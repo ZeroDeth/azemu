@@ -1,0 +1,32 @@
+# Binary outputs
+bin/
+*.exe
+
+# Terraform state and lock files (generated, may contain sensitive data)
+*.tfstate
+*.tfstate.backup
+.terraform/
+.terraform.lock.hcl
+
+# Coverage artifacts
+coverage.out
+*.coverprofile
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# IDE config
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Docker build cache
+.docker/
+
+# Temp cert files (generated at runtime)
+/tmp/azemu-cert.pem
+
+# Go build cache
+/go/
