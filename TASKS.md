@@ -42,8 +42,8 @@ using the official `azurerm` provider pointed at azemu.
 |---|------|---------|--------|-------|
 | 1.1 | Add unhandled route logging middleware | `internal/middleware/unhandled.go` | DONE | `LogUnhandledRequests()` + thread-safe `UnhandledTracker` |
 | 1.2 | Add `/api/unhandled` debug endpoint | `cmd/azemu/main.go` | DONE | Wired at `cmd/azemu/main.go:47` |
-| 1.3 | Run `terraform init` against azemu, capture all requests | | TODO | Enable TF_LOG=TRACE |
-| 1.4 | Fix metadata response: add any missing fields provider expects | `internal/metadata/service.go` | TODO | Compare against MiniBlue's response shape |
+| 1.3 | Run `terraform init` against azemu, capture all requests | | IN PROGRESS | First end-to-end attempt 2026-04-11 on `fix/metadata-classifier-bugs`. `terraform init` succeeds, `apply` makes it past TLS + auth + Azure Stack classifier (after fixing M1+M2 in TODO.md) but dies during provider init at the Storage authorizer construction (M3). Zero ARM requests have reached azemu yet. The flox manifest's `ARM_RESOURCE_MANAGER_ENDPOINT` workaround does NOT work on azurerm v4.68 — must use `ARM_METADATA_HOSTNAME` instead. |
+| 1.4 | Fix metadata response: add any missing fields provider expects | `internal/metadata/service.go` | IN PROGRESS | M1 (dataPlane scheme) and M2 (authentication.tenant) fixed on `fix/metadata-classifier-bugs`. M3 (resourceIdentifiers.azureStorage and likely siblings) still open. See TODO.md for full table. Regression tests landed at `internal/metadata/service_test.go`. |
 | 1.5 | Fix token response: add `ext_expires_in`, `not_before`, `expires_on` fields | `internal/auth/token.go` | TODO | Provider may check these |
 | 1.6 | Fix provider registration: handle GET for specific resource types under a provider | `internal/arm/router.go` | TODO | Provider calls `/providers/{ns}/resourceTypes` |
 | 1.7 | Handle subscription-level feature queries if provider calls them | `internal/arm/router.go` | TODO | May need `/subscriptions/{sub}/providers/Microsoft.Resources/features` |
@@ -66,7 +66,7 @@ Goal: comprehensive unit and integration tests, coverage targets met.
 | 2.2 | Store tests: Put, Get, Delete, List, cascade delete, Export/Import round-trip, concurrent access | `internal/store/memory_test.go` | TODO | Use subagent: test-writer |
 | 2.3 | ARM resource group tests: full CRUD, error cases, api-version, Azure error format | `internal/arm/router_test.go` | TODO | Use subagent: test-writer. VNet+Subnet tests from `feat/vnet-subnet` exercise the shared middleware/error/api-version paths and can be used as a template. |
 | 2.4 | Auth tests: JWT claims, OIDC discovery fields, JWKS key match, token expiry | `internal/auth/token_test.go` | TODO | Use subagent: test-writer |
-| 2.5 | Metadata tests: all required fields present, URLs use correct host | `internal/metadata/service_test.go` | TODO | Use subagent: test-writer |
+| 2.5 | Metadata tests: all required fields present, URLs use correct host | `internal/metadata/service_test.go` | DONE | Landed via `fix/metadata-classifier-bugs`. 4 tests: required fields, all-localhost-urls-https, not-classified-as-azure-stack, dataplane-fields-are-https. The latter two pin the exact go-azure-sdk classifier conditions. |
 | 2.6 | Middleware tests: api-version rejection, Azure headers, metadata exempt | `internal/middleware/azure_test.go` | TODO | Use subagent: test-writer |
 | 2.7 | Config tests: env var loading, defaults, flag overrides | `pkg/config/config_test.go` | TODO | |
 | 2.8 | Integration smoke test: start server, full CRUD, verify responses | `test/integration/smoke_test.go` | PARTIAL | `test/integration/arm_test.go` from `feat/vnet-subnet` covers RG+VNet+Subnet full lifecycle through the production middleware stack (httptest in-process, not a real TCP listener). Subscriptions/providers/auth/metadata still uncovered. |
