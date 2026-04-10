@@ -10,7 +10,19 @@ called it, and whether it blocks `terraform apply`.
 
 | Endpoint | Method | Caller | Blocks apply? | Added |
 |----------|--------|--------|--------------|-------|
-| (none yet) | | | | |
+| (none yet — provider has not made it past initialization to ARM call phase) | | | | |
+
+## Provider initialization gaps (discovered during fix/metadata-classifier-bugs)
+
+These block `terraform apply` *before* any ARM HTTP request is made, so they
+do not appear in `/api/unhandled`. They are gaps in the metadata response
+shape that the azurerm v4.x provider parses at startup.
+
+| # | Symptom | Root cause | Status | Notes |
+|---|---|---|---|---|
+| M1 | "does not support Azure Stack" rejection | `dataPlane` declared as `http://` but port 4566 is HTTPS, so `batch` and `sqlManagement` triggered the classifier | FIXED 2026-04-11 | service.go:35; regression test in service_test.go |
+| M2 | "does not support Azure Stack" rejection (second classifier path) | `authentication.tenant` was the user's tenant UUID; `IsAzureStack` in go-azure-sdk requires the literal `"common"` regardless of which user tenant the env serves | FIXED 2026-04-11 | service.go:50; regression test in service_test.go |
+| M3 | `unable to build authorizer for Storage API: ... endpoint "AzureStorage" is not supported in this Azure Environment` | metadata response is missing `resourceIdentifiers.azureStorage` (and possibly other per-service resource identifiers) | OPEN | Provider builds authorizers for every registered service at startup, fails fast on the first missing one. May need only a handful of `resourceIdentifiers.*` entries or may need many — unknown until M3 is fixed and the next failure surfaces. |
 
 ---
 
