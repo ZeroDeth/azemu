@@ -1,14 +1,15 @@
 # Example: using azemu as a local Azure emulator with the official azurerm provider.
 #
-# Prerequisites:
-#   1. azemu running: ./bin/azemu (or docker run -p 4566:4566 -p 4567:4567 azemu)
-#   2. Trust the self-signed cert: export SSL_CERT_FILE=/tmp/azemu-cert.pem
-#   3. Set metadata_host: export ARM_METADATA_HOSTNAME=localhost:4567
+# Usage:
+#   1. cd into this project directory
+#   2. flox activate          (loads Go, Terraform, ARM_* env vars)
+#   3. azemu-start            (builds, starts server, trusts cert)
+#   4. tf-init && tf-apply    (terraform init && apply)
+#   5. tf-destroy             (clean up)
+#   6. azemu-stop             (stop server)
 #
-# Then run:
-#   terraform init
-#   terraform apply -auto-approve
-#   terraform destroy -auto-approve
+# The flox environment sets ARM_* variables to route azurerm to azemu.
+# Do NOT set metadata_host - it triggers Azure Stack classification.
 
 terraform {
   required_providers {
@@ -22,14 +23,12 @@ terraform {
 provider "azurerm" {
   features {}
 
-  # Point the provider at azemu
-  metadata_host = "localhost:4567"
+  # azurerm reads ARM_* env vars from flox manifest to point at azemu.
+  # We only need resource_provider_registrations here to skip registration.
+  resource_provider_registrations = "none"
 
-  # Skip provider registration (azemu accepts all registrations, but this
-  # avoids unnecessary round-trips during init)
-  skip_provider_registration = true
-
-  # Mock credentials (azemu accepts anything)
+  # These credentials are overridden by flox env vars. They exist here
+  # so terraform validate succeeds even outside the flox environment.
   subscription_id = "00000000-0000-0000-0000-000000000000"
   tenant_id       = "00000000-0000-0000-0000-000000000001"
   client_id       = "00000000-0000-0000-0000-000000000002"
