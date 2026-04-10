@@ -1,0 +1,126 @@
+schema-version = "1.11.0"
+
+# ─── Packages ────────────────────────────────────────────────────────────────────
+[install]
+go.pkg-path = "go"
+terraform.pkg-path = "terraform"
+terraform.version = "^1.14"
+just.pkg-path = "just"
+jq.pkg-path = "jq"
+shellcheck.pkg-path = "shellcheck"
+tflint.pkg-path = "tflint"
+
+# ─── Environment variables ───────────────────────────────────────────────────────
+[vars]
+# azemu ports
+AZEMU_ARM_PORT   = "4566"
+AZEMU_META_PORT  = "4567"
+
+# azurerm provider: override endpoints directly instead of using metadata_host.
+# metadata_host triggers environment classification (Azure Stack rejection) on
+# localhost URLs.  Setting these vars keeps the provider in "public" mode but
+# routes requests to azemu.
+ARM_ENVIRONMENT                  = "public"
+ARM_RESOURCE_MANAGER_ENDPOINT    = "https://localhost:4566"
+ARM_ACTIVE_DIRECTORY_ENDPOINT    = "https://localhost:4567"
+ARM_ACTIVE_DIRECTORY_RESOURCE_ID = "https://localhost:4567/"
+
+# Mock credentials (azemu accepts anything)
+ARM_SUBSCRIPTION_ID = "00000000-0000-0000-0000-000000000000"
+ARM_TENANT_ID       = "00000000-0000-0000-0000-000000000001"
+ARM_CLIENT_ID       = "00000000-0000-0000-0000-000000000002"
+ARM_CLIENT_SECRET   = "azemu-mock-secret"
+
+# Working directory
+TF_DIR = "test/terraform"
+
+# ─── Hook: runs once when environment is activated ───────────────────────────────
+[hook]
+on-activate = '''
+  # Auto-trust cert if azemu is running
+  if pgrep -f 'bin/azemu' >/dev/null 2>&1 && [ -f .azemu-cert.pem ]; then
+    export SSL_CERT_FILE="$(pwd)/.azemu-cert.pem"
+    echo "✔ SSL_CERT_FILE set → $SSL_CERT_FILE"
+  fi
+'''
+
+# ─── Profile: helper functions and aliases ───────────────────────────────────────
+[profile]
+common = '''
+  azemu-start() {
+    echo "▶ Building azemu..."
+    go build -o bin/azemu ./cmd/azemu
+
+    echo "▶ Starting azemu (ARM :4566, Metadata :4567)..."
+    ./bin/azemu > /tmp/azemu.log 2>&1 &
+    sleep 2
+
+    # Grab cert path from startup log
+    CERT=$(grep 'TLS cert written' /tmp/azemu.log | sed 's/.*path=//')
+    if [ -n "$CERT" ] && [ -f "$CERT" ]; then
+      cp "$CERT" .azemu-cert.pem
+      export SSL_CERT_FILE="$(pwd)/.azemu-cert.pem"
+
+      # Trust at OS level for Go-based tools (azurerm provider)
+      if command -v security >/dev/null 2>&1; then
+        security add-trusted-cert -d -r trustRoot \
+          -k ~/Library/Keychains/login.keychain-db "$SSL_CERT_FILE" 2>/dev/null || true
+      elif command -v update-ca-certificates >/dev/null 2>&1; then
+        sudo cp "$CERT" /usr/local/share/ca-certificates/azemu.crt
+        sudo update-ca-certificates
+      fi
+      echo "✔ Cert trusted → $SSL_CERT_FILE"
+    fi
+
+    curl -sfk https://localhost:4567/metadata/endpoints 2>/dev/null \
+      | jq '[.name, .resourceManager] | join(" | ARM=")' \
+      || echo "✘ Metadata unreachable"
+  }
+
+  azemu-stop() {
+    pkill -f 'bin/azemu' 2>/dev/null && echo "✔ azemu stopped" || echo "azemu was not running"
+    rm -f .azemu-cert.pem
+  }
+
+  azemu-status() {
+    if pgrep -f 'bin/azemu' >/dev/null 2>&1; then
+      echo "✔ azemu running"
+      curl -sfk https://localhost:4567/metadata/endpoints 2>/dev/null \
+        | jq '[.name, .resourceManager] | join(" | ARM=")' 2>/dev/null || true
+    else
+      echo "✘ azemu not running  (run: azemu-start)"
+      return 1
+    fi
+  }
+
+  tf-init()   { azemu-status && terraform -chdir="$TF_DIR" init; }
+  tf-plan()   { azemu-status && terraform -chdir="$TF_DIR" plan; }
+  tf-apply()  { azemu-status && terraform -chdir="$TF_DIR" apply -auto-approve; }
+  tf-destroy(){ azemu-status && terraform -chdir="$TF_DIR" destroy -auto-approve; }
+
+  azemu-smoke() {
+    azemu-status
+    echo "▶ Metadata..."
+    curl -sfk https://localhost:4567/metadata/endpoints | jq .name
+    echo "▶ Subscriptions..."
+    curl -sfk "https://localhost:4566/subscriptions?api-version=2022-12-01" \
+      | jq '.value[0].subscriptionId'
+    echo "▶ Resource group create..."
+    curl -sfk -X PUT \
+      "https://localhost:4566/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/smoke?api-version=2023-07-01" \
+      -H 'Content-Type: application/json' \
+      -d '{"location":"uksouth"}' | jq .name
+    echo "✔ smoke passed"
+  }
+
+  # Short aliases
+  alias ti=tf-init
+  alias ta=tf-apply
+  alias td=tf-destroy
+  alias tp=tf-plan
+  alias ts=azemu-status
+'''
+
+# ─── Platforms ───────────────────────────────────────────────────────────────────
+[options]
+systems = ["aarch64-darwin", "x86_64-linux"]
