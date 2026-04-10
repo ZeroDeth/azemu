@@ -3,9 +3,9 @@ package auth
 import (
 	"crypto/rand"
 	"crypto/rsa"
-	"crypto/x509"
+
 	"encoding/json"
-	"encoding/pem"
+
 	"math/big"
 	"net/http"
 	"time"
@@ -79,12 +79,12 @@ func (t *TokenService) OpenIDConfig(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
-		"issuer":                 base + "/" + tenantID + "/",
-		"authorization_endpoint": base + "/" + tenantID + "/oauth2/v2.0/authorize",
-		"token_endpoint":         base + "/" + tenantID + "/oauth2/v2.0/token",
-		"jwks_uri":               base + "/" + tenantID + "/discovery/v2.0/keys",
-		"response_types_supported": []string{"code", "id_token", "token"},
-		"subject_types_supported":  []string{"pairwise"},
+		"issuer":                                base + "/" + tenantID + "/",
+		"authorization_endpoint":                base + "/" + tenantID + "/oauth2/v2.0/authorize",
+		"token_endpoint":                        base + "/" + tenantID + "/oauth2/v2.0/token",
+		"jwks_uri":                              base + "/" + tenantID + "/discovery/v2.0/keys",
+		"response_types_supported":              []string{"code", "id_token", "token"},
+		"subject_types_supported":               []string{"pairwise"},
 		"id_token_signing_alg_values_supported": []string{"RS256"},
 	})
 }
