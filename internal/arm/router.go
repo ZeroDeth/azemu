@@ -36,6 +36,21 @@ func (a *Router) Routes(r chi.Router) {
 	r.Delete("/{subscriptionID}/resourcegroups/{resourceGroupName}", a.deleteResourceGroup)
 	r.Get("/{subscriptionID}/resourcegroups", a.listResourceGroups)
 	r.Head("/{subscriptionID}/resourcegroups/{resourceGroupName}", a.headResourceGroup)
+
+	// Virtual networks (Microsoft.Network/virtualNetworks)
+	r.Put("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/virtualnetworks/{vnetName}", a.putVNet)
+	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/virtualnetworks/{vnetName}", a.getVNet)
+	r.Head("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/virtualnetworks/{vnetName}", a.headVNet)
+	r.Delete("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/virtualnetworks/{vnetName}", a.deleteVNet)
+	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/virtualnetworks", a.listVNetsByRG)
+	r.Get("/{subscriptionID}/providers/microsoft.network/virtualnetworks", a.listVNetsBySub)
+
+	// Subnets (Microsoft.Network/virtualNetworks/subnets)
+	r.Put("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/virtualnetworks/{vnetName}/subnets/{subnetName}", a.putSubnet)
+	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/virtualnetworks/{vnetName}/subnets/{subnetName}", a.getSubnet)
+	r.Head("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/virtualnetworks/{vnetName}/subnets/{subnetName}", a.headSubnet)
+	r.Delete("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/virtualnetworks/{vnetName}/subnets/{subnetName}", a.deleteSubnet)
+	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/virtualnetworks/{vnetName}/subnets", a.listSubnets)
 }
 
 // --- Subscriptions ---

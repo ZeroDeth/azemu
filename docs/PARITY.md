@@ -20,8 +20,8 @@ What azemu implements. Updated whenever a resource handler changes.
 | Tenants | Read-only | N/A | N/A | Full (mock) |
 | Provider Registration | Always succeeds | N/A | N/A | Full |
 | Resource Groups | Full | N/A | `azurerm_resource_group` | Full |
-| Virtual Networks | None | N/A | `azurerm_virtual_network` | Planned (v0.2) |
-| Subnets | None | N/A | `azurerm_subnet` | Planned (v0.2) |
+| Virtual Networks | Full | N/A | `azurerm_virtual_network` | Full (inline subnets in PUT body ignored; use `azurerm_subnet`) |
+| Subnets | Full | N/A | `azurerm_subnet` | Full (404 `ParentResourceNotFound` if vnet missing; cascades with parent) |
 | DNS Zones | None | N/A | `azurerm_dns_zone` | Planned (v0.2) |
 | Storage Accounts | None | None | `azurerm_storage_account` | Planned (v0.2) |
 | Key Vault Secrets | None | None | `azurerm_key_vault_secret` | Planned (v0.2) |
