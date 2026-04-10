@@ -4,6 +4,14 @@ Version: 0.1
 Last updated: 2026-04-10
 Status: Phase 1 (Terraform integration - make terraform apply work)
 
+> **Out-of-phase work on `feat/vnet-subnet` (2026-04-10):** VNets + Subnets
+> (Phase 6) were implemented ahead of Phase 1 acceptance because the feature
+> was requested before TASKS.md was consulted. The work is self-contained and
+> does not block Phase 1 — the new routes sit alongside existing RG handlers
+> and the unit+integration tests pass — but the phase sequence discipline in
+> the "How to use this file" section below was not followed. Phase 1 remains
+> the active phase and Terraform compatibility work should still be prioritised.
+
 ---
 
 ## Phase 0: Bootstrap (make it compile)
@@ -32,8 +40,8 @@ using the official `azurerm` provider pointed at azemu.
 
 | # | Task | File(s) | Status | Notes |
 |---|------|---------|--------|-------|
-| 1.1 | Add unhandled route logging middleware | `internal/middleware/unhandled.go` | TODO | Log method+path at WARN, return 501 with Azure error |
-| 1.2 | Add `/api/unhandled` debug endpoint | `cmd/azemu/main.go` | TODO | Returns list of unhandled routes seen this session |
+| 1.1 | Add unhandled route logging middleware | `internal/middleware/unhandled.go` | DONE | `LogUnhandledRequests()` + thread-safe `UnhandledTracker` |
+| 1.2 | Add `/api/unhandled` debug endpoint | `cmd/azemu/main.go` | DONE | Wired at `cmd/azemu/main.go:47` |
 | 1.3 | Run `terraform init` against azemu, capture all requests | | TODO | Enable TF_LOG=TRACE |
 | 1.4 | Fix metadata response: add any missing fields provider expects | `internal/metadata/service.go` | TODO | Compare against MiniBlue's response shape |
 | 1.5 | Fix token response: add `ext_expires_in`, `not_before`, `expires_on` fields | `internal/auth/token.go` | TODO | Provider may check these |
@@ -54,14 +62,14 @@ Goal: comprehensive unit and integration tests, coverage targets met.
 
 | # | Task | File(s) | Status | Notes |
 |---|------|---------|--------|-------|
-| 2.1 | Create test helpers: `httpGet`, `httpPut`, `httpDelete`, `assertStatus`, `assertJSONField` | `internal/arm/testutil_test.go` | TODO | Reusable across all ARM tests |
+| 2.1 | Create test helpers: `httpGet`, `httpPut`, `httpDelete`, `assertStatus`, `assertJSONField` | `internal/arm/testutil_test.go` | DONE | Landed via `feat/vnet-subnet`. Ships `httpGet`/`httpGetRaw`/`httpPut`/`httpHead`/`httpDelete`/`assertStatus`/`decodeJSON`/`readBody` + `newTestServer` + `withAPIVersion` auto-injection. Uses `decodeJSON`+map assertions instead of `assertJSONField`. |
 | 2.2 | Store tests: Put, Get, Delete, List, cascade delete, Export/Import round-trip, concurrent access | `internal/store/memory_test.go` | TODO | Use subagent: test-writer |
-| 2.3 | ARM resource group tests: full CRUD, error cases, api-version, Azure error format | `internal/arm/router_test.go` | TODO | Use subagent: test-writer |
+| 2.3 | ARM resource group tests: full CRUD, error cases, api-version, Azure error format | `internal/arm/router_test.go` | TODO | Use subagent: test-writer. VNet+Subnet tests from `feat/vnet-subnet` exercise the shared middleware/error/api-version paths and can be used as a template. |
 | 2.4 | Auth tests: JWT claims, OIDC discovery fields, JWKS key match, token expiry | `internal/auth/token_test.go` | TODO | Use subagent: test-writer |
 | 2.5 | Metadata tests: all required fields present, URLs use correct host | `internal/metadata/service_test.go` | TODO | Use subagent: test-writer |
 | 2.6 | Middleware tests: api-version rejection, Azure headers, metadata exempt | `internal/middleware/azure_test.go` | TODO | Use subagent: test-writer |
 | 2.7 | Config tests: env var loading, defaults, flag overrides | `pkg/config/config_test.go` | TODO | |
-| 2.8 | Integration smoke test: start server, full CRUD, verify responses | `test/integration/smoke_test.go` | TODO | Build tag: integration |
+| 2.8 | Integration smoke test: start server, full CRUD, verify responses | `test/integration/smoke_test.go` | PARTIAL | `test/integration/arm_test.go` from `feat/vnet-subnet` covers RG+VNet+Subnet full lifecycle through the production middleware stack (httptest in-process, not a real TCP listener). Subscriptions/providers/auth/metadata still uncovered. |
 | 2.9 | Coverage report: verify targets from CLAUDE.md section 8 | | TODO | `go test -coverprofile` |
 
 Acceptance: `go test ./... -v -race` passes. All packages meet coverage targets.
@@ -140,10 +148,11 @@ Acceptance: `git tag v0.1.0`, CI passes, binary releases published, Docker image
 ## Future Phases (not in v0.1 scope, tracked for context)
 
 ### Phase 6: VNets + Subnets + DNS Zones
-- ARM CRUD for `Microsoft.Network/virtualNetworks`, `Microsoft.Network/virtualNetworks/subnets`
-- ARM CRUD for `Microsoft.Network/dnsZones`, `Microsoft.Network/dnsZones/recordSets`
-- Basic address space validation for VNets
-- Auto SOA/NS for DNS zones
+- **DONE (out-of-phase, `feat/vnet-subnet`):** ARM CRUD for `Microsoft.Network/virtualNetworks`, `Microsoft.Network/virtualNetworks/subnets`. Includes cascade delete via store prefix match, embedded-subnets-on-vnet-GET, `ParentResourceNotFound` on subnet PUT when parent vnet is missing, and 25 unit tests + 1 integration test. See `docs/PARITY.md`.
+- TODO: ARM CRUD for `Microsoft.Network/dnsZones`, `Microsoft.Network/dnsZones/recordSets`
+- TODO: Address space validation for VNets (current impl passes `addressSpace` through without CIDR/format checks)
+- TODO: Inline subnets inside VNet PUT body are currently silently dropped; decide whether to honour them or keep the separate-subnet-PUT contract
+- TODO: Auto SOA/NS for DNS zones
 
 ### Phase 7: Storage Accounts + Key Vault
 - ARM management plane for `Microsoft.Storage/storageAccounts`
