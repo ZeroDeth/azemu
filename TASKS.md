@@ -2,7 +2,7 @@
 
 Version: 0.1
 Last updated: 2026-04-10
-Status: Phase 0 (scaffold exists, not yet compiling)
+Status: Phase 1 (Terraform integration - make terraform apply work)
 
 ---
 
@@ -12,16 +12,16 @@ Goal: scaffold compiles, binary starts, responds to basic curl requests.
 
 | # | Task | File(s) | Status | Notes |
 |---|------|---------|--------|-------|
-| 0.1 | Run `go mod tidy`, resolve deps, generate `go.sum` | `go.mod`, `go.sum` | TODO | |
-| 0.2 | Fix compilation errors in scaffold | all `*.go` | TODO | Scaffold was generated, may have import issues |
-| 0.3 | Verify `go build ./cmd/azemu` produces binary | `cmd/azemu/main.go` | TODO | |
-| 0.4 | Verify binary starts, listens on :4566 and :4567 | | TODO | |
-| 0.5 | Verify metadata endpoint returns JSON | `internal/metadata/service.go` | TODO | `curl -sk https://localhost:4567/metadata/endpoints` |
-| 0.6 | Verify token endpoint returns JWT | `internal/auth/token.go` | TODO | `curl -sk -X POST https://localhost:4567/{tenant}/oauth2/v2.0/token` |
-| 0.7 | Verify resource group CRUD via curl | `internal/arm/router.go` | TODO | PUT/GET/DELETE/HEAD/LIST |
-| 0.8 | Verify api-version enforcement | `internal/middleware/azure.go` | TODO | Bare request returns 400 |
+| 0.1 | Run `go mod tidy`, resolve deps, generate `go.sum` | `go.mod`, `go.sum` | DONE | |
+| 0.2 | Fix compilation errors in scaffold | all `*.go` | DONE | Removed unused `crypto/x509` and `encoding/pem` imports |
+| 0.3 | Verify `go build ./cmd/azemu` produces binary | `cmd/azemu/main.go` | DONE | |
+| 0.4 | Verify binary starts, listens on :4566 and :4567 | | DONE | |
+| 0.5 | Verify metadata endpoint returns JSON | `internal/metadata/service.go` | DONE | `curl -sk https://localhost:4567/metadata/endpoints` |
+| 0.6 | Verify token endpoint returns JWT | `internal/auth/token.go` | DONE | `curl -sk -X POST https://localhost:4567/{tenant}/oauth2/v2.0/token` |
+| 0.7 | Verify resource group CRUD via curl | `internal/arm/router.go` | DONE | PUT/GET/DELETE/HEAD/LIST |
+| 0.8 | Verify api-version enforcement | `internal/middleware/azure.go` | DONE | Bare request returns 400 |
 
-Acceptance: `make smoke` passes (start server, curl all endpoints, stop server).
+Acceptance: `make smoke` passes (start server, curl all endpoints, stop server). ✅
 
 ---
 
