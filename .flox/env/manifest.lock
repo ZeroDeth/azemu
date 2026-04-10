@@ -1,0 +1,435 @@
+{
+  "lockfile-version": 1,
+  "manifest": {
+    "schema-version": "1.11.0",
+    "install": {
+      "go": {
+        "pkg-path": "go"
+      },
+      "jq": {
+        "pkg-path": "jq"
+      },
+      "just": {
+        "pkg-path": "just"
+      },
+      "shellcheck": {
+        "pkg-path": "shellcheck"
+      },
+      "terraform": {
+        "pkg-path": "terraform",
+        "version": "^1.14"
+      },
+      "tflint": {
+        "pkg-path": "tflint"
+      }
+    },
+    "vars": {
+      "ARM_ACTIVE_DIRECTORY_ENDPOINT": "https://localhost:4567",
+      "ARM_ACTIVE_DIRECTORY_RESOURCE_ID": "https://localhost:4567/",
+      "ARM_CLIENT_ID": "00000000-0000-0000-0000-000000000002",
+      "ARM_CLIENT_SECRET": "azemu-mock-secret",
+      "ARM_ENVIRONMENT": "public",
+      "ARM_RESOURCE_MANAGER_ENDPOINT": "https://localhost:4566",
+      "ARM_SUBSCRIPTION_ID": "00000000-0000-0000-0000-000000000000",
+      "ARM_TENANT_ID": "00000000-0000-0000-0000-000000000001",
+      "AZEMU_ARM_PORT": "4566",
+      "AZEMU_META_PORT": "4567",
+      "TF_DIR": "test/terraform"
+    },
+    "hook": {
+      "on-activate": "  # Auto-trust cert if azemu is running\n  if pgrep -f 'bin/azemu' >/dev/null 2>&1 && [ -f .azemu-cert.pem ]; then\n    export SSL_CERT_FILE=\"$(pwd)/.azemu-cert.pem\"\n    echo \"✔ SSL_CERT_FILE set → $SSL_CERT_FILE\"\n  fi\n"
+    },
+    "profile": {
+      "common": "  azemu-start() {\n    echo \"▶ Building azemu...\"\n    go build -o bin/azemu ./cmd/azemu\n\n    echo \"▶ Starting azemu (ARM :4566, Metadata :4567)...\"\n    ./bin/azemu > /tmp/azemu.log 2>&1 &\n    sleep 2\n\n    # Grab cert path from startup log\n    CERT=$(grep 'TLS cert written' /tmp/azemu.log | sed 's/.*path=//')\n    if [ -n \"$CERT\" ] && [ -f \"$CERT\" ]; then\n      cp \"$CERT\" .azemu-cert.pem\n      export SSL_CERT_FILE=\"$(pwd)/.azemu-cert.pem\"\n\n      # Trust at OS level for Go-based tools (azurerm provider)\n      if command -v security >/dev/null 2>&1; then\n        security add-trusted-cert -d -r trustRoot \\\n          -k ~/Library/Keychains/login.keychain-db \"$SSL_CERT_FILE\" 2>/dev/null || true\n      elif command -v update-ca-certificates >/dev/null 2>&1; then\n        sudo cp \"$CERT\" /usr/local/share/ca-certificates/azemu.crt\n        sudo update-ca-certificates\n      fi\n      echo \"✔ Cert trusted → $SSL_CERT_FILE\"\n    fi\n\n    curl -sfk https://localhost:4567/metadata/endpoints 2>/dev/null \\\n      | jq '[.name, .resourceManager] | join(\" | ARM=\")' \\\n      || echo \"✘ Metadata unreachable\"\n  }\n\n  azemu-stop() {\n    pkill -f 'bin/azemu' 2>/dev/null && echo \"✔ azemu stopped\" || echo \"azemu was not running\"\n    rm -f .azemu-cert.pem\n  }\n\n  azemu-status() {\n    if pgrep -f 'bin/azemu' >/dev/null 2>&1; then\n      echo \"✔ azemu running\"\n      curl -sfk https://localhost:4567/metadata/endpoints 2>/dev/null \\\n        | jq '[.name, .resourceManager] | join(\" | ARM=\")' 2>/dev/null || true\n    else\n      echo \"✘ azemu not running  (run: azemu-start)\"\n      return 1\n    fi\n  }\n\n  tf-init()   { azemu-status && terraform -chdir=\"$TF_DIR\" init; }\n  tf-plan()   { azemu-status && terraform -chdir=\"$TF_DIR\" plan; }\n  tf-apply()  { azemu-status && terraform -chdir=\"$TF_DIR\" apply -auto-approve; }\n  tf-destroy(){ azemu-status && terraform -chdir=\"$TF_DIR\" destroy -auto-approve; }\n\n  azemu-smoke() {\n    azemu-status\n    echo \"▶ Metadata...\"\n    curl -sfk https://localhost:4567/metadata/endpoints | jq .name\n    echo \"▶ Subscriptions...\"\n    curl -sfk \"https://localhost:4566/subscriptions?api-version=2022-12-01\" \\\n      | jq '.value[0].subscriptionId'\n    echo \"▶ Resource group create...\"\n    curl -sfk -X PUT \\\n      \"https://localhost:4566/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/smoke?api-version=2023-07-01\" \\\n      -H 'Content-Type: application/json' \\\n      -d '{\"location\":\"uksouth\"}' | jq .name\n    echo \"✔ smoke passed\"\n  }\n\n  # Short aliases\n  alias ti=tf-init\n  alias ta=tf-apply\n  alias td=tf-destroy\n  alias tp=tf-plan\n  alias ts=azemu-status\n"
+    },
+    "options": {
+      "systems": [
+        "aarch64-darwin",
+        "x86_64-linux"
+      ]
+    }
+  },
+  "packages": [
+    {
+      "attr_path": "go",
+      "broken": false,
+      "derivation": "/nix/store/jj5lr2n85rl99d40dcgvv8kh4p37i47d-go-1.26.1.drv",
+      "description": "Go Programming language",
+      "install_id": "go",
+      "license": "BSD-3-Clause",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=68d8aa3d661f0e6bd5862291b5bb263b2a6595c9",
+      "name": "go-1.26.1",
+      "pname": "go",
+      "rev": "68d8aa3d661f0e6bd5862291b5bb263b2a6595c9",
+      "rev_count": 975402,
+      "rev_date": "2026-04-05T21:03:29Z",
+      "scrape_date": "2026-04-07T06:03:33.081743Z",
+      "stabilities": [
+        "unstable"
+      ],
+      "unfree": false,
+      "version": "1.26.1",
+      "outputs_to_install": [
+        "out"
+      ],
+      "outputs": {
+        "out": "/nix/store/kh43nhaz1qcpwws2xq805lrmwpmn9i3k-go-1.26.1"
+      },
+      "system": "aarch64-darwin",
+      "group": "toplevel",
+      "priority": 5
+    },
+    {
+      "attr_path": "go",
+      "broken": false,
+      "derivation": "/nix/store/f7rh1lw0shd5471j9y6wpvc2j43czglz-go-1.26.1.drv",
+      "description": "Go Programming language",
+      "install_id": "go",
+      "license": "BSD-3-Clause",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=68d8aa3d661f0e6bd5862291b5bb263b2a6595c9",
+      "name": "go-1.26.1",
+      "pname": "go",
+      "rev": "68d8aa3d661f0e6bd5862291b5bb263b2a6595c9",
+      "rev_count": 975402,
+      "rev_date": "2026-04-05T21:03:29Z",
+      "scrape_date": "2026-04-07T07:39:08.558986Z",
+      "stabilities": [
+        "unstable"
+      ],
+      "unfree": false,
+      "version": "1.26.1",
+      "outputs_to_install": [
+        "out",
+        "out"
+      ],
+      "outputs": {
+        "out": "/nix/store/ckcq2mj8zk0drhaaacy6mp9d924hnr4m-go-1.26.1"
+      },
+      "system": "x86_64-linux",
+      "group": "toplevel",
+      "priority": 5
+    },
+    {
+      "attr_path": "jq",
+      "broken": false,
+      "derivation": "/nix/store/y1glsdj47nwma5cg6gkwxaidlcqdvmv1-jq-1.8.1.drv",
+      "description": "Lightweight and flexible command-line JSON processor",
+      "install_id": "jq",
+      "license": "MIT",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=68d8aa3d661f0e6bd5862291b5bb263b2a6595c9",
+      "name": "jq-1.8.1",
+      "pname": "jq",
+      "rev": "68d8aa3d661f0e6bd5862291b5bb263b2a6595c9",
+      "rev_count": 975402,
+      "rev_date": "2026-04-05T21:03:29Z",
+      "scrape_date": "2026-04-07T06:03:48.288349Z",
+      "stabilities": [
+        "unstable"
+      ],
+      "unfree": false,
+      "version": "1.8.1",
+      "outputs_to_install": [
+        "bin",
+        "bin",
+        "bin",
+        "man",
+        "man",
+        "man"
+      ],
+      "outputs": {
+        "bin": "/nix/store/bb450vb2gl547zwba8sihcyilsg2rqfa-jq-1.8.1-bin",
+        "dev": "/nix/store/irxgyhi0rq34f2y721a26ii09nynq2ha-jq-1.8.1-dev",
+        "doc": "/nix/store/rnkk37licxmcicz44sm368bk2fsrk52j-jq-1.8.1-doc",
+        "man": "/nix/store/vs96fwfhd5gjycxs5yc58wkrizscww92-jq-1.8.1-man",
+        "out": "/nix/store/y4gq3lbz2nq75cl3v28ixrqrr90pk4lf-jq-1.8.1"
+      },
+      "system": "aarch64-darwin",
+      "group": "toplevel",
+      "priority": 5
+    },
+    {
+      "attr_path": "jq",
+      "broken": false,
+      "derivation": "/nix/store/0vb08cn5pf24mzjbibpc7n37g62lacfj-jq-1.8.1.drv",
+      "description": "Lightweight and flexible command-line JSON processor",
+      "install_id": "jq",
+      "license": "MIT",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=68d8aa3d661f0e6bd5862291b5bb263b2a6595c9",
+      "name": "jq-1.8.1",
+      "pname": "jq",
+      "rev": "68d8aa3d661f0e6bd5862291b5bb263b2a6595c9",
+      "rev_count": 975402,
+      "rev_date": "2026-04-05T21:03:29Z",
+      "scrape_date": "2026-04-07T07:39:28.772917Z",
+      "stabilities": [
+        "unstable"
+      ],
+      "unfree": false,
+      "version": "1.8.1",
+      "outputs_to_install": [
+        "bin",
+        "bin",
+        "bin",
+        "man"
+      ],
+      "outputs": {
+        "bin": "/nix/store/fc13hvlj7541i1xmwdka7f61qicdzr5a-jq-1.8.1-bin",
+        "dev": "/nix/store/plinh1rzkh83n4gfpkxl748zgaydpxll-jq-1.8.1-dev",
+        "doc": "/nix/store/ihgrvb9w91mwbhxx3fi3gcwwx3qlsdfv-jq-1.8.1-doc",
+        "man": "/nix/store/crwv17pim6csnfr4jmsd7kf60sp3c5dh-jq-1.8.1-man",
+        "out": "/nix/store/s4w1j16dj8wyriv1ljfypr9s1r39yjwp-jq-1.8.1"
+      },
+      "system": "x86_64-linux",
+      "group": "toplevel",
+      "priority": 5
+    },
+    {
+      "attr_path": "just",
+      "broken": false,
+      "derivation": "/nix/store/7nmp9ysgqyb1z31blskdjiaadpl7mza1-just-1.49.0.drv",
+      "description": "Handy way to save and run project-specific commands",
+      "install_id": "just",
+      "license": "CC0-1.0",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=68d8aa3d661f0e6bd5862291b5bb263b2a6595c9",
+      "name": "just-1.49.0",
+      "pname": "just",
+      "rev": "68d8aa3d661f0e6bd5862291b5bb263b2a6595c9",
+      "rev_count": 975402,
+      "rev_date": "2026-04-05T21:03:29Z",
+      "scrape_date": "2026-04-07T06:03:48.404121Z",
+      "stabilities": [
+        "unstable"
+      ],
+      "unfree": false,
+      "version": "1.49.0",
+      "outputs_to_install": [
+        "man",
+        "out"
+      ],
+      "outputs": {
+        "doc": "/nix/store/85nkcgs1npazz9vv5py7fsmsd0pwi4fq-just-1.49.0-doc",
+        "man": "/nix/store/ak601qc8jlqgry365b2qkxf6bwf9prk2-just-1.49.0-man",
+        "out": "/nix/store/3ppl78czibxlxv105jf0rr64j577pr4m-just-1.49.0"
+      },
+      "system": "aarch64-darwin",
+      "group": "toplevel",
+      "priority": 5
+    },
+    {
+      "attr_path": "just",
+      "broken": false,
+      "derivation": "/nix/store/51vjxyvi3d6ch7zm6n037ksqhg1ziq4i-just-1.49.0.drv",
+      "description": "Handy way to save and run project-specific commands",
+      "install_id": "just",
+      "license": "CC0-1.0",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=68d8aa3d661f0e6bd5862291b5bb263b2a6595c9",
+      "name": "just-1.49.0",
+      "pname": "just",
+      "rev": "68d8aa3d661f0e6bd5862291b5bb263b2a6595c9",
+      "rev_count": 975402,
+      "rev_date": "2026-04-05T21:03:29Z",
+      "scrape_date": "2026-04-07T07:39:28.933650Z",
+      "stabilities": [
+        "unstable"
+      ],
+      "unfree": false,
+      "version": "1.49.0",
+      "outputs_to_install": [
+        "man",
+        "out"
+      ],
+      "outputs": {
+        "doc": "/nix/store/npllcp9kp3m79hff6mzlbzpyys0z3jd7-just-1.49.0-doc",
+        "man": "/nix/store/hrhxhkyhafrp0rkpcfr2qhvyl2y6fc2i-just-1.49.0-man",
+        "out": "/nix/store/y07l22fq8wvg4wdf6anb0s6cljmsfs73-just-1.49.0"
+      },
+      "system": "x86_64-linux",
+      "group": "toplevel",
+      "priority": 5
+    },
+    {
+      "attr_path": "shellcheck",
+      "broken": false,
+      "derivation": "/nix/store/wwkwh9917jacpnr8dp1x37781miipssy-shellcheck-0.11.0.drv",
+      "description": "Shell script analysis tool",
+      "install_id": "shellcheck",
+      "license": "GPL-3.0-only",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=68d8aa3d661f0e6bd5862291b5bb263b2a6595c9",
+      "name": "shellcheck-0.11.0",
+      "pname": "shellcheck",
+      "rev": "68d8aa3d661f0e6bd5862291b5bb263b2a6595c9",
+      "rev_count": 975402,
+      "rev_date": "2026-04-05T21:03:29Z",
+      "scrape_date": "2026-04-07T06:05:20.648158Z",
+      "stabilities": [
+        "unstable"
+      ],
+      "unfree": false,
+      "version": "0.11.0",
+      "outputs_to_install": [
+        "bin",
+        "doc",
+        "man"
+      ],
+      "outputs": {
+        "bin": "/nix/store/c4s18v7xr8rl74yx7p3pnqciy1801yz3-shellcheck-0.11.0-bin",
+        "doc": "/nix/store/fr6j2dcg92h5b5frfzqp00rqlk600g4b-shellcheck-0.11.0-doc",
+        "man": "/nix/store/wzdzk66ghpwr5xkrzf369vnfwzqyz4d9-shellcheck-0.11.0-man",
+        "out": "/nix/store/8lf356irnq31q3061847hap11pr8w4z5-shellcheck-0.11.0"
+      },
+      "system": "aarch64-darwin",
+      "group": "toplevel",
+      "priority": 5
+    },
+    {
+      "attr_path": "shellcheck",
+      "broken": false,
+      "derivation": "/nix/store/rf1yiv12fh2r6b8n46s0fj27rmnar8nv-shellcheck-0.11.0.drv",
+      "description": "Shell script analysis tool",
+      "install_id": "shellcheck",
+      "license": "GPL-3.0-only",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=68d8aa3d661f0e6bd5862291b5bb263b2a6595c9",
+      "name": "shellcheck-0.11.0",
+      "pname": "shellcheck",
+      "rev": "68d8aa3d661f0e6bd5862291b5bb263b2a6595c9",
+      "rev_count": 975402,
+      "rev_date": "2026-04-05T21:03:29Z",
+      "scrape_date": "2026-04-07T07:41:35.629821Z",
+      "stabilities": [
+        "unstable"
+      ],
+      "unfree": false,
+      "version": "0.11.0",
+      "outputs_to_install": [
+        "bin",
+        "doc",
+        "man"
+      ],
+      "outputs": {
+        "bin": "/nix/store/iszqxdn46psh4crvly6zp7wrp00p3lw5-shellcheck-0.11.0-bin",
+        "doc": "/nix/store/h1ggss2gsrd5xq1yi45ww56yab1lzsif-shellcheck-0.11.0-doc",
+        "man": "/nix/store/srqizsdkqrly5idxqb06qhx6x9fm9r6s-shellcheck-0.11.0-man",
+        "out": "/nix/store/mjdmyvxyv3pvk542rz8a3bcjm0q1rysx-shellcheck-0.11.0"
+      },
+      "system": "x86_64-linux",
+      "group": "toplevel",
+      "priority": 5
+    },
+    {
+      "attr_path": "terraform",
+      "broken": false,
+      "derivation": "/nix/store/jcfh2rvr8dpm1msqkr3jhzfqb0vk06wc-terraform-1.14.8.drv",
+      "description": "Tool for building, changing, and versioning infrastructure",
+      "install_id": "terraform",
+      "license": "BUSL-1.1",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=68d8aa3d661f0e6bd5862291b5bb263b2a6595c9",
+      "name": "terraform-1.14.8",
+      "pname": "terraform",
+      "rev": "68d8aa3d661f0e6bd5862291b5bb263b2a6595c9",
+      "rev_count": 975402,
+      "rev_date": "2026-04-05T21:03:29Z",
+      "scrape_date": "2026-04-07T06:05:24.580441Z",
+      "stabilities": [
+        "unstable"
+      ],
+      "unfree": true,
+      "version": "1.14.8",
+      "outputs_to_install": [
+        "out"
+      ],
+      "outputs": {
+        "out": "/nix/store/21vxm6hcrxki9iwzcc9pcjd060ib7p0w-terraform-1.14.8"
+      },
+      "system": "aarch64-darwin",
+      "group": "toplevel",
+      "priority": 5
+    },
+    {
+      "attr_path": "terraform",
+      "broken": false,
+      "derivation": "/nix/store/z4mjxa6j3w2m88g3fkmywfqdjqg1q31f-terraform-1.14.8.drv",
+      "description": "Tool for building, changing, and versioning infrastructure",
+      "install_id": "terraform",
+      "license": "BUSL-1.1",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=68d8aa3d661f0e6bd5862291b5bb263b2a6595c9",
+      "name": "terraform-1.14.8",
+      "pname": "terraform",
+      "rev": "68d8aa3d661f0e6bd5862291b5bb263b2a6595c9",
+      "rev_count": 975402,
+      "rev_date": "2026-04-05T21:03:29Z",
+      "scrape_date": "2026-04-07T07:41:42.324690Z",
+      "stabilities": [
+        "unstable"
+      ],
+      "unfree": true,
+      "version": "1.14.8",
+      "outputs_to_install": [
+        "out"
+      ],
+      "outputs": {
+        "out": "/nix/store/g3971j79h9mmg5d0cg60qfdgy0qzgsj5-terraform-1.14.8"
+      },
+      "system": "x86_64-linux",
+      "group": "toplevel",
+      "priority": 5
+    },
+    {
+      "attr_path": "tflint",
+      "broken": false,
+      "derivation": "/nix/store/cds30ps50mym5gmf0d30xl2whasw7qm8-tflint-0.61.0.drv",
+      "description": "Terraform linter focused on possible errors, best practices, and so on",
+      "install_id": "tflint",
+      "license": "MPL-2.0",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=68d8aa3d661f0e6bd5862291b5bb263b2a6595c9",
+      "name": "tflint-0.61.0",
+      "pname": "tflint",
+      "rev": "68d8aa3d661f0e6bd5862291b5bb263b2a6595c9",
+      "rev_count": 975402,
+      "rev_date": "2026-04-05T21:03:29Z",
+      "scrape_date": "2026-04-07T06:05:43.988966Z",
+      "stabilities": [
+        "unstable"
+      ],
+      "unfree": false,
+      "version": "0.61.0",
+      "outputs_to_install": [
+        "out"
+      ],
+      "outputs": {
+        "out": "/nix/store/fzbj07x6ak6dhla1pjkpialr153pvv00-tflint-0.61.0"
+      },
+      "system": "aarch64-darwin",
+      "group": "toplevel",
+      "priority": 5
+    },
+    {
+      "attr_path": "tflint",
+      "broken": false,
+      "derivation": "/nix/store/v4g1dr69a02ly1rifsdvad4m2rf3rna0-tflint-0.61.0.drv",
+      "description": "Terraform linter focused on possible errors, best practices, and so on",
+      "install_id": "tflint",
+      "license": "MPL-2.0",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=68d8aa3d661f0e6bd5862291b5bb263b2a6595c9",
+      "name": "tflint-0.61.0",
+      "pname": "tflint",
+      "rev": "68d8aa3d661f0e6bd5862291b5bb263b2a6595c9",
+      "rev_count": 975402,
+      "rev_date": "2026-04-05T21:03:29Z",
+      "scrape_date": "2026-04-07T07:42:10.059533Z",
+      "stabilities": [
+        "unstable"
+      ],
+      "unfree": false,
+      "version": "0.61.0",
+      "outputs_to_install": [
+        "out"
+      ],
+      "outputs": {
+        "out": "/nix/store/zn5pkpy91fimvvcv4lvi8fp1m6gmba2n-tflint-0.61.0"
+      },
+      "system": "x86_64-linux",
+      "group": "toplevel",
+      "priority": 5
+    }
+  ]
+}
