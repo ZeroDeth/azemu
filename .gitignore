@@ -1,0 +1,39 @@
+# Binary output
+bin/
+azemu
+*.exe
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.backup
+.terraform.lock.hcl
+
+# Go
+coverage.out
+*.coverprofile
+*.test
+vendor/
+
+# OS
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Docker
+.docker/
+
+# Temp files
+/tmp/
+*.tmp
+
+# State persistence files (user-generated, not committed)
+state.json
+*.state.json
