@@ -76,6 +76,22 @@ The bundle file is written with mode 0600 because it includes a private key.
   `TestRG_PUT_MissingLocation_CurrentlyAccepted` in `internal/arm/rg_test.go`;
   flip the assertion to `StatusBadRequest` when the handler is brought in
   line with the newer resources.
+- **OIDC and JWKS wiring leaks out of `internal/auth`:** `TokenService.Routes`
+  mounts `/token`, but `OpenIDConfig` and `JWKS` are registered separately in
+  `cmd/azemu/main.go` at `/{tenantID}/.well-known/openid-configuration` and
+  `/{tenantID}/discovery/v2.0/keys`. Move both registrations into
+  `Routes`/`RoutesV2` so the package owns its full public surface. Surfaced
+  while writing `internal/auth/token_test.go`; the test helper had to
+  replicate the production wiring verbatim.
+- **VNet and Subnet test coverage gaps:** `headSubnet` 77.8%, `deleteSubnet`
+  81.8%, `writeVNetList` 85.7%. These gaps predate the Phase 2 unit-test
+  slice; Slice B (RG CRUD tests) was scoped not to touch the VNet/Subnet
+  test files. Backfill in a dedicated VNet/Subnet test-extension PR before
+  Phase 2 closeout.
+- **`azureTimestamp` dead code:** declared in `internal/arm/router.go` but
+  never called by any handler. Flagged at 0% coverage during the Phase 2
+  slice. Delete in a small cleanup commit rather than writing a test for
+  unreachable code.
 
 ---
 
