@@ -76,3 +76,30 @@ repos:
     hooks:
       - id: markdownlint
         args: ['--fix', '--disable', 'MD013', 'MD033', 'MD041', '--']
+
+  # === Claude Code steering structure drift guard ===
+  # Local hook that runs scripts/check-claude-structure.sh on every
+  # commit. Enforces the structure documented in CLAUDE.md, AGENTS.md,
+  # and the Anthropic memory/skills/sub-agents guides:
+  #
+  #   - CLAUDE.md stays under Anthropic's 200-line target
+  #     (https://code.claude.com/docs/en/memory)
+  #   - No machine-local path references in tracked files (so the repo
+  #     is safe to clone on any machine)
+  #   - .claude/agents/*.md and .claude/skills/*/SKILL.md have valid
+  #     frontmatter
+  #   - .gitignore preserves the .claude/rules/, .claude/agents/, and
+  #     .claude/skills/ negations
+  #
+  # Runs on every commit regardless of which files changed, because
+  # any of the checks can regress from an edit that doesn't touch the
+  # files being validated (e.g., a new tracked file that pastes a
+  # home-directory-scoped path in a comment).
+  - repo: local
+    hooks:
+      - id: claude-structure-guard
+        name: Claude Code steering structure drift guard
+        entry: scripts/check-claude-structure.sh
+        language: system
+        pass_filenames: false
+        always_run: true
