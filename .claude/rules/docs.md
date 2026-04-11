@@ -71,8 +71,9 @@ Claude does not need. Comments inside fenced code blocks are preserved.
 | `AGENTS.md` | README for any coding agent (cross-vendor <https://agents.md> spec) |
 | `docs/ARCHITECTURE.md` | Package layout, dependency graph, request flow |
 | `docs/CONVENTIONS.md` | Go style, ARM contracts, auth contracts, testing strategy |
-| `docs/CHECKLISTS.md` | Add-a-resource, modify-store, before-commit checklists |
-| `docs/SUBAGENTS.md` | Subagent role definitions and orchestration patterns |
+| `docs/ORCHESTRATION.md` | Multi-agent composition patterns (parallel, test-then-fix, coverage push) |
 | `docs/PARITY.md` | Full/Stub/None matrix per resource |
 | `docs/SETUP.md` | Contributor onboarding (flox + manual paths) |
 | `docs/TROUBLESHOOTING.md` | Common errors and fixes |
+| `.claude/agents/*.md` | Subagent role definitions (frontmatter-driven) |
+| `.claude/skills/*/SKILL.md` | Slash-invokable playbooks |

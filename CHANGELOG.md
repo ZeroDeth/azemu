@@ -21,6 +21,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `.claude/agents/*.md` — five frontmatter-driven subagent definitions
+  (`arm-resource-implementer`, `test-writer`, `code-reviewer`,
+  `terraform-compatibility-debugger`, `docs-writer`). Claude Code auto-delegates
+  when a task description matches; previously these roles lived as prose recipes
+  in `docs/SUBAGENTS.md` and had to be hand-copied into Task tool invocations.
+  Per <https://code.claude.com/docs/en/sub-agents>.
+- `.claude/skills/*/SKILL.md` — four slash-invokable playbooks
+  (`/add-resource`, `/modify-store`, `/validate-terraform`, `/before-commit`).
+  `before-commit` carries `disable-model-invocation: true` so Claude never
+  auto-runs the full validation sequence. Per
+  <https://code.claude.com/docs/en/skills>.
+- `.gitignore` negations for `.claude/agents/` and `.claude/skills/` so the
+  new directories are version-controlled alongside the existing
+  `.claude/rules/` exception.
+
+### Changed
+
+- `docs/SUBAGENTS.md` renamed to `docs/ORCHESTRATION.md` and trimmed to the
+  three multi-agent composition patterns (parallel resource implementation,
+  test-then-fix, coverage push). The five role definitions moved to
+  `.claude/agents/*.md`.
+- `docs/CHECKLISTS.md` replaced with an 18-line redirect table pointing at
+  the new skills. Existing content moved verbatim into the four skill files.
+- `AGENTS.md` "Subagents and orchestration" section rewritten to document the
+  new `.claude/agents/` and `.claude/skills/` directories and the
+  `/before-commit` / `/validate-terraform` / `/add-resource` / `/modify-store`
+  slash invocations. Project-files table updated to match.
+- `.claude/rules/arm-handlers.md`, `.claude/rules/tests.md`,
+  `.claude/rules/docs.md`, and `docs/CONVENTIONS.md` updated to reference the
+  new skill paths instead of the old `docs/CHECKLISTS.md` and
+  `docs/SUBAGENTS.md` locations.
+
+### Fixed
+
+- `CLAUDE.md` referenced a machine-local auto-memory file
+  (`~/.claude/projects/.../memory/feedback_claude_md_steering.md`) that only
+  existed on the maintainer's machine. Anthropic's own memory docs state auto
+  memory is machine-local and not shared across machines, so any contributor
+  cloning the repo on a fresh machine would hit a dangling reference. The
+  Anthropic source quotes and refactor history now live inline in the
+  `CLAUDE.md` HTML maintainer comment, which is stripped before context
+  injection (zero session-token cost) and travels with the repo.
+  Per <https://code.claude.com/docs/en/memory>.
+
+### Added
+
 - Virtual Networks (`Microsoft.Network/virtualNetworks`) ARM CRUD + HEAD with
   cascade-delete and child-subnet embedding on GET.
 - Subnets (`Microsoft.Network/virtualNetworks/subnets`) ARM CRUD + HEAD with
