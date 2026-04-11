@@ -6,6 +6,13 @@ Status: Phase 1 + Phase 2 acceptance MET. All per-package coverage targets
 from `.claude/rules/tests.md` met or exceeded. Current focus: Phase 2.5
 (package-ownership cleanup) and Phase 3 (developer experience).
 
+> **Strategy, non-goals, and the per-release resource roster live in
+> `ROADMAP.md`.** `TASKS.md` is the execution ledger and `ROADMAP.md` is
+> the north star. If they ever disagree, `ROADMAP.md` wins; this file
+> gets updated to match.
+
+<!-- MD028: HTML comment separates adjacent blockquotes. -->
+
 > **Out-of-phase work on `feat/vnet-subnet` (2026-04-10):** VNets + Subnets
 > (Phase 6) were implemented ahead of Phase 1 acceptance because the feature
 > was requested before TASKS.md was consulted. The work is self-contained,
@@ -124,19 +131,27 @@ documented and (if chosen) implemented.
 
 ## Phase 3: Developer experience
 
-Goal: wrapper CLI, terraform test support, improved Makefile.
+Goal: first-run onboarding is one command. Docker, docker-compose, a Nix
+flake, a bootstrap `examples/terraform/` directory, and Makefile polish.
+The flox environment stays as the contributor-side workspace; Docker is
+what new users hit first.
 
 | # | Task | File(s) | Status | Notes |
 |---|------|---------|--------|-------|
 | 3.1 | Create `scripts/aztf` wrapper script | `scripts/aztf` | TODO | Starts azemu if not running, exports env vars, passes args to terraform |
-| 3.2 | Create `scripts/trust-cert.sh` helper | `scripts/trust-cert.sh` | TODO | macOS: security add-trusted-cert; Linux: update-ca-certificates |
+| 3.2 | Create `scripts/trust-cert.sh` helper | `scripts/trust-cert.sh` | TODO | macOS: `security add-trusted-cert`; Linux: `update-ca-certificates` |
 | 3.3 | Create `.tftest.hcl` test file for resource groups | `test/terraform/main.tftest.hcl` | TODO | Terraform 1.6+ test framework |
-| 3.4 | Update Makefile: `test`, `smoke`, `tf-test`, `coverage` targets | `Makefile` | TODO | |
+| 3.4 | Update Makefile: `test`, `smoke`, `tf-test`, `coverage`, `docker`, `docker-compose` targets | `Makefile` | TODO | `make docker` builds the image, `make docker-compose` runs the stack |
 | 3.5 | Add `--help` flag with usage text | `cmd/azemu/main.go` | TODO | Standard `flag` package |
 | 3.6 | Print startup banner with version, ports, cert path, usage hint | `cmd/azemu/main.go` | TODO | |
-| 3.7 | Update README.md with aztf usage, terraform test, full quick-start | `README.md` | TODO | |
+| 3.7 | Update README.md with aztf usage, terraform test, full quick-start | `README.md` | TODO | Quick-start uses the docker-compose path by default |
+| 3.8 | `Dockerfile` for the azemu binary | `Dockerfile` | TODO | Multi-stage Go build, minimal final image (distroless or alpine). Bakes the binary only; cert is generated or loaded from a mounted bundle. `AGENTS.md` safety list already mentions the file. |
+| 3.9 | `docker-compose.yml` for single-node local use | `docker-compose.yml` | TODO | Exposes 4566/4567, mounts a writable `.azemu/` volume for `AZEMU_CERT_PATH`, healthcheck on `/health` over HTTP (4566 or separate debug port). The one-command onboarding story. |
+| 3.10 | `flake.nix` for Nix users who do not use flox | `flake.nix`, `flake.lock` | TODO | Minimal package output that builds `./bin/azemu`, dev shell inherits the pinned Go toolchain. Flox remains the contributor workflow; this file is for upstream Nix consumers. |
+| 3.11 | `examples/terraform/` bootstrap configs | `examples/terraform/README.md`, `examples/terraform/provider.tf`, `examples/terraform/resource_group.tf`, `examples/terraform/vnet.tf`, `examples/terraform/subnet.tf` | TODO | Scoped to what v0.1 supports today (RG + VNet + Subnet). Each file is runnable in isolation. README shows the `docker compose up` → `terraform apply` → `terraform destroy` loop. Replaces `test/terraform/main.tf` as the public-facing example. |
+| 3.12 | Add `GET /health` HTTP endpoint (non-TLS) for container healthchecks | `cmd/azemu/main.go` | TODO | Separate listener or a plain-HTTP sub-handler. Docker-compose and Kubernetes liveness probes both need a cert-free health endpoint. Kept minimal so it does not cost much and so `docker-compose.yml` can stay simple. |
 
-Acceptance: `make tf-test` starts azemu, runs `terraform test`, stops azemu, exits 0.
+Acceptance: `docker compose up -d && cd examples/terraform && terraform init && terraform apply -auto-approve && terraform destroy -auto-approve` exits 0 on a fresh clone with no flox, no manual cert trust, and no env-var exports beyond what `docker-compose.yml` passes in.
 
 ---
 
@@ -162,49 +177,99 @@ Acceptance: azemu can persist state across restarts. `curl /api/state/export` re
 
 ---
 
-## Phase 5: Documentation and release prep
+## Phase 5: Documentation, governance, and release prep
 
-Goal: project is ready for public GitHub repo and first tagged release.
+Goal: project is ready for public GitHub repo, first external contributors,
+and first tagged release. Governance files land alongside docs so a new
+contributor sees a real open-source project, not a toy.
 
 | # | Task | File(s) | Status | Notes |
 |---|------|---------|--------|-------|
-| 5.1 | Create `docs/PARITY.md` with Full/Stub/None matrix | `docs/PARITY.md` | TODO | |
+| 5.1 | Create `docs/PARITY.md` with Full/Stub/None matrix | `docs/PARITY.md` | TODO | Per-resource table with a link to the test that proves each Full claim |
 | 5.2 | Create `docs/ARCHITECTURE.md` with extended design docs | `docs/ARCHITECTURE.md` | TODO | Include mermaid diagram from research report |
-| 5.3 | Create `docs/CONTRIBUTING.md` | `docs/CONTRIBUTING.md` | TODO | How to add a resource, test requirements, PR checklist |
-| 5.4 | Create `CHANGELOG.md` | `CHANGELOG.md` | TODO | Keep-a-changelog format |
-| 5.5 | Create `TODO.md` with unimplemented endpoints and future work | `TODO.md` | TODO | Populated from Phase 1 discovery |
-| 5.6 | Finalise README.md: badges, quick-start, examples, roadmap | `README.md` | TODO | |
-| 5.7 | Add GitHub Actions CI workflow | `.github/workflows/ci.yml` | TODO | go vet, test, build, coverage |
-| 5.8 | Add Dependabot config | `.github/dependabot.yml` | TODO | |
-| 5.9 | Create `goreleaser.yml` for binary releases | `.goreleaser.yml` | TODO | macOS/Linux/Windows + Docker |
-| 5.10 | Tag v0.1.0 | | TODO | |
+| 5.3 | Create `CONTRIBUTING.md` | `CONTRIBUTING.md` | TODO | How to add a resource, test requirements, PR checklist, link to the `add-resource` skill |
+| 5.4 | Create `CHANGELOG.md` | `CHANGELOG.md` | TODO | Keep-a-changelog format; seed with Phase 1 and Phase 2 summaries |
+| 5.5 | ~~Create `TODO.md`~~ | `TODO.md` | DONE | Populated during Phase 1 debugging; maintained ever since |
+| 5.6 | Finalise README.md: badges, quick-start, examples, roadmap link | `README.md` | TODO | Quick-start uses docker-compose; link `ROADMAP.md` above the fold |
+| 5.7 | Add GitHub Actions CI workflow | `.github/workflows/ci.yml` | TODO | `go vet`, `go test -race -coverprofile`, `go build`, integration suite under `-tags=integration`, markdownlint, golangci-lint |
+| 5.8 | Add Dependabot config | `.github/dependabot.yml` | TODO | go modules + github-actions + docker |
+| 5.9 | Create `goreleaser.yml` for binary releases | `.goreleaser.yml` | TODO | macOS/Linux/Windows + Docker image push to ghcr.io |
+| 5.10 | Create `CODE_OF_CONDUCT.md` | `CODE_OF_CONDUCT.md` | TODO | Contributor Covenant v2.1, standard template, contact email |
+| 5.11 | Create `SECURITY.md` | `SECURITY.md` | TODO | Supported versions, how to report a vulnerability, expected response time. Private channel (email or GitHub security advisories) not public issues |
+| 5.12 | Create `RELEASING.md` | `RELEASING.md` | TODO | Release steps: tag, run `goreleaser`, update `CHANGELOG.md`, write the release notes, announce. The checklist the maintainer follows so nothing is tribal knowledge |
+| 5.13 | Create `CODEOWNERS` | `.github/CODEOWNERS` | TODO | One owner per package until contributors grow; keeps PR reviewer routing explicit |
+| 5.14 | Create `.github/ISSUE_TEMPLATE/bug_report.md` and `feature_request.md` | `.github/ISSUE_TEMPLATE/*.md` | TODO | Bug report template MUST ask for azemu version, azurerm version, terraform version, full error output, and whether `/api/unhandled` shows anything. These four questions short-circuit 90% of M1-M5-class triage. |
+| 5.15 | Create `.github/PULL_REQUEST_TEMPLATE.md` | `.github/PULL_REQUEST_TEMPLATE.md` | TODO | Pre-filled checklist: tests added, docs updated, parity matrix updated if resource-level, changelog entry drafted |
+| 5.16 | Add `renovate.json` (or stick with Dependabot) | `renovate.json` | TODO | Decide one or the other, not both |
+| 5.17 | Tag v0.1.0 | | TODO | Blocked on 5.1 through 5.16 |
 
-Acceptance: `git tag v0.1.0`, CI passes, binary releases published, Docker image pushed.
+Acceptance: `git tag v0.1.0`, CI passes, binary releases published, Docker image pushed to `ghcr.io/zerodeth/azemu:v0.1.0`, `ROADMAP.md` and `CONTRIBUTING.md` both linked from `README.md` above the fold.
 
 ---
 
-## Future Phases (not in v0.1 scope, tracked for context)
+## Future Phases
 
-### Phase 6: VNets + Subnets + DNS Zones
+Resource rosters and fidelity targets for these phases are driven by
+`ROADMAP.md`. This section only tracks the concrete file-level tasks.
 
-- **DONE (out-of-phase, `feat/vnet-subnet`):** ARM CRUD for `Microsoft.Network/virtualNetworks`, `Microsoft.Network/virtualNetworks/subnets`. Includes cascade delete via store prefix match, embedded-subnets-on-vnet-GET, `ParentResourceNotFound` on subnet PUT when parent vnet is missing, and 25 unit tests + 1 integration test. See `docs/PARITY.md`.
-- TODO: ARM CRUD for `Microsoft.Network/dnsZones`, `Microsoft.Network/dnsZones/recordSets`
-- TODO: Address space validation for VNets (current impl passes `addressSpace` through without CIDR/format checks)
-- TODO: Inline subnets inside VNet PUT body are currently silently dropped; decide whether to honour them or keep the separate-subnet-PUT contract
-- TODO: Auto SOA/NS for DNS zones
+### Phase 6: Networking extended (v0.2)
 
-### Phase 7: Storage Accounts + Key Vault
+Goal: every networking primitive a real three-tier web app needs. VNet + Subnet landed out-of-phase in v0.1; v0.2 fills in the rest.
 
-- ARM management plane for `Microsoft.Storage/storageAccounts`
-- Data plane for Key Vault secrets (CRUD)
-- Correct endpoint suffixes in metadata response
+| # | Task | ARM provider | Status | Notes |
+|---|---|---|---|---|
+| 6.1 | ~~VNet + Subnet ARM CRUD~~ | `Microsoft.Network/virtualNetworks` + `.../subnets` | DONE | Shipped out-of-phase in v0.1 on `feat/vnet-subnet`. 25 unit tests + integration coverage. |
+| 6.2 | `azurerm_public_ip` | `Microsoft.Network/publicIPAddresses` | TODO | Prerequisite for LB and Application Gateway. Allocation mode, SKU, IP version. |
+| 6.3 | `azurerm_network_security_group` + rules | `Microsoft.Network/networkSecurityGroups` | TODO | Rules stored as children, cascade delete on NSG delete. Attach-to-subnet wiring via `networkSecurityGroup.id` reference on subnet body. |
+| 6.4 | `azurerm_lb` + backend pool + rule + probe | `Microsoft.Network/loadBalancers` | TODO | The "Load Balancer" from the ROADMAP roster. Children modelled as path-extensions of the LB id so cascade delete works. |
+| 6.5 | `azurerm_application_gateway` | `Microsoft.Network/applicationGateways` | TODO | The "ingress" primitive. Minimal config: frontend IP, backend pool, HTTP listener, routing rule. |
+| 6.6 | `azurerm_dns_zone` + record sets (A, AAAA, CNAME, TXT, MX, SRV, NS, SOA) | `Microsoft.Network/dnsZones` + `.../{type}` | TODO | Auto-SOA and auto-NS on zone create. Record sets as children. |
+| 6.7 | Address-space validation for VNets | `internal/arm/vnet.go` | TODO | Reject invalid CIDR, reject overlapping prefixes inside the same VNet. Currently `addressSpace` is passed through unvalidated. |
+| 6.8 | Inline subnets inside VNet PUT body: honour or keep dropping | `internal/arm/vnet.go`, `docs/PARITY.md` | TODO | Decision already documented in `TODO.md` "Known Gaps". Pick one and make it explicit in PARITY. |
 
-### Phase 8: Identity (IMDS + ADO OIDC)
+### Phase 6.5: Use-case scenarios for v0.2
 
-- IMDS token endpoint (`169.254.169.254` or configurable)
-- Workload identity federation (issuer/subject/audience matching)
-- Azure DevOps OIDC token issuer (compatible with `SYSTEM_OIDCREQUESTURI`)
-- ADO service connection CRUD (minimal)
+Goal: `examples/terraform/scenarios/` grows with each resource batch so
+new contributors learn by running real configurations, not toy snippets.
+A scenario that does not run green in CI is deleted.
+
+| # | Task | Scenario | Status | Requires |
+|---|---|---|---|---|
+| 6.5.1 | `scenarios/three-tier/` | Web + app + data tier with LB, App Gateway, VNet + 3 Subnets, NSG, Public IP | TODO | 6.2 through 6.5 |
+| 6.5.2 | `scenarios/static-site/` | Storage account hosting a static site behind a CDN profile with a DNS zone | TODO | Phase 7 (Storage, CDN) and 6.6 (DNS) |
+| 6.5.3 | `scenarios/dns-with-records/` | DNS zone plus A/AAAA/CNAME/TXT/MX record sets | TODO | 6.6 |
+
+### Phase 7: Storage, Key Vault, CDN (v0.2)
+
+Goal: the secrets-and-state story. Storage account management + container
+creation, Key Vault secrets CRUD, CDN profile + endpoint, correct suffix
+entries in the metadata response.
+
+| # | Task | ARM provider | Status | Notes |
+|---|---|---|---|---|
+| 7.1 | `azurerm_storage_account` | `Microsoft.Storage/storageAccounts` | TODO | Management plane. Name uniqueness check across subscription. |
+| 7.2 | `azurerm_storage_container` | `.../storageAccounts/blobServices/containers` | TODO | Minimal blob data-plane surface for what `azurerm_storage_container` actually writes. Not a full `azcopy` target (see ROADMAP non-goals). |
+| 7.3 | `azurerm_key_vault` | `Microsoft.KeyVault/vaults` | TODO | Management plane. Access policies as children. |
+| 7.4 | `azurerm_key_vault_secret` | `...vaults/secrets` | TODO | Secrets data plane. Versioned. |
+| 7.5 | `azurerm_cdn_profile` + `azurerm_cdn_endpoint` | `Microsoft.Cdn/profiles` + `.../endpoints` | TODO | The "CDN" from the ROADMAP roster. |
+| 7.6 | Verify `suffixes.*` in metadata response still match go-azure-sdk expectations for Storage/KV/CDN | `internal/metadata/service.go` | TODO | Add regression tests for the three suffix families. |
+
+### Phase 8: Identity, AKS, Azure DevOps bridge (v0.3)
+
+Goal: Terraform inside an Azure DevOps pipeline, using workload identity
+federation, provisions an AKS cluster (stub) and a Managed Identity against
+azemu with zero cloud cost. See ROADMAP v0.3 and the non-goals section.
+
+| # | Task | ARM provider / endpoint | Status | Notes |
+|---|---|---|---|---|
+| 8.1 | `azurerm_user_assigned_identity` | `Microsoft.ManagedIdentity/userAssignedIdentities` | TODO | Prerequisite for federated identity credentials. |
+| 8.2 | `azurerm_federated_identity_credential` | `.../userAssignedIdentities/{name}/federatedIdentityCredentials` | TODO | issuer/subject/audience matching. The machinery workload identity needs. |
+| 8.3 | IMDS token endpoint | `169.254.169.254/metadata/identity/oauth2/token` (host binding optional) | TODO | Pair with 8.2. |
+| 8.4 | `azurerm_kubernetes_cluster` | `Microsoft.ContainerService/managedClusters` | TODO (Stub only) | Management plane only. No live Kubernetes control plane. Explicit non-goal. |
+| 8.5 | Azure DevOps OIDC issuer endpoint | `SYSTEM_OIDCREQUESTURI` compatible | TODO | New package `internal/ado/`. |
+| 8.6 | ADO service connection CRUD | `dev.azure.com/{org}/{project}/_apis/serviceendpoint/endpoints` | TODO | Minimal surface the `azuredevops` Terraform provider hits during workload-identity flows. |
+| 8.7 | `scenarios/aks-workload/` | — | TODO | RG + VNet + Subnet + AKS + Managed Identity + Key Vault. |
+| 8.8 | `scenarios/ado-pipeline/` | — | TODO | ADO service connection + workload identity federation + Key Vault + Storage. |
 
 ### Phase 9: Wrapper CLI (aztf v2)
 
@@ -219,6 +284,18 @@ Acceptance: `git tag v0.1.0`, CI passes, binary releases published, Docker image
 - Out-of-process gRPC/HTTP module server protocol
 - Module registry and discovery
 - Community module repo template
+
+### Phase 11: Helm chart + Kubernetes deploy (v0.2 nice-to-have)
+
+Intentionally NOT v0.1. A chart is worth shipping only once azemu emulates
+enough resources to justify a team-shared CI cluster running it.
+
+- `charts/azemu/Chart.yaml`
+- `charts/azemu/templates/deployment.yaml` (one replica for file-store mode)
+- `charts/azemu/templates/service.yaml`
+- `charts/azemu/templates/pvc.yaml` (backing store for `AZEMU_CERT_PATH` and the Phase 4 file store)
+- `charts/azemu/values.yaml`
+- `examples/kubernetes/` manifests for users who do not want Helm
 
 ---
 
