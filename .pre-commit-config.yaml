@@ -1,0 +1,78 @@
+# Pre-commit hooks for azemu.
+#
+# Adapted from MiniBlue's config (github.com/moabukar/miniblue) which solves
+# the same problem space (Go-based local Azure emulator). Run on every
+# `git commit` to enforce hygiene before changes leave a developer's machine.
+#
+# Setup:
+#   pre-commit install        # one-time, registers .git/hooks/pre-commit
+#
+# Manual full-tree run:
+#   pre-commit run --all-files
+#
+# Bypass for an emergency commit (please don't make a habit of this):
+#   git commit --no-verify
+#
+# Bumping versions:
+#   pre-commit autoupdate
+#
+# Pinned versions match MiniBlue's known-good set. Bump deliberately, not
+# automatically — golangci-lint majors in particular have introduced breaking
+# config changes between releases.
+
+repos:
+  # === Generic file hygiene ===
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-json
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: ['--maxkb=500']
+      # NOTE: hook id is singular `mixed-line-ending`. MiniBlue's config has
+      # a typo (`mixed-line-endings`) which silently no-ops on older
+      # pre-commit versions and errors out on newer ones.
+      - id: mixed-line-ending
+        args: ['--fix=lf']
+      # Mechanical enforcement of CLAUDE.md section 4: "Do NOT commit to
+      # main directly. All work on feature branches." This hook blocks the
+      # commit if you forget to branch first. Bypass with --no-verify only
+      # in genuine emergencies.
+      - id: no-commit-to-branch
+        args: ['--branch=main']
+
+  # === Go formatting, vetting, and build ===
+  # MiniBlue uses the unmaintained dnephin/pre-commit-golang v0.5.1 which
+  # only ships the bare `go-vet` and `go-build` hooks. Those pass file
+  # paths to the go tool and fail for monorepo layouts where the actual
+  # Go files live in subdirectories. The maintained tekwizely/pre-commit-
+  # golang fork ships `-repo-mod` variants that run once at the repo root
+  # with `./...`, which is what we want.
+  - repo: https://github.com/tekwizely/pre-commit-golang
+    rev: v1.0.0-rc.4
+    hooks:
+      - id: go-fmt
+      - id: go-vet-repo-mod
+      - id: go-build-repo-mod
+
+  # === Comprehensive Go linting ===
+  # golangci-lint is configurable via .golangci.yml at the repo root. With
+  # no config file present it uses the default linter set, which matches
+  # MiniBlue's setup.
+  - repo: https://github.com/golangci/golangci-lint
+    rev: v1.62.2
+    hooks:
+      - id: golangci-lint
+
+  # === Markdown linting ===
+  # MD013 (line length): docs in this repo use long prose lines.
+  # MD033 (inline HTML): occasionally needed in tables and admonitions.
+  # MD041 (first line h1): not all README-style files start with a heading.
+  - repo: https://github.com/igorshubovych/markdownlint-cli
+    rev: v0.42.0
+    hooks:
+      - id: markdownlint
+        args: ['--fix', '--disable', 'MD013', 'MD033', 'MD041', '--']

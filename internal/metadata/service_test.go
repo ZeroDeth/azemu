@@ -53,7 +53,7 @@ func fetchMetadata(t *testing.T, srv *httptest.Server) map[string]interface{} {
 // The metadata response shape MUST match the canonical Azure public cloud
 // response from
 //
-//   GET https://management.azure.com/metadata/endpoints?api-version=2022-09-01
+//	GET https://management.azure.com/metadata/endpoints?api-version=2022-09-01
 //
 // verbatim. The list below is the exact set of top-level keys real Azure
 // returns. Any drift here means go-azure-sdk's environment loader will see

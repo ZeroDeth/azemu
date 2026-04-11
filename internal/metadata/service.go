@@ -47,9 +47,9 @@ func (s *Service) Routes(r chi.Router) {
 //
 // Substitution rules:
 //   - resourceManager + activeDirectoryResourceId + microsoftGraphResourceId
-//     + portal + graph + media + sqlManagement + batch + appServiceResourceId
-//     + appInsightsResourceId + activeDirectoryDataLake + attestationResourceId
-//     + logAnalyticsResourceId + synapseAnalyticsResourceId + ossrDbmsResourceId
+//   - portal + graph + media + sqlManagement + batch + appServiceResourceId
+//   - appInsightsResourceId + activeDirectoryDataLake + attestationResourceId
+//   - logAnalyticsResourceId + synapseAnalyticsResourceId + ossrDbmsResourceId
 //     -> azemu localhost (so the provider talks to us, not real Azure)
 //   - authentication.loginEndpoint -> azemu localhost (token requests stay local)
 //   - authentication.tenant -> "common" (cloud-environment identifier, not user tenant)
@@ -83,23 +83,23 @@ func (s *Service) endpoints(w http.ResponseWriter, r *http.Request) {
 		},
 
 		// === Resource manager and identity endpoints (redirected to azemu) ===
-		"resourceManager":          armBase + "/",
-		"activeDirectoryDataLake":  armBase + "/",
-		"microsoftGraphResourceId": authBase + "/",
-		"appServiceResourceId":     armBase,
-		"appInsightsResourceId":    armBase,
-		"attestationResourceId":    armBase,
+		"resourceManager":            armBase + "/",
+		"activeDirectoryDataLake":    armBase + "/",
+		"microsoftGraphResourceId":   authBase + "/",
+		"appServiceResourceId":       armBase,
+		"appInsightsResourceId":      armBase,
+		"attestationResourceId":      armBase,
 		"synapseAnalyticsResourceId": armBase,
-		"logAnalyticsResourceId":   armBase,
-		"ossrDbmsResourceId":       armBase,
+		"logAnalyticsResourceId":     armBase,
+		"ossrDbmsResourceId":         armBase,
 
 		// === Data plane / portal / management URLs (redirected) ===
-		"portal":        armBase,
-		"graph":         authBase + "/",
-		"graphAudience": authBase + "/",
-		"media":         armBase + "/",
-		"batch":         armBase + "/",
-		"sqlManagement": armBase + "/",
+		"portal":                                armBase,
+		"graph":                                 authBase + "/",
+		"graphAudience":                         authBase + "/",
+		"media":                                 armBase + "/",
+		"batch":                                 armBase + "/",
+		"sqlManagement":                         armBase + "/",
 		"appInsightsTelemetryChannelResourceId": "https://dc.applicationinsights.azure.com/v2/track",
 
 		// === Reference data (left as real public-cloud URLs) ===

@@ -76,7 +76,7 @@ See [docs/PARITY.md](docs/PARITY.md) for the full compatibility matrix.
 
 ## Project structure
 
-```
+```text
 CLAUDE.md          -- AI agent instructions (Claude Code)
 AGENTS.md          -- subagent skill definitions
 TASKS.md           -- implementation plan and task tracking
