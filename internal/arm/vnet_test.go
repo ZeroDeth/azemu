@@ -299,6 +299,45 @@ func TestVNet_LIST_BySubscription_ReturnsAll(t *testing.T) {
 	}
 }
 
+// TestVNet_LIST_ByRG_FiltersOutSubnets covers the "non-vnet type" continue
+// branch of writeVNetList that was missing from the Phase 2 initial slice
+// (TODO.md coverage gap: writeVNetList 85.7%). The subscription-scope list
+// uses a prefix that picks up subnets too, so the type filter must drop
+// them. Creating a vnet and a subnet beneath it and then listing vnets
+// exercises exactly that branch.
+func TestVNet_LIST_ByRG_FiltersOutSubnets(t *testing.T) {
+	srv := newTestServer(t)
+	vnetU := vnetURL(srv.URL, "sub1", "rg1", "vnet-with-child")
+	resp := httpPut(t, vnetU, vnetBodyMinimal)
+	assertStatus(t, resp, http.StatusCreated)
+	resp.Body.Close()
+
+	// Add a subnet so store.List(prefix) returns both the vnet and the
+	// subnet. Without the type filter, writeVNetList would incorrectly
+	// render the subnet as a vnet item.
+	resp = httpPut(t, vnetU+"/subnets/child", `{"properties":{"addressPrefix":"10.0.1.0/24"}}`)
+	assertStatus(t, resp, http.StatusCreated)
+	resp.Body.Close()
+
+	resp = httpGet(t, vnetListByRGURL(srv.URL, "sub1", "rg1"))
+	assertStatus(t, resp, http.StatusOK)
+	body := decodeJSON(t, resp)
+	items, ok := body["value"].([]interface{})
+	if !ok {
+		t.Fatalf("value missing or wrong type: %T", body["value"])
+	}
+	if len(items) != 1 {
+		t.Fatalf("len(items) = %d, want 1 (subnet must be filtered out)", len(items))
+	}
+	item := items[0].(map[string]interface{})
+	if item["type"] != vnetTypeString {
+		t.Errorf("type = %v, want %s", item["type"], vnetTypeString)
+	}
+	if item["name"] != "vnet-with-child" {
+		t.Errorf("name = %v, want vnet-with-child", item["name"])
+	}
+}
+
 func TestVNet_LIST_Empty_ReturnsEmptyArray(t *testing.T) {
 	srv := newTestServer(t)
 	resp := httpGet(t, vnetListByRGURL(srv.URL, "sub1", "rg-empty"))
