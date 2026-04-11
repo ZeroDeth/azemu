@@ -10,6 +10,7 @@ Common errors and their fixes.
 system or by the tool making the request.
 
 **Fix (curl/CLI):** Export the cert path from azemu's startup log:
+
 ```bash
 export SSL_CERT_FILE=/var/folders/.../azemu-cert.pem
 # Use the path printed by azemu on startup
@@ -17,6 +18,7 @@ export SSL_CERT_FILE=/var/folders/.../azemu-cert.pem
 
 **Fix (macOS -- Terraform/Go clients):** The azurerm provider uses Go's native
 TLS stack which checks the macOS keychain, not `SSL_CERT_FILE`:
+
 ```bash
 security add-trusted-cert \
   -d -r trustRoot \
@@ -25,6 +27,7 @@ security add-trusted-cert \
 ```
 
 **Fix (Linux):**
+
 ```bash
 sudo cp "$SSL_CERT_FILE" /usr/local/share/ca-certificates/azemu.crt
 sudo update-ca-certificates
@@ -40,6 +43,7 @@ entire session.
 holding the port.
 
 **Fix:**
+
 ```bash
 pkill -f "bin/azemu"
 sleep 1
@@ -50,7 +54,7 @@ sleep 1
 
 ### `Azure Stack is not supported`
 
-```
+```text
 The AzureRM Provider supports the different Azure Public Clouds - including
 China, Public, and US Government - however it does not support Azure Stack
 due to differences in API and feature availability
@@ -71,6 +75,7 @@ which the provider recognises as a public-style cloud. Both ports 4566 and
 listens on IPv4.
 
 **Fix:**
+
 ```bash
 export ARM_METADATA_HOSTNAME=127.0.0.1:4567
 ```
@@ -80,6 +85,7 @@ export ARM_METADATA_HOSTNAME=127.0.0.1:4567
 **Cause:** The azurerm provider v4.x deprecated `skip_provider_registration`.
 
 **Fix:** Use the replacement:
+
 ```hcl
 resource_provider_registrations = "none"
 ```
@@ -91,6 +97,7 @@ resource_provider_registrations = "none"
 **Cause:** The subcommand syntax changed. Use `activate -c` instead.
 
 **Fix:**
+
 ```bash
 # Wrong
 flox exec -- terraform version
@@ -104,6 +111,7 @@ flox activate -c "terraform version"
 **Cause:** Stale background processes from a previous session.
 
 **Fix:** Kill the PIDs listed in the error, or run:
+
 ```bash
 kill $(pgrep -f "flox")
 ```
@@ -116,6 +124,7 @@ kill $(pgrep -f "flox")
 assignment.
 
 **Fix:**
+
 ```go
 // Wrong
 r.NotFound = handler

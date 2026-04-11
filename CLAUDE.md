@@ -12,6 +12,7 @@ Licence: MIT
 Owner: Sherif Abdalla (ZeroDeth)
 
 The project exists because:
+
 - MiniBlue (miniblue.io) proved the `metadata_host` provider redirection works
   but has limited ARM coverage and no Azure DevOps identity story.
 - LocalStack proved the developer workflow (wrapper CLI, state snapshots,
@@ -23,7 +24,7 @@ The project exists because:
 
 ## 2) Architecture Overview
 
-```
+```text
 Developer / CI
     |
     v
@@ -58,6 +59,7 @@ azemu serves this endpoint and returns URLs pointing back to itself, so all
 subsequent ARM calls, token requests, and data plane calls stay local.
 
 This requires:
+
 - HTTPS on port 4567 with a self-signed cert (TLS mandatory for metadata)
 - HTTP on port 4566 for ARM and data plane calls
 - Mock OAuth2 token endpoint that returns valid JWTs
@@ -65,7 +67,7 @@ This requires:
 
 ### Package layout
 
-```
+```text
 cmd/azemu/main.go              -- entrypoint, server setup, graceful shutdown
 internal/
   metadata/service.go          -- /metadata/endpoints (the redirect root)
@@ -102,7 +104,7 @@ docs/
 
 ### Dependency direction (enforced)
 
-```
+```text
 cmd/azemu --> internal/* --> pkg/*
                          --> store.Store (interface)
 
@@ -234,17 +236,20 @@ kill %1
 
 Claude Code can spawn subagents for independent, parallelisable work.
 Use subagents when:
+
 - Writing tests for multiple packages simultaneously
 - Implementing independent ARM resource handlers
 - Running lint + build + test in parallel
 
 Do NOT use subagents when:
+
 - Changes are sequential and interdependent
 - Modifying shared interfaces (Store, ARM helpers, middleware)
 - Debugging a test failure (need full context)
 
 Subagent task template:
-```
+
+```text
 ## Subagent Task: [short name]
 ### Scope
 [exactly which files to create/modify]
@@ -268,6 +273,7 @@ Subagent task template:
 ### Code review mode
 
 When asked to review code:
+
 1. Check for correctness against ARM API contracts
 2. Check error handling (no swallowed errors, proper wrapping)
 3. Check test coverage (new code must have tests)
@@ -313,6 +319,7 @@ log.Info().Msgf("created resource %s via %s", id, r.Method)
 ### HTTP handlers
 
 All ARM endpoint handlers MUST:
+
 1. Extract path parameters with `chi.URLParam(r, "name")`
 2. Validate required fields (return Azure error format on failure)
 3. Set `Content-Type: application/json` on all responses
@@ -338,6 +345,7 @@ func (a *Router) getResourceGroup(w http.ResponseWriter, r *http.Request) {
 ### ARM response shapes
 
 Every ARM resource response MUST include:
+
 ```json
 {
     "id": "/subscriptions/{sub}/resourceGroups/{name}",
@@ -464,7 +472,7 @@ They are the contract. Violating them is a bug.
 | `internal/middleware` | api-version rejection, Azure headers present, metadata/auth exempt from api-version | 90% |
 | `pkg/config` | Env var loading, defaults, flag overrides | 80% |
 
-### Integration tests
+### Integration tests (test layout)
 
 Location: `test/integration/`
 Build tag: `//go:build integration`
@@ -477,6 +485,7 @@ They test the full request flow: routing, middleware, handler, store, response.
 Location: `test/terraform/`
 
 Two levels:
+
 1. `.tftest.hcl` files: run with `terraform test` against a live azemu instance.
 2. `test/compatibility/`: recorded HTTP traces from `terraform apply` against
    real Azure, diffed against azemu responses. (v0.2+)
@@ -484,6 +493,7 @@ Two levels:
 ### What to test when adding a new ARM resource
 
 Checklist:
+
 - [ ] Unit test: PUT returns 201 on create, 200 on update
 - [ ] Unit test: GET returns 200 with correct shape, 404 when missing
 - [ ] Unit test: DELETE returns 202, subsequent GET returns 404
@@ -500,11 +510,14 @@ Checklist:
 ## 9) Unhandled Route Strategy
 
 Any request to a path that does not match a registered route MUST:
+
 1. Log the full request (method, path, query, headers) at WARN level
 2. Return 501 Not Implemented with Azure error format:
+
    ```json
    {"error": {"code": "NotImplemented", "message": "azemu does not implement {method} {path}. See TODO.md."}}
    ```
+
 3. Append the path to an in-memory "unhandled routes" list
 4. Expose `GET /api/unhandled` on the HTTP port to dump the list (for debugging)
 
@@ -547,6 +560,7 @@ The file `docs/PARITY.md` tracks what azemu implements. Update it whenever
 a resource handler is added or changed.
 
 Format:
+
 ```markdown
 | Resource | ARM CRUD | Data Plane | Terraform Resource | Status |
 |----------|----------|------------|-------------------|--------|
@@ -556,6 +570,7 @@ Format:
 ```
 
 Status values:
+
 - **Full**: all CRUD operations implemented and tested
 - **Stub**: endpoint exists, returns 200 but data is not persisted or validated
 - **None**: not implemented

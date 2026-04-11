@@ -12,6 +12,7 @@ Purpose: Implement a new ARM resource type end-to-end.
 Input: Resource name, ARM API reference URL, Terraform resource name.
 
 Outputs:
+
 - `internal/arm/{resource}.go` -- CRUD handlers
 - `internal/arm/{resource}_test.go` -- unit tests
 - Updated `internal/arm/router.go` -- route registration
@@ -20,6 +21,7 @@ Outputs:
 - `test/terraform/{resource}.tftest.hcl` -- HCL test
 
 Constraints:
+
 - MUST follow the handler pattern in `internal/arm/router.go` (existing resource group handlers are the reference)
 - MUST use `writeJSON` and `writeAzureError` helpers from `internal/arm/helpers.go`
 - MUST NOT modify `internal/store/store.go` interface without escalating
@@ -28,6 +30,7 @@ Constraints:
 - Response shapes MUST match Azure ARM format (id, name, type, location, tags, properties)
 
 Verification:
+
 ```bash
 go test ./internal/arm/... -v -run Test{Resource}
 go build -o bin/azemu ./cmd/azemu
@@ -42,10 +45,12 @@ Purpose: Write comprehensive tests for an existing package.
 Input: Package path (e.g., `internal/auth`), current coverage gaps.
 
 Outputs:
+
 - `{package}/*_test.go` files
 - Test helper file if shared setup is needed
 
 Constraints:
+
 - MUST use standard `testing` package only. No testify, no gomock.
 - MUST use `httptest` for HTTP handler tests.
 - MUST use table-driven tests where there are 3+ cases for the same function.
@@ -54,6 +59,7 @@ Constraints:
 - Test names: `Test{Function}_{scenario}` (e.g., `TestPut_cascadeDelete`).
 
 Verification:
+
 ```bash
 go test ./{package}/... -v -count=1 -race -coverprofile=coverage.out
 go tool cover -func=coverage.out
@@ -68,6 +74,7 @@ Purpose: Review a set of file changes for correctness, style, and completeness.
 Input: List of changed files or a diff.
 
 Review criteria (in priority order):
+
 1. **Correctness**: does the code match ARM API contracts from CLAUDE.md section 6?
 2. **Error handling**: no swallowed errors, proper `fmt.Errorf` wrapping with `%w`?
 3. **Tests**: every new function has a test? Error paths covered?
@@ -78,6 +85,7 @@ Review criteria (in priority order):
 8. **Docs**: PARITY.md updated? README updated? TODO items tracked?
 
 Output: Numbered list of findings. Each finding has:
+
 - Severity: BLOCKER / WARNING / SUGGESTION
 - File and line reference
 - What is wrong
@@ -92,6 +100,7 @@ Purpose: Diagnose why `terraform apply` fails against azemu.
 Input: Terraform error output, azemu server logs.
 
 Process:
+
 1. Check azemu logs for unhandled routes (`GET /api/unhandled`).
 2. For each unhandled route, identify what the `azurerm` provider expects.
 3. Determine if the fix is:
@@ -102,11 +111,13 @@ Process:
 4. Propose minimal changes to make the specific `terraform apply` succeed.
 
 Constraints:
+
 - Fix only what is needed for the current failure. Do not speculatively add endpoints.
 - Log every unhandled route encountered during debugging.
 - Update TODO.md with endpoints discovered but not yet needed.
 
 Output:
+
 - Root cause analysis (2-3 sentences)
 - Specific code changes with diffs
 - Updated test to prevent regression
@@ -120,6 +131,7 @@ Purpose: Write or update project documentation.
 Input: What changed, which docs to update.
 
 Files this skill may modify:
+
 - `README.md`
 - `docs/PARITY.md`
 - `docs/ARCHITECTURE.md`
@@ -128,6 +140,7 @@ Files this skill may modify:
 - `CHANGELOG.md`
 
 Constraints:
+
 - No em dashes. Use commas, semicolons, or restructure.
 - No AI-sounding language: avoid "leverage", "robust", "comprehensive",
   "streamline", "cutting-edge", "deep dive", "synergy", "holistic".
@@ -143,7 +156,7 @@ Constraints:
 
 When implementing multiple independent ARM resources (e.g., VNets and DNS zones):
 
-```
+```text
 Main agent:
   1. Define shared types in pkg/armtypes/ if needed
   2. Update internal/arm/router.go with route stubs
@@ -162,7 +175,7 @@ Main agent:
 
 When fixing Terraform compatibility issues:
 
-```
+```text
 Main agent:
   1. Run terraform apply, capture output
   2. Spawn subagents:
@@ -179,7 +192,7 @@ Main agent:
 
 When filling test coverage gaps across multiple packages:
 
-```
+```text
 Main agent:
   1. Run coverage report: go test ./... -coverprofile=c.out && go tool cover -func=c.out
   2. Identify packages below target coverage

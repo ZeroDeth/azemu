@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+
 - Project scaffold: dual HTTP/HTTPS server, chi routing, zerolog logging
 - Metadata service (`/metadata/endpoints`) for azurerm provider redirection
 - Mock OAuth2 token endpoint with RS256 JWT signing

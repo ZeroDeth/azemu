@@ -51,6 +51,7 @@ What azemu implements. Updated whenever a resource handler changes.
 ---
 
 Status key:
+
 - **Full**: implemented and tested
 - **Scaffold**: code exists but not validated or tested
 - **Stub**: endpoint returns 200 but no real logic

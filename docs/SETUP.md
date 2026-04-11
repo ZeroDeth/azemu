@@ -41,7 +41,7 @@ flox activate -c "terraform -chdir=test/terraform init"
 azemu generates a new self-signed TLS certificate every time it starts. The
 certificate path is printed on startup:
 
-```
+```text
 INF TLS cert written, export SSL_CERT_FILE to trust it path=/var/folders/.../azemu-cert.pem
 ```
 
@@ -115,6 +115,7 @@ make build
 ```
 
 Ports:
+
 - `:4566` (HTTPS) - ARM API, data plane
 - `:4567` (HTTPS) - metadata service, OAuth2, OIDC
 

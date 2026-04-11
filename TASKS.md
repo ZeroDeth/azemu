@@ -79,7 +79,8 @@ Goal: comprehensive unit and integration tests, coverage targets met.
 Acceptance: `go test ./... -v -race` passes. All packages meet coverage targets.
 
 Subagent plan for this phase:
-```
+
+```text
 Parallel subagents (3):
   A: test-writer for internal/store + internal/middleware
   B: test-writer for internal/arm (depends on test helpers from 2.1)
@@ -152,6 +153,7 @@ Acceptance: `git tag v0.1.0`, CI passes, binary releases published, Docker image
 ## Future Phases (not in v0.1 scope, tracked for context)
 
 ### Phase 6: VNets + Subnets + DNS Zones
+
 - **DONE (out-of-phase, `feat/vnet-subnet`):** ARM CRUD for `Microsoft.Network/virtualNetworks`, `Microsoft.Network/virtualNetworks/subnets`. Includes cascade delete via store prefix match, embedded-subnets-on-vnet-GET, `ParentResourceNotFound` on subnet PUT when parent vnet is missing, and 25 unit tests + 1 integration test. See `docs/PARITY.md`.
 - TODO: ARM CRUD for `Microsoft.Network/dnsZones`, `Microsoft.Network/dnsZones/recordSets`
 - TODO: Address space validation for VNets (current impl passes `addressSpace` through without CIDR/format checks)
@@ -159,23 +161,27 @@ Acceptance: `git tag v0.1.0`, CI passes, binary releases published, Docker image
 - TODO: Auto SOA/NS for DNS zones
 
 ### Phase 7: Storage Accounts + Key Vault
+
 - ARM management plane for `Microsoft.Storage/storageAccounts`
 - Data plane for Key Vault secrets (CRUD)
 - Correct endpoint suffixes in metadata response
 
 ### Phase 8: Identity (IMDS + ADO OIDC)
+
 - IMDS token endpoint (`169.254.169.254` or configurable)
 - Workload identity federation (issuer/subject/audience matching)
 - Azure DevOps OIDC token issuer (compatible with `SYSTEM_OIDCREQUESTURI`)
 - ADO service connection CRUD (minimal)
 
 ### Phase 9: Wrapper CLI (aztf v2)
+
 - Go-based CLI replacing the shell script
 - Auto-start azemu, cert trust, provider config generation
 - `aztf snapshot save/load/list` for state management
 - `aztf parity` to show supported resources
 
 ### Phase 10: Plugin SDK
+
 - In-process Go plugin interface for resource modules
 - Out-of-process gRPC/HTTP module server protocol
 - Module registry and discovery

@@ -128,8 +128,8 @@ func (a *Router) putResourceGroup(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "resourceGroupName")
 
 	var body struct {
-		Location   string            `json:"location"`
-		Tags       map[string]string `json:"tags"`
+		Location   string                 `json:"location"`
+		Tags       map[string]string      `json:"tags"`
 		Properties map[string]interface{} `json:"properties"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
