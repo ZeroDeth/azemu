@@ -1,208 +1,116 @@
 # AGENTS.md -- azemu
 
-This file defines subagent skills for parallelisable work in the azemu project.
-Claude Code auto-loads this file. Subagents inherit all rules from CLAUDE.md.
+A README for any coding agent (Claude Code, Cursor, Codex, Aider, etc.)
+working on this project. See <https://agents.md> for the spec.
 
----
+## Project
 
-## Skill: arm-resource-implementer
+**azemu** is a Terraform-first, open-source local Azure emulator written in
+Go. It intercepts the `hashicorp/azurerm` Terraform provider via the
+metadata-redirect pattern and serves a subset of the Azure Resource Manager
+REST API surface locally, so contributors can run `terraform apply` against
+a fake Azure with no subscription and no external auth.
 
-Purpose: Implement a new ARM resource type end-to-end.
+- Module: `github.com/zerodeth/azemu`
+- Owner: Sherif Abdalla (ZeroDeth)
+- Licence: MIT
+- Status: Phase 1 complete. `terraform init && apply && destroy` round-trip
+  is green against azurerm v4.x for resource groups, virtual networks, and
+  subnets.
 
-Input: Resource name, ARM API reference URL, Terraform resource name.
+Read `docs/ARCHITECTURE.md` for the system design, package layout, and
+request flow. Read `docs/PARITY.md` for the full matrix of what is
+implemented today.
 
-Outputs:
+## Build and test
 
-- `internal/arm/{resource}.go` -- CRUD handlers
-- `internal/arm/{resource}_test.go` -- unit tests
-- Updated `internal/arm/router.go` -- route registration
-- Updated `docs/PARITY.md` -- status entry
-- `test/terraform/{resource}.tf` -- Terraform example
-- `test/terraform/{resource}.tftest.hcl` -- HCL test
-
-Constraints:
-
-- MUST follow the handler pattern in `internal/arm/router.go` (existing resource group handlers are the reference)
-- MUST use `writeJSON` and `writeAzureError` helpers from `internal/arm/helpers.go`
-- MUST NOT modify `internal/store/store.go` interface without escalating
-- MUST NOT add new dependencies
-- MUST include all test cases from the "Add a new ARM resource type" checklist in CLAUDE.md section 12
-- Response shapes MUST match Azure ARM format (id, name, type, location, tags, properties)
-
-Verification:
+The project ships a `flox` environment that pins Go, Terraform, pre-commit,
+and the supporting tools. Activating it gives you everything at the exact
+versions the project is tested against.
 
 ```bash
-go test ./internal/arm/... -v -run Test{Resource}
-go build -o bin/azemu ./cmd/azemu
+flox activate          # installs pre-commit hook on first run
+make build             # go build -o bin/azemu ./cmd/azemu
+make test              # go test ./... -v -count=1
+make smoke             # build + start + curl smoke test + stop
+azemu-start            # flox helper: build, start, print one-time cert trust
+ta && td               # flox helpers: terraform apply && destroy
+azemu-stop
 ```
 
----
+For the manual (non-flox) setup, the environment variables, the persistent
+TLS cert path (`AZEMU_CERT_PATH`), and the IPv6 / `localhost` gotcha, read
+`docs/SETUP.md`. For known errors and their fixes, read
+`docs/TROUBLESHOOTING.md`.
 
-## Skill: test-writer
+## Conventions
 
-Purpose: Write comprehensive tests for an existing package.
+Full reference lives in `docs/CONVENTIONS.md`. The highlights:
 
-Input: Package path (e.g., `internal/auth`), current coverage gaps.
+- **Go style** (error wrapping with `%w`, structured zerolog, no printf-style
+  logging): `docs/CONVENTIONS.md` S1. Also enforced path-scoped by
+  `.claude/rules/go-style.md`.
+- **ARM API fidelity rules** (api-version required, PUT idempotency,
+  DELETE-is-async, HEAD semantics, Azure error format, Azure headers,
+  lowercase location, cascade delete, lowercase chi path literals):
+  `docs/CONVENTIONS.md` S2. Also enforced path-scoped by
+  `.claude/rules/arm-handlers.md` (loads only when touching
+  `internal/arm/**/*.go`).
+- **Auth fidelity rules** (RS256 JWT claims, OIDC discovery fields, JWKS
+  shape, TLS cert persistence via `AZEMU_CERT_PATH`): `docs/CONVENTIONS.md` S3.
+- **Testing strategy** and per-package coverage targets:
+  `docs/CONVENTIONS.md` S4. Also `.claude/rules/tests.md`.
+- **Documentation style** (no em-dashes, no AI-buzzwords, markdownlint
+  gotchas): `.claude/rules/docs.md`.
 
-Outputs:
+## Branch and commit discipline
 
-- `{package}/*_test.go` files
-- Test helper file if shared setup is needed
+- All work on feature branches. The pre-commit hook blocks commits to `main`.
+- One logical change per commit. Do not bundle refactors with feature work.
+- Do not skip pre-commit hooks (`--no-verify`). Fix the underlying issue
+  instead.
+- Do not push to remote unless explicitly asked.
+- Do not `git push --force`, do not `git reset --hard` shared branches, do
+  not amend published commits.
 
-Constraints:
+Full before-commit checklist: `docs/CHECKLISTS.md`.
 
-- MUST use standard `testing` package only. No testify, no gomock.
-- MUST use `httptest` for HTTP handler tests.
-- MUST use table-driven tests where there are 3+ cases for the same function.
-- MUST test error paths, not just happy paths.
-- MUST NOT modify the code under test (test-only changes).
-- Test names: `Test{Function}_{scenario}` (e.g., `TestPut_cascadeDelete`).
+## Safety
 
-Verification:
+- Do not modify `go.mod` / `go.sum` to add dependencies without approval.
+- Do not edit `Dockerfile`, `LICENSE`, or `.github/` workflows without
+  approval.
+- Do not edit linter config (`.pre-commit-config.yaml`, `.markdownlint.yaml`)
+  to silence a violation; fix the offending source instead.
+- Do not commit secrets, tokens, private keys, or `.env*` files.
+- The self-signed TLS cert is generated at runtime. Never commit it. The
+  persistent cert bundle lives at `.azemu/cert-bundle.pem` and is gitignored.
+- Do not delete files or branches without explicit approval.
 
-```bash
-go test ./{package}/... -v -count=1 -race -coverprofile=coverage.out
-go tool cover -func=coverage.out
-```
+## Subagents and orchestration
 
----
+Subagent role definitions (arm-resource-implementer, test-writer,
+code-reviewer, terraform-compatibility-debugger, docs-writer) and
+orchestration patterns live in `docs/SUBAGENTS.md`. They are reference
+recipes, not auto-loaded behavior. Invoke them explicitly when the shape
+of the work matches.
 
-## Skill: code-reviewer
+## Project files at a glance
 
-Purpose: Review a set of file changes for correctness, style, and completeness.
-
-Input: List of changed files or a diff.
-
-Review criteria (in priority order):
-
-1. **Correctness**: does the code match ARM API contracts from CLAUDE.md section 6?
-2. **Error handling**: no swallowed errors, proper `fmt.Errorf` wrapping with `%w`?
-3. **Tests**: every new function has a test? Error paths covered?
-4. **Package boundaries**: no import cycles? Dependency direction respected?
-5. **Response shapes**: ARM JSON matches Azure format exactly?
-6. **Logging**: structured zerolog fields, not printf-style?
-7. **Style**: Go conventions, consistent naming, no unnecessary abstractions?
-8. **Docs**: PARITY.md updated? README updated? TODO items tracked?
-
-Output: Numbered list of findings. Each finding has:
-
-- Severity: BLOCKER / WARNING / SUGGESTION
-- File and line reference
-- What is wrong
-- How to fix it
-
----
-
-## Skill: terraform-compatibility-debugger
-
-Purpose: Diagnose why `terraform apply` fails against azemu.
-
-Input: Terraform error output, azemu server logs.
-
-Process:
-
-1. Check azemu logs for unhandled routes (`GET /api/unhandled`).
-2. For each unhandled route, identify what the `azurerm` provider expects.
-3. Determine if the fix is:
-   - A new endpoint (route it, implement handler)
-   - A response shape correction (fix existing handler)
-   - A missing header or status code
-   - A token/auth issue
-4. Propose minimal changes to make the specific `terraform apply` succeed.
-
-Constraints:
-
-- Fix only what is needed for the current failure. Do not speculatively add endpoints.
-- Log every unhandled route encountered during debugging.
-- Update TODO.md with endpoints discovered but not yet needed.
-
-Output:
-
-- Root cause analysis (2-3 sentences)
-- Specific code changes with diffs
-- Updated test to prevent regression
-
----
-
-## Skill: docs-writer
-
-Purpose: Write or update project documentation.
-
-Input: What changed, which docs to update.
-
-Files this skill may modify:
-
-- `README.md`
-- `docs/PARITY.md`
-- `docs/ARCHITECTURE.md`
-- `docs/CONTRIBUTING.md`
-- `TODO.md`
-- `CHANGELOG.md`
-
-Constraints:
-
-- No em dashes. Use commas, semicolons, or restructure.
-- No AI-sounding language: avoid "leverage", "robust", "comprehensive",
-  "streamline", "cutting-edge", "deep dive", "synergy", "holistic".
-- Technical terms must be exact (e.g., "azurerm provider", not "Azure Terraform plugin").
-- Keep README concise. Detailed docs go in `docs/`.
-- Code examples in docs MUST be copy-pasteable and tested.
-
----
-
-## Subagent Orchestration Patterns
-
-### Pattern: Parallel resource implementation
-
-When implementing multiple independent ARM resources (e.g., VNets and DNS zones):
-
-```text
-Main agent:
-  1. Define shared types in pkg/armtypes/ if needed
-  2. Update internal/arm/router.go with route stubs
-  3. Spawn subagents:
-
-  Subagent A (arm-resource-implementer): VNet + Subnet handlers + tests
-  Subagent B (arm-resource-implementer): DNS Zone handlers + tests
-
-  4. After both complete:
-     - Review merged code for conflicts
-     - Run full test suite
-     - Update PARITY.md and README
-```
-
-### Pattern: Test-then-fix
-
-When fixing Terraform compatibility issues:
-
-```text
-Main agent:
-  1. Run terraform apply, capture output
-  2. Spawn subagents:
-
-  Subagent A (terraform-compatibility-debugger): analyse failure
-  Subagent B (test-writer): write regression test for the expected behaviour
-
-  3. After analysis:
-     - Implement fix
-     - Run the pre-written test to confirm it passes
-```
-
-### Pattern: Comprehensive test coverage push
-
-When filling test coverage gaps across multiple packages:
-
-```text
-Main agent:
-  1. Run coverage report: go test ./... -coverprofile=c.out && go tool cover -func=c.out
-  2. Identify packages below target coverage
-  3. Spawn subagents (max 3 parallel):
-
-  Subagent A (test-writer): internal/store tests
-  Subagent B (test-writer): internal/auth tests
-  Subagent C (test-writer): internal/middleware tests
-
-  4. After all complete:
-     - Run full suite with race detector
-     - Verify coverage targets met
-```
+| File | Purpose |
+|------|---------|
+| `README.md` | Public-facing intro and quickstart |
+| `CHANGELOG.md` | Keep-a-changelog release history |
+| `TASKS.md` | Phased implementation plan, current status |
+| `TODO.md` | Known gaps and post-mortems |
+| `CLAUDE.md` | Claude-Code-specific overrides (imports this file) |
+| `docs/ARCHITECTURE.md` | Package layout, dependency graph, request flow |
+| `docs/CONVENTIONS.md` | Full Go/ARM/auth/testing reference |
+| `docs/CHECKLISTS.md` | Add-a-resource, modify-store, before-commit recipes |
+| `docs/SUBAGENTS.md` | Subagent role definitions and orchestration patterns |
+| `docs/PARITY.md` | Full/Stub/None matrix per resource |
+| `docs/SETUP.md` | Contributor onboarding (flox + manual paths) |
+| `docs/TROUBLESHOOTING.md` | Common errors and fixes |
+| `.claude/rules/*.md` | Path-scoped rules that load only when matching files are touched |
+| `.flox/env/manifest.toml` | Pinned dev environment (Go, Terraform, pre-commit, ...) |
+| `.pre-commit-config.yaml` | Hygiene + go vet/build + golangci-lint + markdownlint |
