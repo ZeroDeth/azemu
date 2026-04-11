@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -134,6 +133,14 @@ func (a *Router) putResourceGroup(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		writeAzureError(w, http.StatusBadRequest, "InvalidRequestContent", err.Error())
+		return
+	}
+	// Mirror the validation pattern used by vnet.go / subnet.go: a PUT with
+	// no location is rejected with 400 InvalidRequestContent. Previously
+	// putResourceGroup predated this pattern and accepted `{}` silently.
+	if strings.TrimSpace(body.Location) == "" {
+		writeAzureError(w, http.StatusBadRequest, "InvalidRequestContent",
+			"location is required")
 		return
 	}
 
@@ -280,9 +287,4 @@ func writeAzureError(w http.ResponseWriter, status int, code, message string) {
 			"message": message,
 		},
 	})
-}
-
-// azureTimestamp returns ARM-style timestamp.
-func azureTimestamp() string {
-	return time.Now().UTC().Format("2006-01-02T15:04:05.0000000Z")
 }

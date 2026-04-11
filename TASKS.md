@@ -2,7 +2,9 @@
 
 Version: 0.1
 Last updated: 2026-04-11
-Status: Phase 1 acceptance MET (terraform apply+destroy round-trip green). Current focus: Phase 2 (test coverage backfill).
+Status: Phase 1 + Phase 2 acceptance MET. All per-package coverage targets
+from `.claude/rules/tests.md` met or exceeded. Current focus: Phase 2.5
+(package-ownership cleanup) and Phase 3 (developer experience).
 
 > **Out-of-phase work on `feat/vnet-subnet` (2026-04-10):** VNets + Subnets
 > (Phase 6) were implemented ahead of Phase 1 acceptance because the feature
@@ -74,21 +76,49 @@ Goal: comprehensive unit and integration tests, coverage targets met.
 | 2.4 | Auth tests: JWT claims, OIDC discovery fields, JWKS key match, token expiry | `internal/auth/token_test.go` | DONE | 14 new tests (9 from plan matrix + 5 coverage gap fillers), package coverage 88%. End-to-end JWKS signature verification pins the kid-in-header contract. |
 | 2.5 | Metadata tests: all required fields present, URLs use correct host | `internal/metadata/service_test.go` | DONE | Landed via `fix/metadata-classifier-bugs`. 4 tests: required fields, all-localhost-urls-https, not-classified-as-azure-stack, dataplane-fields-are-https. The latter two pin the exact go-azure-sdk classifier conditions. |
 | 2.6 | Middleware tests: api-version rejection, Azure headers, metadata exempt | `internal/middleware/azure_test.go` | DONE | 13 tests (8 from plan matrix + 5 for `unhandled.go`), 100% package coverage. `AzureHeaders` confirmed to always overwrite pre-existing headers. |
-| 2.7 | Config tests: env var loading, defaults, flag overrides | `pkg/config/config_test.go` | TODO | |
-| 2.8 | Integration smoke test: start server, full CRUD, verify responses | `test/integration/smoke_test.go` | PARTIAL | `test/integration/arm_test.go` from `feat/vnet-subnet` covers RG+VNet+Subnet full lifecycle through the production middleware stack (httptest in-process, not a real TCP listener). Subscriptions/providers/auth/metadata still uncovered. |
-| 2.9 | Coverage report: verify targets from CLAUDE.md section 8 | | TODO | `go test -coverprofile` |
+| 2.7 | Config tests: env var loading, defaults, flag overrides | `pkg/config/config_test.go` | DONE | 11 cases, 100% coverage. Pins AZEMU_SUBSCRIPTION_ID / AZEMU_TENANT_ID / AZEMU_METADATA_HOST / AZEMU_CERT_PATH, the empty-string-is-unset semantics of `envOr`, and the "ports are hardcoded today" contract. |
+| 2.8 | Integration smoke test: start server, full CRUD, verify responses | `test/integration/*.go` | DONE | `arm_test.go` (RG+VNet+Subnet lifecycle), `auth_test.go` (token mint + OIDC discovery + JWKS end-to-end signature verification), `metadata_test.go` (M1/M2/M3 canonical-schema regression pins). Shared TLS harness in `harness_test.go` mirrors `cmd/azemu/main.go`. |
+| 2.9 | Coverage report: verify targets from `.claude/rules/tests.md` | | DONE | `store` 100%, `arm` 92.6%, `auth` 88.0%, `metadata` 100%, `middleware` 100%, `config` 100%. All packages meet or exceed targets. `go test ./... -race` green. |
 
-Acceptance: `go test ./... -v -race` passes. All packages meet coverage targets.
+Acceptance: `go test ./... -v -race` passes. All packages meet coverage targets. ✅
 
-Subagent plan for this phase:
+**Phase 2 closeout batch (2026-04-11) also landed:**
+
+- Deleted `azureTimestamp` dead code from `internal/arm/router.go` (was 0% coverage, never called).
+- Fixed `putResourceGroup` empty-location validation gap so RG PUT matches
+  the vnet/subnet pattern; `TestRG_PUT_MissingLocation_CurrentlyAccepted`
+  flipped to `TestRG_PUT_MissingLocation_Returns400` plus a whitespace
+  companion. Removed from `TODO.md` Known Gaps.
+- Backfilled the three deferred VNet/Subnet coverage holes
+  (`headSubnet` 77.8% → 100%, `deleteSubnet` 81.8% → 100%, `writeVNetList`
+  85.7% → 100%).
+
+Subagent plan that shipped Phase 2:
 
 ```text
 Parallel subagents (3):
   A: test-writer for internal/store + internal/middleware
   B: test-writer for internal/arm (depends on test helpers from 2.1)
   C: test-writer for internal/auth + internal/metadata
-Sequential after merge: integration test (2.8), coverage verification (2.9)
+Sequential closeout batch: pkg/config tests (2.7), integration auth+metadata
+(2.8), coverage verification (2.9), VNet/Subnet backfill, cleanup commits.
 ```
+
+---
+
+## Phase 2.5: Package ownership and response normalisation
+
+Goal: clear the architectural follow-ups surfaced during Phase 2 before
+Phase 4 introduces the file store. Small, well-scoped, reviewer-friendly.
+
+| # | Task | File(s) | Status | Notes |
+|---|------|---------|--------|-------|
+| 2.5.1 | Move `OpenIDConfig` + `JWKS` mounts into `auth.TokenService.Routes` / `RoutesV2` so `internal/auth` owns its full public surface | `internal/auth/token.go`, `cmd/azemu/main.go`, `test/integration/harness_test.go` | TODO | Surfaced during `internal/auth/token_test.go` and the Phase 2.8 integration harness: both had to replicate the wiring from `cmd/azemu/main.go` verbatim. TODO.md "Known Gaps". |
+| 2.5.2 | Decide on tags `null` vs `{}` normalisation for empty-tags responses | `internal/arm/*.go`, `docs/CONVENTIONS.md` | TODO | Matches existing RG behaviour today; real Azure returns `{}`. Either add a shared helper in `helpers.go` and update all responders, or document the choice in `docs/CONVENTIONS.md` S2 and leave as-is. TODO.md "Known Gaps". |
+
+Acceptance: `internal/auth` exposes `Routes`/`RoutesV2` as the sole mount
+points for the full token/OIDC/JWKS surface. Tags normalisation decision is
+documented and (if chosen) implemented.
 
 ---
 
@@ -116,6 +146,7 @@ Goal: file-based persistence, state export/import via CLI and HTTP API.
 
 | # | Task | File(s) | Status | Notes |
 |---|------|---------|--------|-------|
+| 4.0 | Surface `store.Put` errors at every call site before the file store lands | `internal/arm/router.go`, `internal/arm/vnet.go`, `internal/arm/subnet.go` | TODO | Prerequisite. Every RG / VNet / Subnet handler currently does `_ = a.store.Put(id, res)` (or ignores the return entirely). Safe today because `MemoryStore.Put` cannot fail; **unsafe** the moment a file-backed store can return disk errors. Phase 4 cannot merge without this sweep or the first flaky disk write silently loses the resource. TODO.md "Known Gaps". |
 | 4.1 | Add CLI flags: `--port`, `--tls-port`, `--persist`, `--import`, `--export` | `cmd/azemu/main.go`, `pkg/config/config.go` | TODO | Standard `flag` package |
 | 4.2 | Implement file-based store (`--persist` mode) | `internal/store/file.go` | TODO | Write-through to JSON file on every Put/Delete |
 | 4.3 | Implement `--import` (load state from file on startup) | `cmd/azemu/main.go` | TODO | |
