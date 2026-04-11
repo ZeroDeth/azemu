@@ -54,4 +54,5 @@ not real TCP listeners.
 
 ## Adding tests for a new ARM resource
 
-Follow the test cases section of the checklist in `docs/CHECKLISTS.md`.
+Follow the test-cases section of the `add-resource` skill
+(`.claude/skills/add-resource/SKILL.md`).
