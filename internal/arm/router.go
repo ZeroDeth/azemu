@@ -36,6 +36,12 @@ func (a *Router) Routes(r chi.Router) {
 	r.Delete("/{subscriptionID}/resourcegroups/{resourceGroupName}", a.deleteResourceGroup)
 	r.Get("/{subscriptionID}/resourcegroups", a.listResourceGroups)
 	r.Head("/{subscriptionID}/resourcegroups/{resourceGroupName}", a.headResourceGroup)
+	// List child resources within an RG. The azurerm provider calls this
+	// during `terraform destroy` to verify the RG is empty (or to enumerate
+	// what would be cascade-deleted) BEFORE issuing the DELETE on the RG.
+	// Returning 501 here surfaces as the cryptic provider-side error
+	// "a polling status of `Failed` should be surfaced as a PollingFailedError".
+	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/resources", a.listResourceGroupResources)
 
 	// Virtual networks (Microsoft.Network/virtualNetworks)
 	r.Put("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/virtualnetworks/{vnetName}", a.putVNet)
@@ -208,6 +214,38 @@ func (a *Router) listResourceGroups(w http.ResponseWriter, r *http.Request) {
 	}
 	if items == nil {
 		items = []map[string]interface{}{}
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"value": items})
+}
+
+// listResourceGroupResources returns every resource the store holds whose
+// id is a path-extension of the given resource group, EXCLUDING the
+// resource group itself. The azurerm provider calls this during destroy
+// to verify the cascade is safe; returning an empty value array for an
+// RG that contains nothing is the right behaviour. Query params like
+// $expand and $top are accepted but ignored — azemu always returns the
+// full result set.
+func (a *Router) listResourceGroupResources(w http.ResponseWriter, r *http.Request) {
+	subID := chi.URLParam(r, "subscriptionID")
+	rgName := chi.URLParam(r, "resourceGroupName")
+	prefix := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/", subID, rgName)
+	resources := a.store.List(prefix)
+
+	items := []map[string]interface{}{}
+	for _, res := range resources {
+		// Exclude the parent RG itself; the prefix matches it as a
+		// substring of any child id.
+		if res.Type == "Microsoft.Resources/resourceGroups" {
+			continue
+		}
+		items = append(items, map[string]interface{}{
+			"id":         res.ID,
+			"name":       res.Name,
+			"type":       res.Type,
+			"location":   res.Location,
+			"tags":       res.Tags,
+			"properties": res.Properties,
+		})
 	}
 	writeJSON(w, http.StatusOK, map[string]interface{}{"value": items})
 }

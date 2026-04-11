@@ -48,30 +48,92 @@ func fetchMetadata(t *testing.T, srv *httptest.Server) map[string]interface{} {
 	return body
 }
 
-// TestMetadata_RequiredFields ensures the metadata response has every field
-// the azurerm provider needs to construct a working cloud environment.
-// Missing any of these triggers a different failure mode (often a cryptic
-// nil dereference deep in go-azure-sdk).
-func TestMetadata_RequiredFields(t *testing.T) {
+// TestMetadata_CanonicalFieldNames is the regression guard for the entire
+// class of "wrong field name" bugs that broke the Storage authorizer (M3).
+// The metadata response shape MUST match the canonical Azure public cloud
+// response from
+//
+//   GET https://management.azure.com/metadata/endpoints?api-version=2022-09-01
+//
+// verbatim. The list below is the exact set of top-level keys real Azure
+// returns. Any drift here means go-azure-sdk's environment loader will see
+// missing fields and fail later when constructing per-service authorizers.
+func TestMetadata_CanonicalFieldNames(t *testing.T) {
 	srv := newTestService(t)
 	body := fetchMetadata(t, srv)
 
-	required := []string{
+	canonicalTopLevel := []string{
 		"name",
-		"resourceManager",
 		"authentication",
-		"graphEndpoint",
-		"portalEndpoint",
-		"activeDirectoryResourceId",
+		"resourceManager",
+		"portal",
+		"graph",
+		"graphAudience",
+		"media",
+		"batch",
+		"sqlManagement",
+		"vmImageAliasDoc",
+		"activeDirectoryDataLake",
+		"microsoftGraphResourceId",
+		"appServiceResourceId",
+		"appInsightsResourceId",
+		"appInsightsTelemetryChannelResourceId",
+		"attestationResourceId",
+		"synapseAnalyticsResourceId",
+		"logAnalyticsResourceId",
+		"ossrDbmsResourceId",
+		"suffixes",
 	}
-	for _, k := range required {
+	for _, k := range canonicalTopLevel {
 		if _, ok := body[k]; !ok {
-			t.Errorf("required field %q missing from metadata response", k)
+			t.Errorf("canonical top-level field %q missing from metadata response", k)
 		}
 	}
 
 	if body["name"] != "AzureCloud" {
 		t.Errorf("name = %v, want AzureCloud (needed by classifier)", body["name"])
+	}
+}
+
+// TestMetadata_CanonicalSuffixNames is the regression guard for the
+// suffixes block, which is what go-azure-sdk uses to construct per-service
+// resource URLs (e.g. blob.{storage}). The bug that surfaced as
+// "endpoint AzureStorage is not supported" was caused by azemu naming this
+// field `storageEndpoint` instead of the canonical `storage`.
+func TestMetadata_CanonicalSuffixNames(t *testing.T) {
+	srv := newTestService(t)
+	body := fetchMetadata(t, srv)
+
+	suffixes, ok := body["suffixes"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("suffixes block missing or wrong type: %v", body["suffixes"])
+	}
+
+	canonicalSuffixes := map[string]string{
+		"acrLoginServer":                      "azurecr.io",
+		"attestationEndpoint":                 "attest.azure.net",
+		"azureDataLakeAnalyticsCatalogAndJob": "azuredatalakeanalytics.net",
+		"azureDataLakeStoreFileSystem":        "azuredatalakestore.net",
+		"azureFrontDoorEndpointSuffix":        "azurefd.net",
+		"keyVaultDns":                         "vault.azure.net",
+		"mariadbServerEndpoint":               "mariadb.database.azure.com",
+		"mhsmDns":                             "managedhsm.azure.net",
+		"mysqlServerEndpoint":                 "mysql.database.azure.com",
+		"postgresqlServerEndpoint":            "postgres.database.azure.com",
+		"sqlServerHostname":                   "database.windows.net",
+		"storage":                             "core.windows.net",
+		"storageSyncEndpointSuffix":           "afs.azure.net",
+		"synapseAnalytics":                    "dev.azuresynapse.net",
+	}
+	for k, want := range canonicalSuffixes {
+		got, ok := suffixes[k]
+		if !ok {
+			t.Errorf("canonical suffix %q missing", k)
+			continue
+		}
+		if got != want {
+			t.Errorf("suffixes.%s = %v, want %q (must match real Azure verbatim)", k, got, want)
+		}
 	}
 }
 

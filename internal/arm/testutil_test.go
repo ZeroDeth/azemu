@@ -31,6 +31,10 @@ func newTestServer(t *testing.T) *httptest.Server {
 	s := store.NewMemoryStore()
 	ar := NewRouter(s)
 	r := chi.NewRouter()
+	// Mirror the production middleware order from cmd/azemu/main.go so
+	// tests exercise the same path-normalization, header stamping, and
+	// api-version enforcement as real traffic.
+	r.Use(mw.NormalizePath)
 	r.Use(mw.AzureHeaders)
 	r.Use(mw.RequireAPIVersion)
 	r.Route("/subscriptions", ar.Routes)
