@@ -43,5 +43,10 @@ state.json
 # Local TLS cert bundle written by AZEMU_CERT_PATH (contains private key)
 .azemu/
 
-# Per-project Claude Code tooling cache
-.claude/
+# Per-project Claude Code tooling cache — personal state stays local, but
+# .claude/rules/*.md is project-shared content per
+# https://code.claude.com/docs/en/memory (path-scoped rule files). The
+# `.claude/*` glob only matches direct children of .claude/, so the
+# `!.claude/rules/` negation lets its contents through normally.
+.claude/*
+!.claude/rules/

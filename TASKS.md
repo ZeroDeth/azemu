@@ -1,16 +1,14 @@
 # TASKS.md -- azemu Implementation Plan
 
 Version: 0.1
-Last updated: 2026-04-10
-Status: Phase 1 (Terraform integration - make terraform apply work)
+Last updated: 2026-04-11
+Status: Phase 1 acceptance MET (terraform apply+destroy round-trip green). Current focus: Phase 2 (test coverage backfill).
 
 > **Out-of-phase work on `feat/vnet-subnet` (2026-04-10):** VNets + Subnets
 > (Phase 6) were implemented ahead of Phase 1 acceptance because the feature
-> was requested before TASKS.md was consulted. The work is self-contained and
-> does not block Phase 1 — the new routes sit alongside existing RG handlers
-> and the unit+integration tests pass — but the phase sequence discipline in
-> the "How to use this file" section below was not followed. Phase 1 remains
-> the active phase and Terraform compatibility work should still be prioritised.
+> was requested before TASKS.md was consulted. The work is self-contained,
+> shipped 25 unit tests + 1 integration test, and was retroactively validated
+> by the Phase 1 end-to-end run on `fix/metadata-classifier-bugs`.
 
 ---
 
@@ -45,18 +43,22 @@ using the official `azurerm` provider pointed at azemu.
 | 1.3 | Run `terraform init` against azemu, capture all requests | | DONE | Full `terraform apply && terraform destroy` cycle proven 2026-04-11 on `fix/metadata-classifier-bugs`. Five distinct blockers were uncovered and fixed in this branch (see TODO.md M1-M5 for the post-mortem). The flox manifest's `ARM_RESOURCE_MANAGER_ENDPOINT` workaround does NOT work on azurerm v4.68 — must use `ARM_METADATA_HOSTNAME=127.0.0.1:4567` instead. |
 | 1.4 | Fix metadata response: add any missing fields provider expects | `internal/metadata/service.go` | DONE | Full canonical-schema rewrite against ground truth from `https://management.azure.com/metadata/endpoints?api-version=2022-09-01`. Every top-level field and every suffix entry now matches real Azure verbatim. Regression tests pin both shapes. |
 | 1.5 | Fix token response: add `ext_expires_in`, `not_before`, `expires_on` fields | `internal/auth/token.go` | DEFERRED | Not blocking — `terraform apply` succeeds without it. Provider tolerates the current minimal token. |
-| 1.6 | Fix provider registration: handle GET for specific resource types under a provider | `internal/arm/router.go` | DEFERRED | Not blocking the smoke flow. `azurerm_resource_group` works without it because main.tf sets `resource_provider_registrations = "none"`. |
+| 1.6 | Fix provider registration: handle GET for specific resource types under a provider | `internal/arm/router.go` | DEFERRED | Not blocking the smoke flow. `azurerm_resource_group` works without it because `main.tf` sets `resource_provider_registrations = "none"`. |
 | 1.7 | Handle subscription-level feature queries if provider calls them | `internal/arm/router.go` | DEFERRED | Not blocking. |
-| 1.8 | Run `terraform apply`, fix failures iteratively | all arm/ files | DONE | Apply+destroy round-trip green; see 1.3 |
-| 1.5 | Fix token response: add `ext_expires_in`, `not_before`, `expires_on` fields | `internal/auth/token.go` | TODO | Provider may check these |
-| 1.6 | Fix provider registration: handle GET for specific resource types under a provider | `internal/arm/router.go` | TODO | Provider calls `/providers/{ns}/resourceTypes` |
-| 1.7 | Handle subscription-level feature queries if provider calls them | `internal/arm/router.go` | TODO | May need `/subscriptions/{sub}/providers/Microsoft.Resources/features` |
-| 1.8 | Run `terraform apply`, fix failures iteratively | all arm/ files | TODO | Log-driven: check unhandled routes after each failure |
-| 1.9 | Run `terraform destroy`, verify clean | | TODO | |
-| 1.10 | Document all endpoints discovered during this phase in TODO.md | `TODO.md` | TODO | |
+| 1.8 | Run `terraform apply`, fix failures iteratively | all `internal/arm/*`, `internal/metadata/*`, `internal/middleware/*` | DONE | Apply round-trip green; five blockers fixed (M1-M5 in TODO.md). |
+| 1.9 | Run `terraform destroy`, verify clean | `internal/arm/router.go` | DONE | `listResourceGroupResources` handler unblocks polling; destroy round-trip green 2026-04-11. |
+| 1.10 | Document all endpoints discovered during this phase in TODO.md | `TODO.md` | DONE | M1-M5 post-mortem table + Known Gaps section populated. |
 
 Acceptance: `terraform apply -auto-approve && terraform destroy -auto-approve`
-exits 0 with the `test/terraform/main.tf` config.
+exits 0 with the `test/terraform/main.tf` config. ✅
+
+**Structural improvements landed alongside Phase 1:**
+
+- Persistent TLS cert via `AZEMU_CERT_PATH` (eliminates per-restart keychain trust friction). See `internal/auth/tls.go`.
+- `internal/middleware/pathcase.go` `NormalizePath` for case-insensitive ARM path matching + `//` collapse.
+- `.flox/env/manifest.toml` pinning Go, Terraform `^1.14`, pre-commit, jq, just, shellcheck, tflint with profile helpers (`azemu-start`, `tf-apply`, etc.) and an activation hook that installs `.git/hooks/pre-commit`.
+- `.pre-commit-config.yaml` adopted from MiniBlue with hygiene + go vet/build + golangci-lint + markdownlint.
+- `docs/SETUP.md` and `docs/TROUBLESHOOTING.md` published with the IPv6/`localhost` gotcha and the cert trust dance.
 
 ---
 

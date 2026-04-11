@@ -10,7 +10,7 @@ What azemu implements. Updated whenever a resource handler changes.
 | OAuth2 token endpoint (mock JWT) | Full | Accepts any credentials, returns RS256 JWT |
 | OIDC discovery (`/.well-known/openid-configuration`) | Full | Standard discovery document |
 | JWKS (`/discovery/v2.0/keys`) | Full | RSA public key matching signing key |
-| Self-signed TLS (ECDSA P-256) | Full | Auto-generated at startup |
+| Self-signed TLS (ECDSA P-256) | Full | Auto-generated at startup; persistent across restarts when `AZEMU_CERT_PATH` is set |
 
 ## ARM Resources
 

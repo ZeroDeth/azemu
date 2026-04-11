@@ -33,9 +33,12 @@ sudo cp "$SSL_CERT_FILE" /usr/local/share/ca-certificates/azemu.crt
 sudo update-ca-certificates
 ```
 
-**Note:** The certificate regenerates every time azemu starts. You must re-run
-the trust command after each restart, or keep the server running for your
-entire session.
+**Note:** The certificate regenerates every time azemu starts *unless* you set
+`AZEMU_CERT_PATH` to a persistent PEM bundle file. With it set, the cert+key
+are loaded from disk on startup (or generated and written there on first run),
+so you only have to add it to the keychain once. The flox profile defaults
+this to `.azemu/cert-bundle.pem` for you. See `docs/SETUP.md` "Persistent
+(recommended)" for the full flow.
 
 ### `Failed to connect to localhost port 4566/4567`
 
