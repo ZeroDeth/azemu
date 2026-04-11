@@ -69,6 +69,13 @@ The bundle file is written with mode 0600 because it includes a private key.
   subnets created via the separate `.../subnets/{name}` endpoint, matching
   how `azurerm_subnet` issues writes. Real ARM accepts both. Documented in
   `docs/PARITY.md`.
+- **`putResourceGroup` accepts empty location:** `resourcegroup.go` predates
+  the validation pattern used in `vnet.go` and `subnet.go` (which return 400
+  `InvalidRequestContent` when `location` is missing). A PUT with body `{}`
+  is currently accepted and stored with `location: ""`. Pinned by
+  `TestRG_PUT_MissingLocation_CurrentlyAccepted` in `internal/arm/rg_test.go`;
+  flip the assertion to `StatusBadRequest` when the handler is brought in
+  line with the newer resources.
 
 ---
 
