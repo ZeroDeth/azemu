@@ -73,7 +73,7 @@ Full reference lives in `docs/CONVENTIONS.md`. The highlights:
 - Do not `git push --force`, do not `git reset --hard` shared branches, do
   not amend published commits.
 
-Full before-commit checklist: `docs/CHECKLISTS.md`.
+Full before-commit sequence: the `before-commit` skill (`.claude/skills/before-commit/SKILL.md`), invokable as `/before-commit`.
 
 ## Safety
 
@@ -87,13 +87,30 @@ Full before-commit checklist: `docs/CHECKLISTS.md`.
   persistent cert bundle lives at `.azemu/cert-bundle.pem` and is gitignored.
 - Do not delete files or branches without explicit approval.
 
-## Subagents and orchestration
+## Subagents and skills
 
-Subagent role definitions (arm-resource-implementer, test-writer,
-code-reviewer, terraform-compatibility-debugger, docs-writer) and
-orchestration patterns live in `docs/SUBAGENTS.md`. They are reference
-recipes, not auto-loaded behavior. Invoke them explicitly when the shape
-of the work matches.
+Invocable subagents live in `.claude/agents/` as frontmatter-driven
+definitions. Claude auto-delegates when a task description matches, and
+any tool can invoke them explicitly by name:
+
+- `arm-resource-implementer`: add a new ARM resource type end-to-end
+- `test-writer`: fill test-coverage gaps for a package
+- `code-reviewer`: review a set of changes before merging
+- `terraform-compatibility-debugger`: diagnose a `terraform apply` failure
+- `docs-writer`: update human-facing documentation
+
+Invocable skills live in `.claude/skills/` as slash-invokable playbooks:
+
+- `/add-resource`: walk the add-a-resource checklist (also usable
+  as reference by `arm-resource-implementer`)
+- `/modify-store`: propagate a store-interface change across the repo
+- `/validate-terraform`: run the end-to-end terraform apply+destroy loop
+- `/before-commit`: run the full validation sequence before committing
+  (user-invocable only; Claude does not auto-run it)
+
+Orchestration patterns for composing multiple agents (parallel resource
+implementation, test-then-fix, coverage push) live in
+`docs/ORCHESTRATION.md`.
 
 ## Project files at a glance
 
@@ -106,11 +123,12 @@ of the work matches.
 | `CLAUDE.md` | Claude-Code-specific overrides (imports this file) |
 | `docs/ARCHITECTURE.md` | Package layout, dependency graph, request flow |
 | `docs/CONVENTIONS.md` | Full Go/ARM/auth/testing reference |
-| `docs/CHECKLISTS.md` | Add-a-resource, modify-store, before-commit recipes |
-| `docs/SUBAGENTS.md` | Subagent role definitions and orchestration patterns |
+| `docs/ORCHESTRATION.md` | Multi-agent composition patterns (parallel, test-then-fix, coverage push) |
 | `docs/PARITY.md` | Full/Stub/None matrix per resource |
 | `docs/SETUP.md` | Contributor onboarding (flox + manual paths) |
 | `docs/TROUBLESHOOTING.md` | Common errors and fixes |
+| `.claude/agents/*.md` | Subagent role definitions (frontmatter-driven, auto-delegated) |
+| `.claude/skills/*/SKILL.md` | Slash-invokable playbooks (add-resource, modify-store, validate-terraform, before-commit) |
 | `.claude/rules/*.md` | Path-scoped rules that load only when matching files are touched |
 | `.flox/env/manifest.toml` | Pinned dev environment (Go, Terraform, pre-commit, ...) |
 | `.pre-commit-config.yaml` | Hygiene + go vet/build + golangci-lint + markdownlint |

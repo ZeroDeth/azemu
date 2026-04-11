@@ -69,4 +69,6 @@ Every handler MUST:
 
 ## Adding a new resource type
 
-Follow the checklist in `docs/CHECKLISTS.md`.
+Follow the `add-resource` skill (`.claude/skills/add-resource/SKILL.md`)
+or delegate the whole job to the `arm-resource-implementer` subagent
+(`.claude/agents/arm-resource-implementer.md`).
