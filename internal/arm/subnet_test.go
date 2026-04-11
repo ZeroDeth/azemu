@@ -125,6 +125,20 @@ func TestSubnet_HEAD_Exists_Returns204(t *testing.T) {
 	assertStatus(t, resp, http.StatusNoContent)
 }
 
+// TestSubnet_HEAD_NotFound_Returns404_EmptyBody covers the !ok branch of
+// headSubnet that was missing from the Phase 2 initial slice (TODO.md
+// coverage gap: headSubnet 77.8%). HEAD semantics require an empty body
+// even on 404.
+func TestSubnet_HEAD_NotFound_Returns404_EmptyBody(t *testing.T) {
+	srv := newTestServer(t)
+	createParentVNet(t, srv.URL)
+	resp := httpHead(t, subnetURL(srv.URL, "sub1", "rg1", "vnet1", "ghost"))
+	assertStatus(t, resp, http.StatusNotFound)
+	if body := readBody(t, resp); body != "" {
+		t.Errorf("HEAD body = %q, want empty", body)
+	}
+}
+
 func TestSubnet_DELETE_Returns202(t *testing.T) {
 	srv := newTestServer(t)
 	createParentVNet(t, srv.URL)
@@ -143,6 +157,25 @@ func TestSubnet_DELETE_Returns202(t *testing.T) {
 	resp = httpGet(t, url)
 	assertStatus(t, resp, http.StatusNotFound)
 	resp.Body.Close()
+}
+
+// TestSubnet_DELETE_NotFound_Returns404 covers the store.Delete-returns-false
+// branch of deleteSubnet that was missing from the Phase 2 initial slice
+// (TODO.md coverage gap: deleteSubnet 81.8%).
+func TestSubnet_DELETE_NotFound_Returns404(t *testing.T) {
+	srv := newTestServer(t)
+	createParentVNet(t, srv.URL)
+	resp := httpDelete(t, subnetURL(srv.URL, "sub1", "rg1", "vnet1", "ghost"))
+	assertStatus(t, resp, http.StatusNotFound)
+
+	errBody := decodeJSON(t, resp)
+	errObj, ok := errBody["error"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("error object missing: %v", errBody)
+	}
+	if errObj["code"] != "ResourceNotFound" {
+		t.Errorf("code = %v, want ResourceNotFound", errObj["code"])
+	}
 }
 
 func TestSubnet_DELETE_DoesNotAffectParentVNet(t *testing.T) {

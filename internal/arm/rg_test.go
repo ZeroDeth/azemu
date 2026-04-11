@@ -68,21 +68,39 @@ func TestRG_PUT_Idempotent_Returns200(t *testing.T) {
 	}
 }
 
-// TestRG_PUT_MissingLocation_CurrentlyAccepted pins a known gap in
-// putResourceGroup: the handler does not validate that location is non-empty,
-// so a PUT with body {} is stored with an empty location and returns 201.
-// vnet.go and subnet.go do reject missing location with 400
-// InvalidRequestContent; resourcegroup.go predates that pattern
-// (see .claude/rules/arm-handlers.md "Reference handlers"). Tracked in
-// TODO.md "Known Gaps". When the handler is fixed, flip this assertion to
-// http.StatusBadRequest and rename the test to TestRG_PUT_MissingLocation_Returns400.
-func TestRG_PUT_MissingLocation_CurrentlyAccepted(t *testing.T) {
+// TestRG_PUT_MissingLocation_Returns400 verifies that a PUT body with no
+// location is rejected with 400 InvalidRequestContent. This matches the
+// validation pattern used by vnet.go / subnet.go; resourcegroup.go used to
+// accept `{}` silently and was pinned by an earlier
+// TestRG_PUT_MissingLocation_CurrentlyAccepted stub. The handler was brought
+// in line during the Phase 2 closeout batch (TODO.md "Known Gaps").
+func TestRG_PUT_MissingLocation_Returns400(t *testing.T) {
 	srv := newTestServer(t)
 	resp := httpPut(t, rgURL(srv.URL, "sub1", "rg-noloc"), `{}`)
-	assertStatus(t, resp, http.StatusCreated)
-	body := decodeJSON(t, resp)
-	if body["location"] != "" {
-		t.Errorf("location = %v, want empty string while the gap stands", body["location"])
+	assertStatus(t, resp, http.StatusBadRequest)
+
+	errBody := decodeJSON(t, resp)
+	errObj, ok := errBody["error"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("error object missing: %v", errBody)
+	}
+	if errObj["code"] != "InvalidRequestContent" {
+		t.Errorf("code = %v, want InvalidRequestContent", errObj["code"])
+	}
+}
+
+// TestRG_PUT_WhitespaceOnlyLocation_Returns400 ensures the location trim
+// matches the vnet.go behaviour: a location that is only whitespace is the
+// same as an empty location.
+func TestRG_PUT_WhitespaceOnlyLocation_Returns400(t *testing.T) {
+	srv := newTestServer(t)
+	resp := httpPut(t, rgURL(srv.URL, "sub1", "rg-ws"), `{"location": "   "}`)
+	assertStatus(t, resp, http.StatusBadRequest)
+
+	errBody := decodeJSON(t, resp)
+	errObj := errBody["error"].(map[string]interface{})
+	if errObj["code"] != "InvalidRequestContent" {
+		t.Errorf("code = %v, want InvalidRequestContent", errObj["code"])
 	}
 }
 
