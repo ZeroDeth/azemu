@@ -9,8 +9,13 @@ is the full reference and the canonical source.
 See also:
 
 - `docs/ARCHITECTURE.md` — package layout and dependency direction
-- `docs/CHECKLISTS.md` — add-a-resource, modify-store, before-commit flows
+- `docs/ORCHESTRATION.md` — multi-agent composition patterns
 - `docs/PARITY.md` — what is actually implemented
+- `.claude/skills/add-resource/SKILL.md` — add-a-resource playbook
+- `.claude/skills/modify-store/SKILL.md` — modify-store playbook
+- `.claude/skills/before-commit/SKILL.md` — full before-commit sequence
+- `.claude/skills/validate-terraform/SKILL.md` — terraform apply/destroy loop
+- `.claude/agents/*.md` — subagent role definitions
 - `.claude/rules/arm-handlers.md` — condensed handler rules (path-scoped)
 - `.claude/rules/go-style.md` — condensed Go style (path-scoped)
 - `.claude/rules/tests.md` — condensed test rules (path-scoped)
