@@ -1,6 +1,8 @@
-# Binary output
+# Binary output. The bare `azemu` pattern that used to live here was a
+# bug — it matched the cmd/azemu/ source directory and silently kept
+# main.go untracked for the entire project history. The build artefact
+# itself is at bin/azemu, which is already covered above.
 bin/
-azemu
 *.exe
 
 # Terraform
@@ -37,3 +39,9 @@ Thumbs.db
 # State persistence files (user-generated, not committed)
 state.json
 *.state.json
+
+# Local TLS cert bundle written by AZEMU_CERT_PATH (contains private key)
+.azemu/
+
+# Per-project Claude Code tooling cache
+.claude/

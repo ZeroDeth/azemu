@@ -36,6 +36,7 @@ func buildFullServer(t *testing.T) *httptest.Server {
 	s := store.NewMemoryStore()
 	ar := arm.NewRouter(s)
 	r := chi.NewRouter()
+	r.Use(mw.NormalizePath)
 	r.Use(mw.AzureHeaders)
 	r.Use(mw.RequireAPIVersion)
 	r.Route("/subscriptions", ar.Routes)

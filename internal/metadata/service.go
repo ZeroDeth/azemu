@@ -25,71 +25,108 @@ func (s *Service) Routes(r chi.Router) {
 }
 
 // endpoints returns the Azure cloud environment metadata that azurerm
-// uses to discover ARM, auth, and data plane URLs. By pointing everything
-// at localhost, Terraform talks exclusively to the emulator.
+// uses to discover ARM, auth, and data plane URLs. The response shape
+// MUST match the canonical Azure public cloud response from
+// https://management.azure.com/metadata/endpoints?api-version=2022-09-01
+// verbatim, except for fields that need to be redirected to azemu.
+//
+// History note: earlier versions of this handler used hand-rolled field
+// names like `portalEndpoint`, `graphEndpoint`, `appInsights`, `attestation`,
+// `synapse`, `logAnalytics`, `ossrdbms` and a `suffixes` block with
+// `storageEndpoint`, `keyvaultDns`, etc. None of these match the real
+// Azure response — the real names are `portal`, `graph`, `appInsightsResourceId`,
+// `attestationResourceId`, `synapseAnalyticsResourceId`,
+// `logAnalyticsResourceId`, `ossrDbmsResourceId`, `suffixes.storage`,
+// `suffixes.keyVaultDns`. The result was that go-azure-sdk's environment
+// loader silently saw missing fields, which surfaced later as opaque
+// "endpoint X is not supported in this Azure Environment" errors when
+// the provider tried to construct authorizers for individual services.
+// This handler is now ground-truth-aligned to prevent that whole class
+// of bug; the regression test in service_test.go pins every field
+// against the canonical schema.
+//
+// Substitution rules:
+//   - resourceManager + activeDirectoryResourceId + microsoftGraphResourceId
+//     + portal + graph + media + sqlManagement + batch + appServiceResourceId
+//     + appInsightsResourceId + activeDirectoryDataLake + attestationResourceId
+//     + logAnalyticsResourceId + synapseAnalyticsResourceId + ossrDbmsResourceId
+//     -> azemu localhost (so the provider talks to us, not real Azure)
+//   - authentication.loginEndpoint -> azemu localhost (token requests stay local)
+//   - authentication.tenant -> "common" (cloud-environment identifier, not user tenant)
+//   - authentication.audiences -> include both localhost and the real
+//     "https://management.core.windows.net/" so token verification has both
+//   - vmImageAliasDoc -> leave as the real GitHub URL (it's a documentation
+//     reference, not an API call; the provider doesn't redirect it)
+//   - suffixes.* -> leave as the real Azure suffix values; these are domain
+//     suffix strings (e.g. "core.windows.net") used by the SDK to construct
+//     resource URLs, NOT endpoints that need redirecting. Renaming
+//     `storageEndpoint` -> `storage` is what unblocks the Storage authorizer.
 //
 // Supports api-version 2022-09-01 (modern Azure CLI) and earlier.
 func (s *Service) endpoints(w http.ResponseWriter, r *http.Request) {
-	base := fmt.Sprintf("https://%s", s.cfg.MetadataHost)
 	armBase := fmt.Sprintf("https://localhost:%d", s.cfg.HTTPPort)
-	// Data plane shares port 4566 with ARM and is served over TLS (see
-	// cmd/azemu/main.go). Earlier versions declared this as http:// which
-	// caused the azurerm provider's cloud classifier to mark every field
-	// assigned from dataPlane as Azure Stack and reject the environment.
-	// The fix for resourceManager in docs/TROUBLESHOOTING.md was incomplete;
-	// batch and sqlManagement also had to switch to https.
-	dataPlane := fmt.Sprintf("https://localhost:%d", s.cfg.HTTPPort)
+	authBase := fmt.Sprintf("https://%s", s.cfg.MetadataHost)
 
 	resp := map[string]interface{}{
-		"galleryEndpoint": "https://gallery.azure.com/",
-		"graphEndpoint":   base,
-		"portalEndpoint":  base,
+		// === Top-level identification ===
+		"name": "AzureCloud",
+
+		// === Authentication block (classifier-sensitive — see Service docstring) ===
 		"authentication": map[string]interface{}{
-			"loginEndpoint": base,
-			"audiences":     []string{base + "/", "https://management.core.windows.net/"},
-			// tenant in the metadata response is a *cloud-environment* identifier,
-			// not the user's tenant. The azurerm provider's IsAzureStack() classifier
-			// in go-azure-sdk/sdk/environments/azure_stack.go returns true (reject)
-			// when this value is anything other than "common" (case-insensitive).
-			// Real Azure public cloud always returns "common" here. The user's
-			// actual tenant is supplied separately via ARM_TENANT_ID / provider
-			// config and used at token-request time.
+			"loginEndpoint": authBase,
+			"audiences": []string{
+				authBase + "/",
+				"https://management.core.windows.net/",
+			},
 			"tenant":           "common",
 			"identityProvider": "AAD",
 		},
-		"media":                                 "https://media.azure.com/",
-		"graphAudience":                         base,
-		"activeDirectoryEndpoint":               base,
-		"activeDirectoryDataLake":               "https://datalake.azure.net/",
-		"batch":                                 dataPlane,
-		"resourceManager":                       armBase,
-		"vmImageAliasDoc":                       "https://gallery.azure.com/",
-		"activeDirectoryResourceId":             base + "/",
-		"sqlManagement":                         dataPlane,
-		"microsoftGraphResourceId":              base + "/",
-		"appInsights":                           "https://api.applicationinsights.io/",
+
+		// === Resource manager and identity endpoints (redirected to azemu) ===
+		"resourceManager":          armBase + "/",
+		"activeDirectoryDataLake":  armBase + "/",
+		"microsoftGraphResourceId": authBase + "/",
+		"appServiceResourceId":     armBase,
+		"appInsightsResourceId":    armBase,
+		"attestationResourceId":    armBase,
+		"synapseAnalyticsResourceId": armBase,
+		"logAnalyticsResourceId":   armBase,
+		"ossrDbmsResourceId":       armBase,
+
+		// === Data plane / portal / management URLs (redirected) ===
+		"portal":        armBase,
+		"graph":         authBase + "/",
+		"graphAudience": authBase + "/",
+		"media":         armBase + "/",
+		"batch":         armBase + "/",
+		"sqlManagement": armBase + "/",
 		"appInsightsTelemetryChannelResourceId": "https://dc.applicationinsights.azure.com/v2/track",
-		"attestation":                           "https://attest.azure.net/",
-		"synapse":                               "https://dev.azuresynapse.net/",
-		"logAnalytics":                          "https://api.loganalytics.io/",
-		"ossrdbms":                              "https://ossrdbms-aad.database.windows.net/",
+
+		// === Reference data (left as real public-cloud URLs) ===
+		"vmImageAliasDoc": "https://raw.githubusercontent.com/Azure/azure-rest-api-specs/master/arm-compute/quickstart-templates/aliases.json",
+
+		// === Domain suffixes (NOT endpoints — used by SDK to construct
+		// resource URLs like {acct}.blob.{storage}). These match real Azure
+		// public cloud verbatim. Renaming/typo here is what previously
+		// broke the Storage authorizer. ===
 		"suffixes": map[string]interface{}{
-			"acrLoginServer": ".azurecr.io",
-			"azureDatalakeAnalyticsCatalogAndJobEndpoint": ".azuredatalakeanalytics.net/",
-			"azureDatalakeStoreFileSystemEndpoint":        ".azuredatalakestore.net/",
-			"keyvaultDns":                                 ".vault.azure.net",
-			"sqlServerHostname":                           ".database.windows.net",
-			"storageEndpoint":                             "core.windows.net",
-			"storageSyncEndpoint":                         ".afs.azure.net",
-			"mhsmDns":                                     ".managedhsm.azure.net",
-			"mysqlServerEndpoint":                         ".mysql.database.azure.com",
-			"postgresqlServerEndpoint":                    ".postgres.database.azure.com",
-			"mariadbServerEndpoint":                       ".mariadb.database.azure.com",
-			"synapseAnalytics":                            ".dev.azuresynapse.net",
+			"acrLoginServer":                      "azurecr.io",
+			"attestationEndpoint":                 "attest.azure.net",
+			"azureDataLakeAnalyticsCatalogAndJob": "azuredatalakeanalytics.net",
+			"azureDataLakeStoreFileSystem":        "azuredatalakestore.net",
+			"azureFrontDoorEndpointSuffix":        "azurefd.net",
+			"keyVaultDns":                         "vault.azure.net",
+			"mariadbServerEndpoint":               "mariadb.database.azure.com",
+			"mhsmDns":                             "managedhsm.azure.net",
+			"mysqlServerEndpoint":                 "mysql.database.azure.com",
+			"postgresqlServerEndpoint":            "postgres.database.azure.com",
+			"sqlServerHostname":                   "database.windows.net",
+			"storage":                             "core.windows.net",
+			"storageSyncEndpointSuffix":           "afs.azure.net",
+			"synapseAnalytics":                    "dev.azuresynapse.net",
 		},
-		"name": "AzureCloud",
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
+	_ = json.NewEncoder(w).Encode(resp)
 }
