@@ -330,3 +330,29 @@ func TestImport_RejectsNilResource(t *testing.T) {
 		t.Error("Import accepted null resource value, want error")
 	}
 }
+
+// TestReset_ClearsAllResources verifies that Reset removes all resources
+// and subsequent Gets return miss.
+func TestReset_ClearsAllResources(t *testing.T) {
+	s := NewMemoryStore()
+	ids := []string{
+		"/subscriptions/sub1/resourcegroups/rg1",
+		"/subscriptions/sub1/resourcegroups/rg2",
+	}
+	for _, id := range ids {
+		if err := s.Put(id, &Resource{Name: id}); err != nil {
+			t.Fatalf("Put %q: %v", id, err)
+		}
+	}
+
+	s.Reset()
+
+	for _, id := range ids {
+		if _, ok := s.Get(id); ok {
+			t.Errorf("Get(%q) returned true after Reset, want false", id)
+		}
+	}
+	if list := s.List("/subscriptions/"); len(list) != 0 {
+		t.Errorf("List returned %d items after Reset, want 0", len(list))
+	}
+}
