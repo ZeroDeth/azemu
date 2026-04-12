@@ -128,6 +128,13 @@ the contract. Violating them is a bug.
 - LIST responses MUST be wrapped in `{"value": [...]}`.
 - Error responses MUST use `{"error": {"code": "...", "message": "..."}}`.
 
+### Tags normalisation
+
+Real Azure always returns `"tags": {}` for resources with no tags, never
+`null`. All PUT handlers MUST pass tags through `normaliseTags()` (defined in
+`internal/arm/router.go`) before storing, so nil input becomes an empty map.
+Subnets do not carry tags in the ARM API.
+
 ### Intentionally NOT implemented (v0.1)
 
 - Async operation polling (the `Location` header from DELETE is returned but

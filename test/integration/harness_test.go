@@ -64,10 +64,7 @@ func buildProductionLikeServer(t *testing.T) *httptest.Server {
 	r.Use(mw.RequireAPIVersion)
 
 	r.Route("/metadata", metaSvc.Routes)
-	r.Route("/{tenantID}/oauth2", tokenSvc.Routes)
-	r.Route("/{tenantID}/oauth2/v2.0", tokenSvc.RoutesV2)
-	r.Get("/{tenantID}/.well-known/openid-configuration", tokenSvc.OpenIDConfig)
-	r.Get("/{tenantID}/discovery/v2.0/keys", tokenSvc.JWKS)
+	r.Route("/{tenantID}", tokenSvc.TenantRoutes)
 	r.Route("/subscriptions", armRouter.Routes)
 
 	srv := httptest.NewTLSServer(r)

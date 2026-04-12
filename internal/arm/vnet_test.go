@@ -363,3 +363,28 @@ func TestVNet_MissingAPIVersion_Returns400(t *testing.T) {
 		t.Errorf("code = %v, want MissingApiVersionParameter", errObj["code"])
 	}
 }
+
+// TestVNet_PUT_NilTags_NormalisedToEmptyObject verifies that when a client
+// sends no tags field, the response contains "tags": {} (not null), matching
+// real Azure behaviour.
+func TestVNet_PUT_NilTags_NormalisedToEmptyObject(t *testing.T) {
+	srv := newTestServer(t)
+	// First create the parent RG.
+	httpPut(t, rgURL(srv.URL, "sub1", "rg1"), rgBodyMinimal)
+	// vnetBodyMinimal has no "tags" key, so body.Tags will be nil.
+	resp := httpPut(t, vnetURL(srv.URL, "sub1", "rg1", "vnet1"), vnetBodyMinimal)
+	assertStatus(t, resp, http.StatusCreated)
+
+	body := decodeJSON(t, resp)
+	tags, ok := body["tags"]
+	if !ok {
+		t.Fatal("tags field missing from response")
+	}
+	tagsMap, ok := tags.(map[string]interface{})
+	if !ok {
+		t.Fatalf("tags is %T, want map (JSON object); got %v", tags, tags)
+	}
+	if len(tagsMap) != 0 {
+		t.Errorf("tags should be empty object, got %v", tagsMap)
+	}
+}

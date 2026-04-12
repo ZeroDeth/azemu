@@ -2,9 +2,9 @@
 
 Version: 0.1
 Last updated: 2026-04-11
-Status: Phase 1 + Phase 2 + Phase 3 acceptance MET. All per-package
-coverage targets from `.claude/rules/tests.md` met or exceeded. Current
-focus: Phase 2.5 (package-ownership cleanup) and Phase 4 (state management).
+Status: Phase 1 + Phase 2 + Phase 2.5 + Phase 3 acceptance MET. All
+per-package coverage targets from `.claude/rules/tests.md` met or exceeded.
+Current focus: Phase 4 (state management).
 
 > **Strategy, non-goals, and the per-release resource roster live in
 > `ROADMAP.md`.** `TASKS.md` is the execution ledger and `ROADMAP.md` is
@@ -120,12 +120,12 @@ Phase 4 introduces the file store. Small, well-scoped, reviewer-friendly.
 
 | # | Task | File(s) | Status | Notes |
 |---|------|---------|--------|-------|
-| 2.5.1 | Move `OpenIDConfig` + `JWKS` mounts into `auth.TokenService.Routes` / `RoutesV2` so `internal/auth` owns its full public surface | `internal/auth/token.go`, `cmd/azemu/main.go`, `test/integration/harness_test.go` | TODO | Surfaced during `internal/auth/token_test.go` and the Phase 2.8 integration harness: both had to replicate the wiring from `cmd/azemu/main.go` verbatim. TODO.md "Known Gaps". |
-| 2.5.2 | Decide on tags `null` vs `{}` normalisation for empty-tags responses | `internal/arm/*.go`, `docs/CONVENTIONS.md` | TODO | Matches existing RG behaviour today; real Azure returns `{}`. Either add a shared helper in `helpers.go` and update all responders, or document the choice in `docs/CONVENTIONS.md` S2 and leave as-is. TODO.md "Known Gaps". |
+| 2.5.1 | Move `OpenIDConfig` + `JWKS` mounts into `auth.TokenService.TenantRoutes` so `internal/auth` owns its full public surface | `internal/auth/token.go`, `cmd/azemu/main.go`, `test/integration/harness_test.go` | DONE | New `TenantRoutes(chi.Router)` method mounts oauth2 + OIDC + JWKS under one `/{tenantID}` group. `main.go` and `harness_test.go` each reduced to a single `r.Route("/{tenantID}", tokenSvc.TenantRoutes)` call. |
+| 2.5.2 | Normalise empty tags to `{}` in all ARM responses | `internal/arm/router.go`, `internal/arm/vnet.go`, `docs/CONVENTIONS.md` | DONE | `normaliseTags()` helper in `router.go` converts nil to `map[string]string{}`. Applied in `putResourceGroup` and `putVNet`. Decision documented in `docs/CONVENTIONS.md` "Tags normalisation". Pinned by `TestRG_PUT_NilTags_NormalisedToEmptyObject` and `TestVNet_PUT_NilTags_NormalisedToEmptyObject`. |
 
-Acceptance: `internal/auth` exposes `Routes`/`RoutesV2` as the sole mount
-points for the full token/OIDC/JWKS surface. Tags normalisation decision is
-documented and (if chosen) implemented.
+Acceptance: `internal/auth` exposes `TenantRoutes` as the sole mount point
+for the full token/OIDC/JWKS surface. Tags normalisation to `{}` is
+implemented via `normaliseTags()` and documented in `docs/CONVENTIONS.md`. ✅
 
 ---
 

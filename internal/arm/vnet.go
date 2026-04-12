@@ -69,7 +69,7 @@ func (a *Router) putVNet(w http.ResponseWriter, r *http.Request) {
 		Name:       name,
 		Type:       vnetTypeString,
 		Location:   strings.ToLower(body.Location),
-		Tags:       body.Tags,
+		Tags:       normaliseTags(body.Tags),
 		Properties: body.Properties,
 	}
 

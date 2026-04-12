@@ -357,3 +357,26 @@ func TestRG_LIST_EmptySubscription_ReturnsEmptyArray(t *testing.T) {
 		t.Errorf("len(items) = %d, want 0", len(items))
 	}
 }
+
+// TestRG_PUT_NilTags_NormalisedToEmptyObject verifies that when a client
+// sends no tags field, the response contains "tags": {} (not null), matching
+// real Azure behaviour.
+func TestRG_PUT_NilTags_NormalisedToEmptyObject(t *testing.T) {
+	srv := newTestServer(t)
+	// rgBodyMinimal has no "tags" key, so body.Tags will be nil.
+	resp := httpPut(t, rgURL(srv.URL, "sub1", "rg1"), rgBodyMinimal)
+	assertStatus(t, resp, http.StatusCreated)
+
+	body := decodeJSON(t, resp)
+	tags, ok := body["tags"]
+	if !ok {
+		t.Fatal("tags field missing from response")
+	}
+	tagsMap, ok := tags.(map[string]interface{})
+	if !ok {
+		t.Fatalf("tags is %T, want map (JSON object); got %v", tags, tags)
+	}
+	if len(tagsMap) != 0 {
+		t.Errorf("tags should be empty object, got %v", tagsMap)
+	}
+}
