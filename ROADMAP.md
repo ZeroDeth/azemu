@@ -164,7 +164,7 @@ Priority order inside v0.2 is top-down; ship the first row first.
 | Idea | Why it is there |
 |---|---|
 | Postgres-backed store | Multi-process CI clusters where one azemu serves many runners |
-| `aztf` wrapper CLI (Go rewrite) | Single-binary UX for "start, trust, apply, destroy" in one command |
+| `azemu` multi-toolchain CLI | Subcommands (`azemu tf`, `azemu pulumi`, `azemu kubectl`, `azemu python`) auto-start the emulator, inject env vars, and exec the underlying tool. One binary, any IaC toolchain. Replaces the shell `scripts/aztf` wrapper. |
 | Plugin SDK | Out-of-process resource modules so community can ship providers without forking |
 | Native Terraform test framework (`.tftest.hcl`) | First-class support for `terraform test` in the emulator test pyramid |
 | Front Door, Traffic Manager | Requested by users once Application Gateway lands |
