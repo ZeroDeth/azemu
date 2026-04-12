@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"net/http"
 	"os"
@@ -24,7 +25,21 @@ import (
 	"github.com/zerodeth/azemu/pkg/config"
 )
 
+// Version is overridden at build time via -ldflags "-X main.Version=...".
+var Version = "dev"
+
 func main() {
+	// --- flags (stdlib only, per .claude/rules/go-style.md) ---
+	fs := flag.NewFlagSet("azemu", flag.ExitOnError)
+	showVersion := fs.Bool("version", false, "Print version and exit")
+	fs.Usage = func() { printUsage(os.Stderr) }
+	_ = fs.Parse(os.Args[1:])
+
+	if *showVersion {
+		fmt.Fprintf(os.Stdout, "azemu %s\n", Version)
+		os.Exit(0)
+	}
+
 	log.Logger = zerolog.New(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: time.RFC3339}).
 		With().Timestamp().Caller().Logger()
 
@@ -73,7 +88,7 @@ func main() {
 
 	// Load existing TLS cert from AZEMU_CERT_PATH if set, otherwise generate
 	// fresh. Persistence eliminates the per-restart keychain trust friction
-	// that blocks Phase 1 debugging cycles — trust once, restart freely.
+	// that blocks Phase 1 debugging cycles -- trust once, restart freely.
 	tlsCfg, generated, err := auth.LoadOrGenerateSelfSignedTLS(cfg.CertPath, "localhost", "127.0.0.1")
 	if err != nil {
 		// LoadOrGenerateSelfSignedTLS may return a usable cert with a
@@ -85,28 +100,45 @@ func main() {
 	}
 	sharedTLS := &tls.Config{Certificates: []tls.Certificate{tlsCfg}}
 
-	// Surface the cert path so the user can trust it. When AZEMU_CERT_PATH
-	// is set, the bundle file already contains both cert and key — point
-	// SSL_CERT_FILE at it (or the cert-only export below). When unset,
-	// fall back to writing a cert-only file to OS temp dir for legacy UX.
+	// Resolve cert path for the banner.
+	certDisplay := cfg.CertPath
 	switch {
 	case cfg.CertPath != "" && generated:
 		log.Info().Str("path", cfg.CertPath).Msg("TLS cert generated and persisted; trust once, restart freely")
 	case cfg.CertPath != "" && !generated:
 		log.Info().Str("path", cfg.CertPath).Msg("TLS cert loaded from existing bundle; trust unchanged")
 	default:
-		certPath, err := auth.WriteCertToTemp(tlsCfg)
-		if err != nil {
-			log.Warn().Err(err).Msg("could not write cert file")
+		certPath, werr := auth.WriteCertToTemp(tlsCfg)
+		if werr != nil {
+			log.Warn().Err(werr).Msg("could not write cert file")
+			certDisplay = "(in-memory only)"
 		} else {
 			log.Info().Str("path", certPath).Msg("TLS cert written, export SSL_CERT_FILE to trust it")
+			certDisplay = certPath
 		}
 	}
 
-	log.Info().
-		Str("arm", fmt.Sprintf("https://localhost:%d", cfg.HTTPPort)).
-		Str("metadata", fmt.Sprintf("https://localhost:%d", cfg.HTTPSPort)).
-		Msg("azemu starting")
+	// --- startup banner ---
+	printBanner(os.Stderr, cfg, certDisplay)
+
+	startTime := time.Now()
+
+	// --- Health server (plain HTTP, no TLS, no middleware) ---
+	healthMux := http.NewServeMux()
+	healthMux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"status":         "ok",
+			"version":        Version,
+			"uptime_seconds": int(time.Since(startTime).Seconds()),
+		})
+	})
+	healthSrv := &http.Server{
+		Addr:         fmt.Sprintf(":%d", cfg.HealthPort),
+		Handler:      healthMux,
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 5 * time.Second,
+	}
 
 	// ARM server (HTTPS, required because metadata declares https:// URLs)
 	httpSrv := &http.Server{
@@ -127,6 +159,11 @@ func main() {
 	}
 
 	go func() {
+		if err := healthSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatal().Err(err).Msg("health server failed")
+		}
+	}()
+	go func() {
 		if err := httpSrv.ListenAndServeTLS("", ""); err != nil && err != http.ErrServerClosed {
 			log.Fatal().Err(err).Msg("arm server failed")
 		}
@@ -144,6 +181,33 @@ func main() {
 	log.Info().Msg("shutting down")
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	httpSrv.Shutdown(ctx)
-	httpsSrv.Shutdown(ctx)
+	_ = healthSrv.Shutdown(ctx)
+	_ = httpSrv.Shutdown(ctx)
+	_ = httpsSrv.Shutdown(ctx)
+}
+
+func printBanner(w *os.File, cfg *config.Config, certPath string) {
+	fmt.Fprintf(w, "\nazemu %s\n", Version)
+	fmt.Fprintf(w, "  ARM (HTTPS)        https://localhost:%d\n", cfg.HTTPPort)
+	fmt.Fprintf(w, "  metadata (HTTPS)   https://localhost:%d\n", cfg.HTTPSPort)
+	fmt.Fprintf(w, "  health (HTTP)      http://localhost:%d/health\n", cfg.HealthPort)
+	fmt.Fprintf(w, "  cert bundle        %s\n", certPath)
+	fmt.Fprintf(w, "  docs               https://github.com/zerodeth/azemu\n\n")
+}
+
+func printUsage(w *os.File) {
+	fmt.Fprintf(w, "azemu %s -- local Azure emulator for Terraform\n\n", Version)
+	fmt.Fprintf(w, "Usage: azemu [flags]\n\n")
+	fmt.Fprintf(w, "Flags:\n")
+	fmt.Fprintf(w, "  -version    Print version and exit\n")
+	fmt.Fprintf(w, "  -h, -help   Print this help and exit\n\n")
+	fmt.Fprintf(w, "Environment variables:\n")
+	fmt.Fprintf(w, "  AZEMU_CERT_PATH         Persistent TLS cert+key PEM bundle path\n")
+	fmt.Fprintf(w, "  AZEMU_METADATA_HOST     Host for URLs in /metadata/endpoints (default localhost:4567)\n")
+	fmt.Fprintf(w, "  AZEMU_SUBSCRIPTION_ID   Mock subscription ID (default 00000000-...)\n")
+	fmt.Fprintf(w, "  AZEMU_TENANT_ID         Mock tenant ID (default 00000000-...)\n\n")
+	fmt.Fprintf(w, "Ports:\n")
+	fmt.Fprintf(w, "  :4566   ARM API (HTTPS)\n")
+	fmt.Fprintf(w, "  :4567   Metadata / OAuth2 / OIDC (HTTPS)\n")
+	fmt.Fprintf(w, "  :4568   Health check (plain HTTP)\n\n")
 }

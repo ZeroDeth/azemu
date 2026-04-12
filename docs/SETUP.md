@@ -4,8 +4,51 @@ Everything required to get azemu running and talking to Terraform.
 
 ## Prerequisites
 
-- [flox](https://flox.dev) (the only host-level requirement; pulls everything else)
+- Docker and Docker Compose (for the quick-start path)
+- [flox](https://flox.dev) (for the contributor dev environment; pulls Go, Terraform, etc.)
 - macOS or Linux
+
+## Docker (quick start)
+
+The fastest way to get azemu running. No Go toolchain, no flox, no manual
+cert trust.
+
+```bash
+docker compose up -d --build
+```
+
+This builds the image, starts azemu, and exposes three ports:
+
+| Port | Protocol | Purpose |
+|---|---|---|
+| 4566 | HTTPS | ARM API |
+| 4567 | HTTPS | Metadata, OAuth2, OIDC |
+| 4568 | HTTP | Health check (no TLS) |
+
+The compose file bind-mounts `.azemu/` from the host, so the self-signed cert
+bundle appears at `.azemu/cert-bundle.pem` on the host after first boot.
+
+To run Terraform against azemu:
+
+```bash
+export SSL_CERT_FILE=$PWD/.azemu/cert-bundle.pem
+cd examples/terraform
+terraform init && terraform apply -auto-approve
+```
+
+Or use the `scripts/aztf` wrapper which handles the env-var exports and
+starts azemu automatically:
+
+```bash
+./scripts/aztf -chdir=examples/terraform init
+./scripts/aztf -chdir=examples/terraform apply -auto-approve
+```
+
+To stop:
+
+```bash
+docker compose down
+```
 
 ## Development environment (flox)
 
@@ -160,13 +203,17 @@ Sourced from `Makefile`:
 
 | Target | Description |
 |---|---|
-| `make build` | `go build -o bin/azemu ./cmd/azemu` |
+| `make build` | `go build -o bin/azemu ./cmd/azemu` (with `-ldflags` version) |
 | `make run` | `make build && ./bin/azemu` |
 | `make test` | `go test ./... -v -count=1` |
+| `make coverage` | Run tests with coverage, generate `coverage.html` |
 | `make smoke` | Build, start server, run inline curl smoke test, stop server |
 | `make docker` | Build the Docker image as `azemu:latest` |
-| `make docker-run` | Build and run the image with ports `4566`/`4567` exposed |
-| `make clean` | Remove `bin/` |
+| `make docker-run` | Build and run the image with ports `4566`/`4567`/`4568` exposed |
+| `make docker-compose` | `docker compose up -d --build` |
+| `make docker-compose-down` | `docker compose down -v` |
+| `make tf-test` | Run `terraform test` in `examples/terraform/` |
+| `make clean` | Remove `bin/`, `coverage.out`, `coverage.html` |
 
 ## Quick validation
 

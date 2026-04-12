@@ -1,10 +1,11 @@
-.PHONY: build run test docker clean
+.PHONY: build run test docker docker-run docker-compose docker-compose-down clean smoke tf-test coverage
 
-BINARY := azemu
-MODULE := github.com/zerodeth/azemu
+BINARY  := azemu
+MODULE  := github.com/zerodeth/azemu
+VERSION ?= dev
 
 build:
-	go build -o bin/$(BINARY) ./cmd/azemu
+	go build -ldflags "-X main.Version=$(VERSION)" -o bin/$(BINARY) ./cmd/azemu
 
 run: build
 	./bin/$(BINARY)
@@ -12,14 +13,28 @@ run: build
 test:
 	go test ./... -v -count=1
 
+coverage:
+	go test ./... -coverprofile=coverage.out -covermode=atomic
+	go tool cover -html=coverage.out -o coverage.html
+	@echo "open coverage.html"
+
 docker:
 	docker build -t azemu:latest .
 
 docker-run: docker
-	docker run --rm -p 4566:4566 -p 4567:4567 azemu:latest
+	docker run --rm -p 4566:4566 -p 4567:4567 -p 4568:4568 azemu:latest
+
+docker-compose:
+	docker compose up -d --build
+
+docker-compose-down:
+	docker compose down -v
+
+tf-test:
+	cd examples/terraform && terraform test
 
 clean:
-	rm -rf bin/
+	rm -rf bin/ coverage.out coverage.html
 
 # Quick smoke test: metadata endpoint should return JSON
 smoke:
