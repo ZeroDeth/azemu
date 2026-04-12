@@ -8,6 +8,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
+	"fmt"
 	"math/big"
 	"net"
 	"os"
@@ -25,7 +26,10 @@ func generateSelfSignedPEM(hosts ...string) (certPEM, keyPEM []byte, err error) 
 		return nil, nil, err
 	}
 
-	serial, _ := rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), 128))
+	serial, err2 := rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), 128))
+	if err2 != nil {
+		return nil, nil, fmt.Errorf("generate cert serial: %w", err2)
+	}
 	tmpl := &x509.Certificate{
 		SerialNumber: serial,
 		Subject:      pkix.Name{Organization: []string{"azemu"}, CommonName: "azemu localhost"},
@@ -48,7 +52,10 @@ func generateSelfSignedPEM(hosts ...string) (certPEM, keyPEM []byte, err error) 
 	}
 
 	certPEM = pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certDER})
-	keyDER, _ := x509.MarshalECPrivateKey(key)
+	keyDER, err := x509.MarshalECPrivateKey(key)
+	if err != nil {
+		return nil, nil, fmt.Errorf("marshal EC private key: %w", err)
+	}
 	keyPEM = pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: keyDER})
 	return certPEM, keyPEM, nil
 }
@@ -98,12 +105,10 @@ func LoadOrGenerateSelfSignedTLS(path string, hosts ...string) (tls.Certificate,
 		return tls.Certificate{}, false, err
 	}
 	if path != "" {
-		// Write cert+key concatenated. Mode 0644 so bind-mounted files are
-		// readable by the host user when azemu runs as root inside a
-		// container. The key is only used for a local self-signed cert;
-		// there is no security value in restricting it.
+		// Write cert+key concatenated. Mode 0600 because the bundle
+		// contains the private key.
 		bundle := append(certPEM, keyPEM...)
-		if err := os.WriteFile(path, bundle, 0644); err != nil {
+		if err := os.WriteFile(path, bundle, 0600); err != nil {
 			// Generation succeeded but persistence failed — return the cert
 			// anyway so the server still starts; the caller can log the
 			// path failure as a warning.

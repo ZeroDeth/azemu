@@ -53,7 +53,10 @@ func buildProductionLikeServer(t *testing.T) *httptest.Server {
 	}
 
 	s := store.NewMemoryStore()
-	tokenSvc := auth.NewTokenService(cfg.TenantID)
+	tokenSvc, err := auth.NewTokenService(cfg.TenantID)
+	if err != nil {
+		t.Fatalf("NewTokenService: %v", err)
+	}
 	metaSvc := metadata.NewService(cfg)
 	armRouter := arm.NewRouter(s)
 

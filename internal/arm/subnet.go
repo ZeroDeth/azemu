@@ -43,7 +43,7 @@ func (a *Router) putSubnet(w http.ResponseWriter, r *http.Request) {
 	// fidelity so broken Terraform graphs surface the correct error.
 	parentID := vnetID(subID, rgName, vnetName)
 	parent, ok := a.store.Get(parentID)
-	if !ok {
+	if parent == nil || !ok {
 		writeAzureError(w, http.StatusNotFound, "ParentResourceNotFound",
 			fmt.Sprintf("Virtual network '%s' could not be found.", vnetName))
 		return
@@ -71,7 +71,11 @@ func (a *Router) putSubnet(w http.ResponseWriter, r *http.Request) {
 	}
 
 	_, exists := a.store.Get(id)
-	_ = a.store.Put(id, res)
+	if err := a.store.Put(id, res); err != nil {
+		writeAzureError(w, http.StatusInternalServerError, "InternalServerError",
+			fmt.Sprintf("put subnet %q: %s", name, err))
+		return
+	}
 
 	status := http.StatusCreated
 	if exists {

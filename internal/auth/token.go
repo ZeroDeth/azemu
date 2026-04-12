@@ -3,9 +3,9 @@ package auth
 import (
 	"crypto/rand"
 	"crypto/rsa"
-
+	"encoding/base64"
 	"encoding/json"
-
+	"fmt"
 	"math/big"
 	"net/http"
 	"time"
@@ -20,13 +20,16 @@ type TokenService struct {
 	keyID      string
 }
 
-func NewTokenService(tenantID string) *TokenService {
-	key, _ := rsa.GenerateKey(rand.Reader, 2048)
+func NewTokenService(tenantID string) (*TokenService, error) {
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		return nil, fmt.Errorf("generate RSA signing key: %w", err)
+	}
 	return &TokenService{
 		tenantID:   tenantID,
 		signingKey: key,
 		keyID:      "azemu-signing-key-1",
-	}
+	}, nil
 }
 
 // TenantRoutes mounts the full auth surface for a {tenantID} path group:
@@ -111,33 +114,9 @@ func (t *TokenService) JWKS(w http.ResponseWriter, r *http.Request) {
 				"kty": "RSA",
 				"use": "sig",
 				"kid": t.keyID,
-				"n":   base64URLEncode(n),
-				"e":   base64URLEncode(e),
+				"n":   base64.RawURLEncoding.EncodeToString(n),
+				"e":   base64.RawURLEncoding.EncodeToString(e),
 			},
 		},
 	})
-}
-
-func base64URLEncode(b []byte) string {
-	// Standard base64url without padding
-	const enc = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
-	result := make([]byte, 0, (len(b)*4+2)/3)
-	for i := 0; i < len(b); i += 3 {
-		val := uint(b[i]) << 16
-		if i+1 < len(b) {
-			val |= uint(b[i+1]) << 8
-		}
-		if i+2 < len(b) {
-			val |= uint(b[i+2])
-		}
-		result = append(result, enc[(val>>18)&0x3F])
-		result = append(result, enc[(val>>12)&0x3F])
-		if i+1 < len(b) {
-			result = append(result, enc[(val>>6)&0x3F])
-		}
-		if i+2 < len(b) {
-			result = append(result, enc[val&0x3F])
-		}
-	}
-	return string(result)
 }
