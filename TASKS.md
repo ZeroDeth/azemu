@@ -278,12 +278,27 @@ azemu with zero cloud cost. See ROADMAP v0.3 and the non-goals section.
 | 8.7 | `scenarios/aks-workload/` | — | TODO | RG + VNet + Subnet + AKS + Managed Identity + Key Vault. |
 | 8.8 | `scenarios/ado-pipeline/` | — | TODO | ADO service connection + workload identity federation + Key Vault + Storage. |
 
-### Phase 9: Wrapper CLI (aztf v2)
+### Phase 9: Multi-toolchain CLI (`azemu` subcommands)
 
-- Go-based CLI replacing the shell script
-- Auto-start azemu, cert trust, provider config generation
-- `aztf snapshot save/load/list` for state management
-- `aztf parity` to show supported resources
+Goal: the `azemu` binary itself becomes the unified CLI. No separate wrapper
+binary. Each toolchain adapter auto-starts the emulator, injects the correct
+env vars and config, and execs the underlying tool. Replaces `scripts/aztf`.
+
+| # | Task | Status | Notes |
+|---|------|--------|-------|
+| 9.1 | `azemu serve` subcommand (current bare-start behaviour) | TODO | Default when no subcommand given, for backwards compat |
+| 9.2 | `azemu tf <args>` (Terraform adapter) | TODO | Auto-start, cert trust, `ARM_*` + `SSL_CERT_FILE` injection, exec `terraform <args>` |
+| 9.3 | `azemu pulumi <args>` (Pulumi adapter) | TODO | `ARM_*` env vars, Pulumi Azure Native config injection |
+| 9.4 | `azemu kubectl <args>` (Kubernetes adapter) | TODO | Kubeconfig pointing at azemu's AKS stub (requires Phase 8.4) |
+| 9.5 | `azemu python <args>` (Python Azure SDK adapter) | TODO | `AZURE_*` env vars for `azure-identity` DefaultAzureCredential |
+| 9.6 | `azemu parity` (show supported resources) | TODO | Reads from embedded parity data or live server |
+| 9.7 | `azemu snapshot save\|load\|list` (state management) | TODO | Wraps Phase 4 export/import HTTP API |
+| 9.8 | `azemu status` (health and version check) | TODO | Replaces `azemu-status` flox helper |
+| 9.9 | Remove `scripts/aztf` shell wrapper | TODO | Superseded by `azemu tf` |
+
+Acceptance: `azemu tf apply` from a cold start (no running emulator) exits 0
+against the `examples/terraform/` config. `azemu pulumi preview` works with
+the Pulumi Azure Native provider pointed at azemu.
 
 ### Phase 10: Plugin SDK
 
