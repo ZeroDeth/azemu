@@ -168,7 +168,7 @@ Goal: file-based persistence, state export/import via CLI and HTTP API.
 
 | # | Task | File(s) | Status | Notes |
 |---|------|---------|--------|-------|
-| 4.0 | Surface `store.Put` errors at every call site before the file store lands | `internal/arm/router.go`, `internal/arm/vnet.go`, `internal/arm/subnet.go` | TODO | Prerequisite. Every RG / VNet / Subnet handler currently does `_ = a.store.Put(id, res)` (or ignores the return entirely). Safe today because `MemoryStore.Put` cannot fail; **unsafe** the moment a file-backed store can return disk errors. Phase 4 cannot merge without this sweep or the first flaky disk write silently loses the resource. TODO.md "Known Gaps". |
+| 4.0 | Surface `store.Put` errors at every call site before the file store lands | `internal/arm/router.go`, `internal/arm/vnet.go`, `internal/arm/subnet.go` | DONE | All three handlers now check `store.Put` errors and return 500 with Azure error format on failure. Landed in the pre-Phase-4 hardening commit alongside store copy semantics, auth error propagation, writeJSON buffer-first, and middleware singleton removal. |
 | 4.1 | Add CLI flags: `--port`, `--tls-port`, `--persist`, `--import`, `--export` | `cmd/azemu/main.go`, `pkg/config/config.go` | TODO | Standard `flag` package |
 | 4.2 | Implement file-based store (`--persist` mode) | `internal/store/file.go` | TODO | Write-through to JSON file on every Put/Delete |
 | 4.3 | Implement `--import` (load state from file on startup) | `cmd/azemu/main.go` | TODO | |
