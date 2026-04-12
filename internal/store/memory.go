@@ -3,6 +3,7 @@ package store
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 )
@@ -15,8 +16,8 @@ type Resource struct {
 	Location   string                 `json:"location"`
 	Tags       map[string]string      `json:"tags,omitempty"`
 	Properties map[string]interface{} `json:"properties,omitempty"`
-	CreatedAt  time.Time              `json:"-"`
-	UpdatedAt  time.Time              `json:"-"`
+	CreatedAt  time.Time              `json:"createdAt"`
+	UpdatedAt  time.Time              `json:"updatedAt"`
 }
 
 // Store defines the interface for resource persistence.
@@ -43,14 +44,15 @@ func (s *MemoryStore) Put(id string, r *Resource) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	now := time.Now()
+	stored := *r // shallow copy; caller keeps their own pointer
+	stored.ID = id
+	stored.UpdatedAt = now
 	if existing, ok := s.resources[id]; ok {
-		r.CreatedAt = existing.CreatedAt
+		stored.CreatedAt = existing.CreatedAt
 	} else {
-		r.CreatedAt = now
+		stored.CreatedAt = now
 	}
-	r.UpdatedAt = now
-	r.ID = id
-	s.resources[id] = r
+	s.resources[id] = &stored
 	return nil
 }
 
@@ -58,7 +60,11 @@ func (s *MemoryStore) Get(id string) (*Resource, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	r, ok := s.resources[id]
-	return r, ok
+	if !ok {
+		return nil, false
+	}
+	copy := *r // shallow copy; caller cannot mutate stored state
+	return &copy, true
 }
 
 func (s *MemoryStore) Delete(id string) bool {
@@ -66,8 +72,9 @@ func (s *MemoryStore) Delete(id string) bool {
 	defer s.mu.Unlock()
 	// Cascade: delete anything with this prefix
 	deleted := false
+	prefix := id + "/"
 	for k := range s.resources {
-		if k == id || len(k) > len(id) && k[:len(id)+1] == id+"/" {
+		if k == id || strings.HasPrefix(k, prefix) {
 			delete(s.resources, k)
 			deleted = true
 		}
@@ -80,8 +87,9 @@ func (s *MemoryStore) List(prefix string) []*Resource {
 	defer s.mu.RUnlock()
 	var result []*Resource
 	for k, v := range s.resources {
-		if len(k) >= len(prefix) && k[:len(prefix)] == prefix {
-			result = append(result, v)
+		if strings.HasPrefix(k, prefix) {
+			copy := *v
+			result = append(result, &copy)
 		}
 	}
 	return result
@@ -97,6 +105,11 @@ func (s *MemoryStore) Import(data []byte) error {
 	var imported map[string]*Resource
 	if err := json.Unmarshal(data, &imported); err != nil {
 		return fmt.Errorf("import: %w", err)
+	}
+	for k, v := range imported {
+		if v == nil {
+			return fmt.Errorf("import: nil resource at key %q", k)
+		}
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
