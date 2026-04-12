@@ -150,7 +150,7 @@ func (a *Router) putResourceGroup(w http.ResponseWriter, r *http.Request) {
 		Name:     name,
 		Type:     "Microsoft.Resources/resourceGroups",
 		Location: strings.ToLower(body.Location),
-		Tags:     body.Tags,
+		Tags:     normaliseTags(body.Tags),
 		Properties: map[string]interface{}{
 			"provisioningState": "Succeeded",
 		},
@@ -271,6 +271,15 @@ func resourceGroupResponse(r *store.Resource) map[string]interface{} {
 }
 
 // --- Helpers ---
+
+// normaliseTags ensures tags is always a non-nil map so JSON responses
+// serialise as {} instead of null, matching real Azure behaviour.
+func normaliseTags(tags map[string]string) map[string]string {
+	if tags == nil {
+		return map[string]string{}
+	}
+	return tags
+}
 
 func writeJSON(w http.ResponseWriter, status int, v interface{}) {
 	w.Header().Set("Content-Type", "application/json")

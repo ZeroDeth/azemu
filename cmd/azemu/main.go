@@ -75,13 +75,8 @@ func main() {
 	// Metadata endpoints (HTTPS, used by azurerm provider)
 	r.Route("/metadata", metaSvc.Routes)
 
-	// OAuth2 / token endpoints
-	r.Route("/{tenantID}/oauth2", tokenSvc.Routes)
-	r.Route("/{tenantID}/oauth2/v2.0", tokenSvc.RoutesV2)
-
-	// OIDC discovery
-	r.Get("/{tenantID}/.well-known/openid-configuration", tokenSvc.OpenIDConfig)
-	r.Get("/{tenantID}/discovery/v2.0/keys", tokenSvc.JWKS)
+	// Auth surface: OAuth2 token, OIDC discovery, JWKS (all tenant-scoped)
+	r.Route("/{tenantID}", tokenSvc.TenantRoutes)
 
 	// ARM endpoints
 	r.Route("/subscriptions", armRouter.Routes)

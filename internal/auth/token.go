@@ -29,6 +29,15 @@ func NewTokenService(tenantID string) *TokenService {
 	}
 }
 
+// TenantRoutes mounts the full auth surface for a {tenantID} path group:
+// OAuth2 token endpoints, OIDC discovery, and JWKS.
+func (t *TokenService) TenantRoutes(r chi.Router) {
+	r.Route("/oauth2", t.Routes)
+	r.Route("/oauth2/v2.0", t.RoutesV2)
+	r.Get("/.well-known/openid-configuration", t.OpenIDConfig)
+	r.Get("/discovery/v2.0/keys", t.JWKS)
+}
+
 func (t *TokenService) Routes(r chi.Router) {
 	r.Post("/token", t.token)
 }
