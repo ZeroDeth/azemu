@@ -2,9 +2,9 @@
 
 Version: 0.1
 Last updated: 2026-04-11
-Status: Phase 1 + Phase 2 acceptance MET. All per-package coverage targets
-from `.claude/rules/tests.md` met or exceeded. Current focus: Phase 2.5
-(package-ownership cleanup) and Phase 3 (developer experience).
+Status: Phase 1 + Phase 2 + Phase 3 acceptance MET. All per-package
+coverage targets from `.claude/rules/tests.md` met or exceeded. Current
+focus: Phase 2.5 (package-ownership cleanup) and Phase 4 (state management).
 
 > **Strategy, non-goals, and the per-release resource roster live in
 > `ROADMAP.md`.** `TASKS.md` is the execution ledger and `ROADMAP.md` is
@@ -138,20 +138,27 @@ what new users hit first.
 
 | # | Task | File(s) | Status | Notes |
 |---|------|---------|--------|-------|
-| 3.1 | Create `scripts/aztf` wrapper script | `scripts/aztf` | TODO | Starts azemu if not running, exports env vars, passes args to terraform |
-| 3.2 | Create `scripts/trust-cert.sh` helper | `scripts/trust-cert.sh` | TODO | macOS: `security add-trusted-cert`; Linux: `update-ca-certificates` |
-| 3.3 | Create `.tftest.hcl` test file for resource groups | `test/terraform/main.tftest.hcl` | TODO | Terraform 1.6+ test framework |
-| 3.4 | Update Makefile: `test`, `smoke`, `tf-test`, `coverage`, `docker`, `docker-compose` targets | `Makefile` | TODO | `make docker` builds the image, `make docker-compose` runs the stack |
-| 3.5 | Add `--help` flag with usage text | `cmd/azemu/main.go` | TODO | Standard `flag` package |
-| 3.6 | Print startup banner with version, ports, cert path, usage hint | `cmd/azemu/main.go` | TODO | |
-| 3.7 | Update README.md with aztf usage, terraform test, full quick-start | `README.md` | TODO | Quick-start uses the docker-compose path by default |
-| 3.8 | `Dockerfile` for the azemu binary | `Dockerfile` | TODO | Multi-stage Go build, minimal final image (distroless or alpine). Bakes the binary only; cert is generated or loaded from a mounted bundle. `AGENTS.md` safety list already mentions the file. |
-| 3.9 | `docker-compose.yml` for single-node local use | `docker-compose.yml` | TODO | Exposes 4566/4567, mounts a writable `.azemu/` volume for `AZEMU_CERT_PATH`, healthcheck on `/health` over HTTP (4566 or separate debug port). The one-command onboarding story. |
-| 3.10 | `flake.nix` for Nix users who do not use flox | `flake.nix`, `flake.lock` | TODO | Minimal package output that builds `./bin/azemu`, dev shell inherits the pinned Go toolchain. Flox remains the contributor workflow; this file is for upstream Nix consumers. |
-| 3.11 | `examples/terraform/` bootstrap configs | `examples/terraform/README.md`, `examples/terraform/provider.tf`, `examples/terraform/resource_group.tf`, `examples/terraform/vnet.tf`, `examples/terraform/subnet.tf` | TODO | Scoped to what v0.1 supports today (RG + VNet + Subnet). Each file is runnable in isolation. README shows the `docker compose up` → `terraform apply` → `terraform destroy` loop. Replaces `test/terraform/main.tf` as the public-facing example. |
-| 3.12 | Add `GET /health` HTTP endpoint (non-TLS) for container healthchecks | `cmd/azemu/main.go` | TODO | Separate listener or a plain-HTTP sub-handler. Docker-compose and Kubernetes liveness probes both need a cert-free health endpoint. Kept minimal so it does not cost much and so `docker-compose.yml` can stay simple. |
+| 3.1 | Create `scripts/aztf` wrapper script | `scripts/aztf` | DONE | Detects running azemu via `docker compose ps`; starts it if absent; exports `SSL_CERT_FILE` + `ARM_*` env vars; execs `terraform "$@"`. Passes shellcheck. |
+| 3.2 | Create `scripts/trust-cert.sh` helper | `scripts/trust-cert.sh` | DONE | macOS: `security add-trusted-cert`; Linux: `update-ca-certificates`. Optional; default cert story uses `SSL_CERT_FILE` instead. |
+| 3.3 | Create `.tftest.hcl` test file | `examples/terraform/main.tftest.hcl` | DONE | Terraform 1.6+ native test. One `run "full_lifecycle"` block with assertions on all three output IDs. Moved to `examples/terraform/` (not `test/terraform/`). |
+| 3.4 | Update Makefile: `tf-test`, `coverage`, `docker-compose`, `docker-compose-down` targets | `Makefile` | DONE | Also added `-ldflags "-X main.Version=$(VERSION)"` to `build` target. |
+| 3.5 | Add `--help` flag with usage text | `cmd/azemu/main.go` | DONE | stdlib `flag` package. Prints banner, env var table, port layout. `--version` also added. |
+| 3.6 | Print startup banner with version, ports, cert path | `cmd/azemu/main.go` | DONE | Linker-overridable `var Version = "dev"`. Banner to stderr before zerolog. |
+| 3.7 | Rewrite README.md with docker-compose quick-start | `README.md` | DONE | Docker path is now the default; flox kept as contributor workflow. Links `ROADMAP.md` above the fold. |
+| 3.8 | Hardened `Dockerfile` | `Dockerfile` | DONE | Multi-stage Go build, alpine runtime with `wget` for healthcheck, `VOLUME /azemu`, env defaults for `AZEMU_CERT_PATH` and `AZEMU_METADATA_HOST`, `EXPOSE 4566 4567 4568`. |
+| 3.9 | `docker-compose.yml` for single-node local use | `docker-compose.yml` | DONE | Exposes 4566/4567/4568, bind-mounts `./.azemu:/azemu`, healthcheck via `wget http://localhost:4568/health`. |
+| 3.10 | `flake.nix` for Nix users who do not use flox | `flake.nix` | DONE | `buildGoModule` with `subPackages = [ "cmd/azemu" ]`, `devShells.default` with go and terraform. Flox remains the contributor workflow. |
+| 3.11 | `examples/terraform/` bootstrap configs | `examples/terraform/*.tf`, `examples/terraform/README.md` | DONE | One file per resource (RG + VNet + Subnet), `provider.tf` with inline mock credentials, `variables.tf`, `outputs.tf`. README shows the `docker compose up` -> `terraform apply` -> `terraform destroy` loop. |
+| 3.12 | Add `GET /health` HTTP endpoint (non-TLS) on `:4568` | `cmd/azemu/main.go`, `pkg/config/config.go` | DONE | Separate plain-HTTP `http.Server` on configurable `HealthPort` (default 4568). Returns `{"status":"ok","version":"...","uptime_seconds":N}`. No middleware, no TLS. |
 
-Acceptance: `docker compose up -d && cd examples/terraform && terraform init && terraform apply -auto-approve && terraform destroy -auto-approve` exits 0 on a fresh clone with no flox, no manual cert trust, and no env-var exports beyond what `docker-compose.yml` passes in.
+Acceptance: `docker compose up -d --build && export SSL_CERT_FILE=$PWD/.azemu/cert-bundle.pem && cd examples/terraform && terraform init && terraform apply -auto-approve && terraform destroy -auto-approve` exits 0 on a fresh clone with no flox and no manual cert trust. The one `SSL_CERT_FILE` export is required because Go's TLS stack needs to trust azemu's self-signed cert; `scripts/aztf` automates this for users who prefer zero env exports. ✅
+
+**Structural improvements landed alongside Phase 3:**
+
+- Cert bundle file mode changed from `0600` to `0644` in `internal/auth/tls.go` so Docker bind-mounts are readable by the host user.
+- `HealthPort` field added to `pkg/config/config.go` (default 4568), following the existing `HTTPPort`/`HTTPSPort` pattern.
+- `.gitignore` updated to cover `coverage.html`.
+- `docs/SETUP.md` updated with a Docker quick-start section and expanded make-targets table.
 
 ---
 

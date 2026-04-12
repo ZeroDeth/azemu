@@ -22,13 +22,14 @@ func TestLoadOrGenerate_FreshGeneration(t *testing.T) {
 		t.Fatalf("returned cert has no certificate bytes")
 	}
 
-	// File must exist and have mode 0600 because it contains a private key.
+	// File must exist and have mode 0644 so bind-mounted files are
+	// readable by the host user when azemu runs as root in a container.
 	info, err := os.Stat(path)
 	if err != nil {
 		t.Fatalf("stat persisted bundle: %v", err)
 	}
-	if mode := info.Mode().Perm(); mode != 0600 {
-		t.Errorf("bundle mode = %o, want 0600 (private key must not be world-readable)", mode)
+	if mode := info.Mode().Perm(); mode != 0644 {
+		t.Errorf("bundle mode = %o, want 0644 (readable for container bind-mount)", mode)
 	}
 }
 
