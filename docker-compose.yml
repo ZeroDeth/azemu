@@ -1,0 +1,19 @@
+services:
+  azemu:
+    build: .
+    image: azemu:dev
+    ports:
+      - "4566:4566"
+      - "4567:4567"
+      - "4568:4568"
+    environment:
+      AZEMU_CERT_PATH: /azemu/cert-bundle.pem
+      AZEMU_METADATA_HOST: 127.0.0.1:4567
+    volumes:
+      - ./.azemu:/azemu
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:4568/health"]
+      interval: 5s
+      timeout: 2s
+      retries: 10
+      start_period: 3s

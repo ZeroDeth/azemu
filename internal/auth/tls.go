@@ -98,10 +98,12 @@ func LoadOrGenerateSelfSignedTLS(path string, hosts ...string) (tls.Certificate,
 		return tls.Certificate{}, false, err
 	}
 	if path != "" {
-		// Write cert+key concatenated. Mode 0600 because the file contains
-		// a private key — must not be world-readable.
+		// Write cert+key concatenated. Mode 0644 so bind-mounted files are
+		// readable by the host user when azemu runs as root inside a
+		// container. The key is only used for a local self-signed cert;
+		// there is no security value in restricting it.
 		bundle := append(certPEM, keyPEM...)
-		if err := os.WriteFile(path, bundle, 0600); err != nil {
+		if err := os.WriteFile(path, bundle, 0644); err != nil {
 			// Generation succeeded but persistence failed — return the cert
 			// anyway so the server still starts; the caller can log the
 			// path failure as a warning.
