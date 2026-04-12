@@ -28,6 +28,8 @@ type Store interface {
 	List(prefix string) []*Resource
 	Export() ([]byte, error)
 	Import(data []byte) error
+	// Reset clears all resources from the store.
+	Reset()
 }
 
 // MemoryStore is the default in-memory implementation.
@@ -93,6 +95,12 @@ func (s *MemoryStore) List(prefix string) []*Resource {
 		}
 	}
 	return result
+}
+
+func (s *MemoryStore) Reset() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.resources = make(map[string]*Resource)
 }
 
 func (s *MemoryStore) Export() ([]byte, error) {

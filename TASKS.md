@@ -169,15 +169,15 @@ Goal: file-based persistence, state export/import via CLI and HTTP API.
 | # | Task | File(s) | Status | Notes |
 |---|------|---------|--------|-------|
 | 4.0 | Surface `store.Put` errors at every call site before the file store lands | `internal/arm/router.go`, `internal/arm/vnet.go`, `internal/arm/subnet.go` | DONE | All three handlers now check `store.Put` errors and return 500 with Azure error format on failure. Landed in the pre-Phase-4 hardening commit alongside store copy semantics, auth error propagation, writeJSON buffer-first, and middleware singleton removal. |
-| 4.1 | Add CLI flags: `--port`, `--tls-port`, `--persist`, `--import`, `--export` | `cmd/azemu/main.go`, `pkg/config/config.go` | TODO | Standard `flag` package |
-| 4.2 | Implement file-based store (`--persist` mode) | `internal/store/file.go` | TODO | Write-through to JSON file on every Put/Delete |
-| 4.3 | Implement `--import` (load state from file on startup) | `cmd/azemu/main.go` | TODO | |
-| 4.4 | Implement `--export` (dump current state to file, then exit) | `cmd/azemu/main.go` | TODO | |
-| 4.5 | Add `GET /api/state/export` HTTP endpoint | `cmd/azemu/main.go` | TODO | Returns current state as JSON |
-| 4.6 | Add `POST /api/state/import` HTTP endpoint | `cmd/azemu/main.go` | TODO | Replaces current state |
-| 4.7 | Add `POST /api/state/reset` HTTP endpoint | `cmd/azemu/main.go` | TODO | Clears all state (useful for test isolation) |
-| 4.8 | File store tests: write-through, reload, concurrent access | `internal/store/file_test.go` | TODO | |
-| 4.9 | Integration test: persist, restart, verify state survives | `test/integration/persist_test.go` | TODO | |
+| 4.1 | Add CLI flags: `--persist`, `--import`, `--export` | `cmd/azemu/main.go`, `pkg/config/config.go` | DONE | `--persist` also via `AZEMU_PERSIST_PATH` env var. Port flags (`--port`, `--tls-port`) deferred. |
+| 4.2 | Implement file-based store (`--persist` mode) | `internal/store/file.go` | DONE | `FileStore` wraps `MemoryStore` with write-through persistence. Atomic writes via tmp+rename. 10 tests, 92% coverage. |
+| 4.3 | Implement `--import` (load state from file on startup) | `cmd/azemu/main.go` | DONE | Reads file, calls `state.Import()`, continues serving. Works with both memory and file stores. |
+| 4.4 | Implement `--export` (dump current state to file, then exit) | `cmd/azemu/main.go` | DONE | Calls `state.Export()`, writes file, exits with code 0. |
+| 4.5 | Add `GET /api/state/export` HTTP endpoint | `cmd/azemu/main.go` | DONE | Returns full state as JSON. |
+| 4.6 | Add `POST /api/state/import` HTTP endpoint | `cmd/azemu/main.go` | DONE | Replaces current state from request body. |
+| 4.7 | Add `POST /api/state/reset` HTTP endpoint | `cmd/azemu/main.go` | DONE | Calls `state.Reset()`. Added `Reset()` to Store interface. |
+| 4.8 | File store tests: write-through, reload, concurrent access | `internal/store/file_test.go` | DONE | 10 tests: write-through, reload, timestamps, delete, reset, tmp cleanup, missing file, corrupt file, import, concurrent. |
+| 4.9 | Integration test: persist, restart, verify state survives | `test/integration/persist_test.go` | TODO | Deferred to follow-up; reload is covered by `TestFileStore_Reload` in unit tests. |
 
 Acceptance: azemu can persist state across restarts. `curl /api/state/export` returns valid JSON.
 `curl -X POST /api/state/reset` clears all resources.

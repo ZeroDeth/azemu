@@ -17,6 +17,18 @@ type Config struct {
 	// legacy "fresh cert per startup, write cert-only to /tmp/azemu-cert.pem"
 	// behaviour. Source: AZEMU_CERT_PATH env var.
 	CertPath string
+	// PersistPath is an optional file path for write-through state
+	// persistence. When set, azemu uses a FileStore that writes the full
+	// state to this JSON file after every Put/Delete. On restart, the file
+	// is loaded automatically. Source: --persist flag or AZEMU_PERSIST_PATH
+	// env var.
+	PersistPath string
+	// ImportPath loads state from this file on startup, then continues
+	// serving. CLI-only (--import flag), no env var.
+	ImportPath string
+	// ExportPath dumps the current state to this file, then exits
+	// immediately. CLI-only (--export flag), no env var.
+	ExportPath string
 }
 
 func Load() *Config {
@@ -29,6 +41,7 @@ func Load() *Config {
 		CertPath:       envOr("AZEMU_CERT_PATH", ""),
 	}
 	cfg.MetadataHost = envOr("AZEMU_METADATA_HOST", "localhost:4567")
+	cfg.PersistPath = envOr("AZEMU_PERSIST_PATH", "")
 	return cfg
 }
 
