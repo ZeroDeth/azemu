@@ -25,6 +25,9 @@ func TestLoad_Defaults(t *testing.T) {
 	if cfg.HTTPSPort != 4567 {
 		t.Errorf("HTTPSPort = %d, want 4567", cfg.HTTPSPort)
 	}
+	if cfg.HealthPort != 4568 {
+		t.Errorf("HealthPort = %d, want 4568", cfg.HealthPort)
+	}
 	if want := "00000000-0000-0000-0000-000000000000"; cfg.SubscriptionID != want {
 		t.Errorf("SubscriptionID = %q, want %q", cfg.SubscriptionID, want)
 	}
@@ -122,15 +125,16 @@ func TestLoad_EmptyStringIsTreatedAsUnset(t *testing.T) {
 	}
 }
 
-// TestLoad_PortsAreNotEnvDriven pins the current behaviour: HTTPPort and
-// HTTPSPort are hardcoded in Load() and ignore any env-var overrides. If a
-// future change adds AZEMU_HTTP_PORT / AZEMU_HTTPS_PORT support, this test
-// is the place to update and Phase 3 / Phase 4 should touch it. Recording
+// TestLoad_PortsAreNotEnvDriven pins the current behaviour: HTTPPort,
+// HTTPSPort, and HealthPort are hardcoded in Load() and ignore any env-var
+// overrides. If a future change adds AZEMU_HTTP_PORT / AZEMU_HTTPS_PORT /
+// AZEMU_HEALTH_PORT support, this test is the place to update. Recording
 // the behaviour explicitly here keeps the contract visible to contributors.
 func TestLoad_PortsAreNotEnvDriven(t *testing.T) {
 	clearAzemuEnv(t)
 	t.Setenv("AZEMU_HTTP_PORT", "9999")
 	t.Setenv("AZEMU_HTTPS_PORT", "9998")
+	t.Setenv("AZEMU_HEALTH_PORT", "9997")
 
 	cfg := Load()
 
@@ -139,6 +143,9 @@ func TestLoad_PortsAreNotEnvDriven(t *testing.T) {
 	}
 	if cfg.HTTPSPort != 4567 {
 		t.Errorf("HTTPSPort = %d, want 4567 (ports are hardcoded today)", cfg.HTTPSPort)
+	}
+	if cfg.HealthPort != 4568 {
+		t.Errorf("HealthPort = %d, want 4568 (ports are hardcoded today)", cfg.HealthPort)
 	}
 }
 
@@ -192,6 +199,7 @@ func clearAzemuEnv(t *testing.T) {
 		"AZEMU_CERT_PATH",
 		"AZEMU_HTTP_PORT",
 		"AZEMU_HTTPS_PORT",
+		"AZEMU_HEALTH_PORT",
 	} {
 		t.Setenv(k, "")
 	}

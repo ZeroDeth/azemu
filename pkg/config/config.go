@@ -5,6 +5,7 @@ import "os"
 type Config struct {
 	HTTPPort       int
 	HTTPSPort      int
+	HealthPort     int
 	SubscriptionID string
 	TenantID       string
 	MetadataHost   string // what to return in /metadata/endpoints
@@ -22,6 +23,7 @@ func Load() *Config {
 	cfg := &Config{
 		HTTPPort:       4566,
 		HTTPSPort:      4567,
+		HealthPort:     4568,
 		SubscriptionID: envOr("AZEMU_SUBSCRIPTION_ID", "00000000-0000-0000-0000-000000000000"),
 		TenantID:       envOr("AZEMU_TENANT_ID", "00000000-0000-0000-0000-000000000001"),
 		CertPath:       envOr("AZEMU_CERT_PATH", ""),

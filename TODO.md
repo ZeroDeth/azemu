@@ -43,7 +43,10 @@ mkdir -p .azemu
 AZEMU_CERT_PATH=$PWD/.azemu/cert-bundle.pem ./bin/azemu
 ```
 
-The bundle file is written with mode 0600 because it includes a private key.
+The bundle file is written with mode 0644 so it is readable by the host user
+when azemu runs as root inside a Docker container (bind-mount scenario).
+The key is only used for a local self-signed cert; there is no security value
+in restricting it for a dev tool.
 
 ---
 
@@ -99,7 +102,9 @@ The bundle file is written with mode 0600 because it includes a private key.
 ## Ideas (not committed)
 
 - Postgres-backed store for multi-process CI
-- gRPC health check endpoint
+- ~~gRPC health check endpoint~~ **RESOLVED 2026-04-12** by plain-HTTP
+  `GET /health` on `:4568` (Phase 3.12). gRPC adds a dependency; plain HTTP
+  is simpler and sufficient for docker-compose and Kubernetes probes.
 - Prometheus metrics endpoint
 - ARM deployment template execution (massively complex, defer)
 - Azure CLI (`az`) compatibility (beyond Terraform)
