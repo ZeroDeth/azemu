@@ -43,10 +43,7 @@ mkdir -p .azemu
 AZEMU_CERT_PATH=$PWD/.azemu/cert-bundle.pem ./bin/azemu
 ```
 
-The bundle file is written with mode 0644 so it is readable by the host user
-when azemu runs as root inside a Docker container (bind-mount scenario).
-The key is only used for a local self-signed cert; there is no security value
-in restricting it for a dev tool.
+The bundle file is written with mode 0600 because it contains the private key.
 
 ---
 
@@ -60,14 +57,17 @@ in restricting it for a dev tool.
 - ~~**chi route casing:** existing RG routes and the new VNet/Subnet routes use
   lowercase path literals while Azure canonical paths are camelCase.~~
   **RESOLVED 2026-04-11** by `internal/middleware/pathcase.go` (M4 above).
-- **`store.Put` error ignored:** every handler (RG, VNet, Subnet) calls
-  `_ = a.store.Put(id, res)` because `MemoryStore.Put` cannot fail today. When
-  the file-backed store lands (Phase 4), these sites will silently lose writes.
-  Pattern needs a codebase-wide fix before Phase 4 merges.
-- **Tags returned as `null` on empty:** the shared response builders render
+- ~~**`store.Put` error ignored:** every handler (RG, VNet, Subnet) calls
+  `_ = a.store.Put(id, res)` because `MemoryStore.Put` cannot fail today.~~
+  **RESOLVED 2026-04-12** in the pre-Phase-4 hardening commit. All three
+  handlers now check `store.Put` errors and return 500 with Azure error format.
+- ~~**Tags returned as `null` on empty:** the shared response builders render
   `"tags": null` when the store has no tags, rather than `"tags": {}` as real
-  Azure does. Matches existing RG behaviour; may need normalisation if a
-  Terraform consumer rejects null.
+  Azure does.~~ **RESOLVED 2026-04-11** in Phase 2.5. `normaliseTags()` in
+  `router.go` converts nil to `map[string]string{}`. Applied in
+  `putResourceGroup` and `putVNet`. Pinned by
+  `TestRG_PUT_NilTags_NormalisedToEmptyObject` and
+  `TestVNet_PUT_NilTags_NormalisedToEmptyObject`.
 - **Inline subnets in VNet PUT body are dropped:** azemu v0.1 only recognises
   subnets created via the separate `.../subnets/{name}` endpoint, matching
   how `azurerm_subnet` issues writes. Real ARM accepts both. Documented in
@@ -79,13 +79,12 @@ in restricting it for a dev tool.
   whitespace-only location, matching vnet/subnet. Pinned by
   `TestRG_PUT_MissingLocation_Returns400` and
   `TestRG_PUT_WhitespaceOnlyLocation_Returns400`.
-- **OIDC and JWKS wiring leaks out of `internal/auth`:** `TokenService.Routes`
+- ~~**OIDC and JWKS wiring leaks out of `internal/auth`:** `TokenService.Routes`
   mounts `/token`, but `OpenIDConfig` and `JWKS` are registered separately in
-  `cmd/azemu/main.go` at `/{tenantID}/.well-known/openid-configuration` and
-  `/{tenantID}/discovery/v2.0/keys`. Move both registrations into
-  `Routes`/`RoutesV2` so the package owns its full public surface. Surfaced
-  while writing `internal/auth/token_test.go`; the test helper had to
-  replicate the production wiring verbatim.
+  `cmd/azemu/main.go`.~~ **RESOLVED 2026-04-11** in Phase 2.5.
+  `TenantRoutes(chi.Router)` mounts oauth2 + OIDC + JWKS under one
+  `/{tenantID}` group. `main.go` and `harness_test.go` each reduced to a
+  single `r.Route("/{tenantID}", tokenSvc.TenantRoutes)` call.
 - ~~**VNet and Subnet test coverage gaps:** `headSubnet` 77.8%, `deleteSubnet`
   81.8%, `writeVNetList` 85.7%.~~ **RESOLVED 2026-04-11** during the Phase 2
   closeout batch. All three functions now at 100%. See

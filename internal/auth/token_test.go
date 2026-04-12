@@ -22,7 +22,10 @@ import (
 // JWKS routes wired the same way cmd/azemu/main.go wires them.
 func newAuthTestServer(t *testing.T, tenantID string) (*httptest.Server, *TokenService) {
 	t.Helper()
-	svc := NewTokenService(tenantID)
+	svc, err := NewTokenService(tenantID)
+	if err != nil {
+		t.Fatalf("NewTokenService: %v", err)
+	}
 	r := chi.NewRouter()
 	svc.Routes(r)
 	r.Get("/{tenantID}/.well-known/openid-configuration", svc.OpenIDConfig)
@@ -361,7 +364,10 @@ func TestJWKS_KidMatchesTokenHeader(t *testing.T) {
 // TestRoutesV2_TokenEndpointResponds confirms that RoutesV2 registers POST
 // /token and issues a valid JWT, identical in shape to Routes.
 func TestRoutesV2_TokenEndpointResponds(t *testing.T) {
-	svc := NewTokenService("v2-tenant")
+	svc, err := NewTokenService("v2-tenant")
+	if err != nil {
+		t.Fatalf("NewTokenService: %v", err)
+	}
 	r := chi.NewRouter()
 	svc.RoutesV2(r)
 	srv := httptest.NewServer(r)
@@ -379,7 +385,10 @@ func TestRoutesV2_TokenEndpointResponds(t *testing.T) {
 // stored in the TokenService.
 func TestOpenIDConfig_FallsBackToServiceTenant(t *testing.T) {
 	const tenantID = "fallback-tenant"
-	svc := NewTokenService(tenantID)
+	svc, err := NewTokenService(tenantID)
+	if err != nil {
+		t.Fatalf("NewTokenService: %v", err)
+	}
 	// Wire OpenIDConfig directly without the {tenantID} URL param.
 	r := chi.NewRouter()
 	r.Get("/.well-known/openid-configuration", svc.OpenIDConfig)

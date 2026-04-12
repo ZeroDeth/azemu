@@ -15,9 +15,9 @@ type UnhandledTracker struct {
 	routes map[string]int
 }
 
-// Unhandled is the global tracker instance used by the server.
-var Unhandled = &UnhandledTracker{
-	routes: make(map[string]int),
+// NewUnhandledTracker creates a new tracker instance.
+func NewUnhandledTracker() *UnhandledTracker {
+	return &UnhandledTracker{routes: make(map[string]int)}
 }
 
 // Record tracks a method+path combination and logs a warning.
@@ -43,11 +43,9 @@ func (t *UnhandledTracker) List() map[string]int {
 // LogUnhandledRequests returns an http.Handler that records the request
 // as unhandled, logs it at WARN level, and returns 501 Not Implemented
 // with an Azure-style error payload.
-//
-// Usage: r.NotFound = middleware.LogUnhandledRequests()
-func LogUnhandledRequests() http.HandlerFunc {
+func LogUnhandledRequests(tracker *UnhandledTracker) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		Unhandled.Record(r.Method, r.URL.Path)
+		tracker.Record(r.Method, r.URL.Path)
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusNotImplemented)

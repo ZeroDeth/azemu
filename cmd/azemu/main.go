@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"net/http"
@@ -46,7 +47,10 @@ func main() {
 	cfg := config.Load()
 
 	state := store.NewMemoryStore()
-	tokenSvc := auth.NewTokenService(cfg.TenantID)
+	tokenSvc, err := auth.NewTokenService(cfg.TenantID)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to create token service")
+	}
 	metaSvc := metadata.NewService(cfg)
 	armRouter := arm.NewRouter(state)
 
@@ -64,11 +68,12 @@ func main() {
 	r.Use(chimw.Recoverer)
 
 	// Debug API: list unhandled routes seen this session
-	r.NotFound(mw.LogUnhandledRequests())
+	unhandled := mw.NewUnhandledTracker()
+	r.NotFound(mw.LogUnhandledRequests(unhandled))
 	r.HandleFunc("/api/unhandled", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{
-			"unhandled_routes": mw.Unhandled.List(),
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"unhandled_routes": unhandled.List(),
 		})
 	})
 
@@ -153,32 +158,44 @@ func main() {
 		WriteTimeout: 30 * time.Second,
 	}
 
+	errCh := make(chan error, 3)
 	go func() {
-		if err := healthSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatal().Err(err).Msg("health server failed")
+		if err := healthSrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			errCh <- fmt.Errorf("health server: %w", err)
 		}
 	}()
 	go func() {
-		if err := httpSrv.ListenAndServeTLS("", ""); err != nil && err != http.ErrServerClosed {
-			log.Fatal().Err(err).Msg("arm server failed")
+		if err := httpSrv.ListenAndServeTLS("", ""); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			errCh <- fmt.Errorf("arm server: %w", err)
 		}
 	}()
 	go func() {
-		if err := httpsSrv.ListenAndServeTLS("", ""); err != nil && err != http.ErrServerClosed {
-			log.Fatal().Err(err).Msg("metadata server failed")
+		if err := httpsSrv.ListenAndServeTLS("", ""); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			errCh <- fmt.Errorf("metadata server: %w", err)
 		}
 	}()
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
+	select {
+	case sig := <-quit:
+		log.Info().Str("signal", sig.String()).Msg("received signal")
+	case err := <-errCh:
+		log.Fatal().Err(err).Msg("server failed to start")
+	}
 
 	log.Info().Msg("shutting down")
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	_ = healthSrv.Shutdown(ctx)
-	_ = httpSrv.Shutdown(ctx)
-	_ = httpsSrv.Shutdown(ctx)
+	if err := healthSrv.Shutdown(ctx); err != nil {
+		log.Warn().Err(err).Msg("health server shutdown")
+	}
+	if err := httpSrv.Shutdown(ctx); err != nil {
+		log.Warn().Err(err).Msg("arm server shutdown")
+	}
+	if err := httpsSrv.Shutdown(ctx); err != nil {
+		log.Warn().Err(err).Msg("metadata server shutdown")
+	}
 }
 
 func printBanner(w *os.File, cfg *config.Config, certPath string) {

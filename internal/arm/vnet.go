@@ -74,7 +74,11 @@ func (a *Router) putVNet(w http.ResponseWriter, r *http.Request) {
 	}
 
 	_, exists := a.store.Get(id)
-	_ = a.store.Put(id, res)
+	if err := a.store.Put(id, res); err != nil {
+		writeAzureError(w, http.StatusInternalServerError, "InternalServerError",
+			fmt.Sprintf("put virtual network %q: %s", name, err))
+		return
+	}
 
 	status := http.StatusCreated
 	if exists {
