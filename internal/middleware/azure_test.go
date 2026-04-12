@@ -239,7 +239,8 @@ func TestUnhandledTracker_List_ReturnsCopy(t *testing.T) {
 // TestLogUnhandledRequests_Returns501WithAzureError verifies that the handler
 // returned by LogUnhandledRequests writes 501 and the Azure error body shape.
 func TestLogUnhandledRequests_Returns501WithAzureError(t *testing.T) {
-	handler := LogUnhandledRequests()
+	tracker := NewUnhandledTracker()
+	handler := LogUnhandledRequests(tracker)
 
 	req := httptest.NewRequest(http.MethodGet, "/some/unimplemented/path", nil)
 	rec := httptest.NewRecorder()
@@ -269,20 +270,15 @@ func TestLogUnhandledRequests_Returns501WithAzureError(t *testing.T) {
 }
 
 // TestLogUnhandledRequests_RecordsRoute verifies that calling the handler
-// causes the route to appear in the global Unhandled tracker.
+// causes the route to appear in the tracker.
 func TestLogUnhandledRequests_RecordsRoute(t *testing.T) {
-	// Use a fresh tracker so this test does not depend on global state from
-	// other tests or from the previous TestLogUnhandledRequests_Returns501 call.
-	orig := Unhandled
-	Unhandled = &UnhandledTracker{routes: make(map[string]int)}
-	t.Cleanup(func() { Unhandled = orig })
-
-	handler := LogUnhandledRequests()
+	tracker := NewUnhandledTracker()
+	handler := LogUnhandledRequests(tracker)
 	req := httptest.NewRequest(http.MethodPut, "/api/untracked", nil)
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
 
-	routes := Unhandled.List()
+	routes := tracker.List()
 	if routes["PUT /api/untracked"] != 1 {
 		t.Errorf("tracker count for PUT /api/untracked = %d, want 1", routes["PUT /api/untracked"])
 	}

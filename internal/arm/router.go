@@ -1,6 +1,7 @@
 package arm
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -8,6 +9,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	"github.com/rs/zerolog/log"
 	"github.com/zerodeth/azemu/internal/store"
 )
 
@@ -157,12 +159,17 @@ func (a *Router) putResourceGroup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	_, exists := a.store.Get(id)
-	a.store.Put(id, res)
+	if err := a.store.Put(id, res); err != nil {
+		writeAzureError(w, http.StatusInternalServerError, "InternalServerError",
+			fmt.Sprintf("put resource group %q: %s", name, err))
+		return
+	}
 
 	status := http.StatusCreated
 	if exists {
 		status = http.StatusOK
 	}
+	log.Info().Str("resource_id", id).Bool("existed", exists).Msg("resource group upsert")
 	writeJSON(w, status, resourceGroupResponse(res))
 }
 
@@ -213,14 +220,11 @@ func (a *Router) listResourceGroups(w http.ResponseWriter, r *http.Request) {
 	prefix := fmt.Sprintf("/subscriptions/%s/resourceGroups/", subID)
 	resources := a.store.List(prefix)
 
-	var items []map[string]interface{}
+	items := []map[string]interface{}{}
 	for _, res := range resources {
 		if res.Type == "Microsoft.Resources/resourceGroups" {
 			items = append(items, resourceGroupResponse(res))
 		}
-	}
-	if items == nil {
-		items = []map[string]interface{}{}
 	}
 	writeJSON(w, http.StatusOK, map[string]interface{}{"value": items})
 }
@@ -282,18 +286,32 @@ func normaliseTags(tags map[string]string) map[string]string {
 }
 
 func writeJSON(w http.ResponseWriter, status int, v interface{}) {
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(v); err != nil {
+		log.Error().Err(err).Msg("writeJSON: encode failed")
+		http.Error(w, `{"error":{"code":"InternalServerError","message":"response encoding failed"}}`,
+			http.StatusInternalServerError)
+		return
+	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(v)
+	_, _ = buf.WriteTo(w)
 }
 
 func writeAzureError(w http.ResponseWriter, status int, code, message string) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(map[string]interface{}{
 		"error": map[string]interface{}{
 			"code":    code,
 			"message": message,
 		},
-	})
+	}); err != nil {
+		log.Error().Err(err).Msg("writeAzureError: encode failed")
+		http.Error(w, `{"error":{"code":"InternalServerError","message":"error encoding failed"}}`,
+			http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_, _ = buf.WriteTo(w)
 }
