@@ -7,6 +7,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"os/signal"
@@ -33,6 +34,9 @@ func main() {
 	// --- flags (stdlib only, per .claude/rules/go-style.md) ---
 	fs := flag.NewFlagSet("azemu", flag.ExitOnError)
 	showVersion := fs.Bool("version", false, "Print version and exit")
+	persistPath := fs.String("persist", "", "File path for write-through state persistence")
+	importPath := fs.String("import", "", "Load state from file on startup")
+	exportPath := fs.String("export", "", "Dump state to file and exit")
 	fs.Usage = func() { printUsage(os.Stderr) }
 	_ = fs.Parse(os.Args[1:])
 
@@ -46,7 +50,51 @@ func main() {
 
 	cfg := config.Load()
 
-	state := store.NewMemoryStore()
+	// CLI flags override env vars for persist path.
+	if *persistPath != "" {
+		cfg.PersistPath = *persistPath
+	}
+	cfg.ImportPath = *importPath
+	cfg.ExportPath = *exportPath
+
+	// --- store selection ---
+	var state store.Store
+	if cfg.PersistPath != "" {
+		fs, err := store.NewFileStore(cfg.PersistPath)
+		if err != nil {
+			log.Fatal().Err(err).Str("path", cfg.PersistPath).Msg("failed to open persist store")
+		}
+		state = fs
+		log.Info().Str("path", cfg.PersistPath).Msg("file-backed store enabled")
+	} else {
+		state = store.NewMemoryStore()
+	}
+
+	// --import: load state from file, then continue serving.
+	if cfg.ImportPath != "" {
+		data, err := os.ReadFile(cfg.ImportPath)
+		if err != nil {
+			log.Fatal().Err(err).Str("path", cfg.ImportPath).Msg("failed to read import file")
+		}
+		if err := state.Import(data); err != nil {
+			log.Fatal().Err(err).Str("path", cfg.ImportPath).Msg("failed to import state")
+		}
+		log.Info().Str("path", cfg.ImportPath).Msg("state imported from file")
+	}
+
+	// --export: dump state to file and exit immediately.
+	if cfg.ExportPath != "" {
+		data, err := state.Export()
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to export state")
+		}
+		if err := os.WriteFile(cfg.ExportPath, data, 0600); err != nil {
+			log.Fatal().Err(err).Str("path", cfg.ExportPath).Msg("failed to write export file")
+		}
+		log.Info().Str("path", cfg.ExportPath).Msg("state exported")
+		os.Exit(0)
+	}
+
 	tokenSvc, err := auth.NewTokenService(cfg.TenantID)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to create token service")
@@ -75,6 +123,35 @@ func main() {
 		_ = json.NewEncoder(w).Encode(map[string]interface{}{
 			"unhandled_routes": unhandled.List(),
 		})
+	})
+
+	// State management API (no api-version required; azemu admin endpoints)
+	r.Get("/api/state/export", func(w http.ResponseWriter, r *http.Request) {
+		data, err := state.Export()
+		if err != nil {
+			http.Error(w, fmt.Sprintf(`{"error":"export failed: %s"}`, err), http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write(data)
+	})
+	r.Post("/api/state/import", func(w http.ResponseWriter, r *http.Request) {
+		data, err := io.ReadAll(r.Body)
+		if err != nil {
+			http.Error(w, fmt.Sprintf(`{"error":"read body: %s"}`, err), http.StatusBadRequest)
+			return
+		}
+		if err := state.Import(data); err != nil {
+			http.Error(w, fmt.Sprintf(`{"error":"import failed: %s"}`, err), http.StatusBadRequest)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"status":"imported"}`))
+	})
+	r.Post("/api/state/reset", func(w http.ResponseWriter, r *http.Request) {
+		state.Reset()
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"status":"reset"}`))
 	})
 
 	// Metadata endpoints (HTTPS, used by azurerm provider)
@@ -204,6 +281,9 @@ func printBanner(w *os.File, cfg *config.Config, certPath string) {
 	fmt.Fprintf(w, "  metadata (HTTPS)   https://localhost:%d\n", cfg.HTTPSPort)
 	fmt.Fprintf(w, "  health (HTTP)      http://localhost:%d/health\n", cfg.HealthPort)
 	fmt.Fprintf(w, "  cert bundle        %s\n", certPath)
+	if cfg.PersistPath != "" {
+		fmt.Fprintf(w, "  persist            %s\n", cfg.PersistPath)
+	}
 	fmt.Fprintf(w, "  docs               https://github.com/zerodeth/azemu\n\n")
 }
 
@@ -211,10 +291,14 @@ func printUsage(w *os.File) {
 	fmt.Fprintf(w, "azemu %s -- local Azure emulator for Terraform\n\n", Version)
 	fmt.Fprintf(w, "Usage: azemu [flags]\n\n")
 	fmt.Fprintf(w, "Flags:\n")
-	fmt.Fprintf(w, "  -version    Print version and exit\n")
-	fmt.Fprintf(w, "  -h, -help   Print this help and exit\n\n")
+	fmt.Fprintf(w, "  -version          Print version and exit\n")
+	fmt.Fprintf(w, "  -persist <path>   Write-through state persistence to JSON file\n")
+	fmt.Fprintf(w, "  -import <path>    Load state from file on startup\n")
+	fmt.Fprintf(w, "  -export <path>    Dump state to file and exit\n")
+	fmt.Fprintf(w, "  -h, -help         Print this help and exit\n\n")
 	fmt.Fprintf(w, "Environment variables:\n")
 	fmt.Fprintf(w, "  AZEMU_CERT_PATH         Persistent TLS cert+key PEM bundle path\n")
+	fmt.Fprintf(w, "  AZEMU_PERSIST_PATH      Write-through state persistence path (same as -persist)\n")
 	fmt.Fprintf(w, "  AZEMU_METADATA_HOST     Host for URLs in /metadata/endpoints (default localhost:4567)\n")
 	fmt.Fprintf(w, "  AZEMU_SUBSCRIPTION_ID   Mock subscription ID (default 00000000-...)\n")
 	fmt.Fprintf(w, "  AZEMU_TENANT_ID         Mock tenant ID (default 00000000-...)\n\n")
