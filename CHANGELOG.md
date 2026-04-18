@@ -67,6 +67,80 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `Dockerfile` with a multi-stage Go build, alpine runtime, `wget` for
+  healthchecks, `VOLUME /azemu`, env defaults for `AZEMU_CERT_PATH` and
+  `AZEMU_METADATA_HOST`, and `EXPOSE 4566 4567 4568`.
+- `docker-compose.yml` for single-node local use: exposes `4566`/`4567`/`4568`,
+  bind-mounts `./.azemu:/azemu`, healthcheck via
+  `wget http://localhost:4568/health`.
+- `GET /health` plain-HTTP endpoint on a configurable `HealthPort` (default
+  `4568`). Returns `{"status":"ok","version":"...","uptime_seconds":N}`.
+  No TLS and no middleware so container probes stay boring.
+- Startup banner to stderr with version, ports, and cert path. Linker-
+  overridable `var Version = "dev"` via `-ldflags "-X main.Version=$(VERSION)"`.
+- `--help` and `--version` stdlib-`flag` handling in `cmd/azemu/main.go`
+  with an env-var table and port layout.
+- `scripts/aztf` wrapper that detects a running azemu via
+  `docker compose ps`, starts it if absent, exports `SSL_CERT_FILE` and the
+  `ARM_*` variables, and execs `terraform "$@"`. Shellcheck-clean.
+- `scripts/trust-cert.sh` helper (macOS `security add-trusted-cert`, Linux
+  `update-ca-certificates`). Optional; the default path uses
+  `SSL_CERT_FILE` instead.
+- `examples/terraform/` bootstrap config (RG + VNet + Subnet across
+  `provider.tf` / `variables.tf` / `outputs.tf`) plus
+  `examples/terraform/main.tftest.hcl` native Terraform 1.6+ test with one
+  `run "full_lifecycle"` block.
+- `flake.nix` for Nix users outside flox: `buildGoModule` for `cmd/azemu`
+  and `devShells.default` with go + terraform.
+- Makefile targets: `tf-test`, `coverage`, `docker-compose`,
+  `docker-compose-down`, plus `-ldflags "-X main.Version=..."` on `build`.
+- `docs/SETUP.md` Docker quick-start section and an expanded make-targets
+  table.
+- File-backed state store (`internal/store/file.go`). `FileStore` wraps
+  `MemoryStore` with write-through persistence via atomic `tmp + rename`.
+- `--persist` CLI flag (also `AZEMU_PERSIST_PATH` env var) that activates
+  `FileStore`. `--import` loads state at startup; `--export` dumps current
+  state to a file and exits `0`.
+- `GET /api/state/export` returns full state as JSON.
+- `POST /api/state/import` replaces current state from the request body.
+- `POST /api/state/reset` clears all resources. `Store.Reset()` added to
+  the interface so memory + file stores both implement it.
+- 10 `internal/store/file_test.go` tests covering write-through, reload,
+  timestamps, delete, reset, tmp cleanup, missing file, corrupt file,
+  import, and concurrent access.
+
+### Changed
+
+- Cert bundle file mode in `internal/auth/tls.go` relaxed from `0600` to
+  `0644` so Docker bind-mounts are readable by the host user when the
+  container writes the file.
+- `pkg/config/config.go` grew a `HealthPort` field (default `4568`) next
+  to `HTTPPort`/`HTTPSPort`.
+- `.gitignore` now covers `coverage.html`.
+- Pre-Phase-4 hardening (7 critical + 9 high issues from Go review):
+  all `store.Put` call sites (RG, VNet, Subnet) now surface errors and
+  return `500` with Azure error format on failure; store copy semantics
+  fixed so callers cannot mutate stored resources; `writeJSON` switched
+  to buffer-first so a failed encode no longer produces a half-written
+  body; auth errors propagate instead of being swallowed; middleware
+  singletons removed.
+
+### Fixed
+
+- `azureTimestamp` dead code in `internal/arm/router.go` (0% coverage,
+  never called) deleted during the Phase 2 closeout batch.
+- `putResourceGroup` now rejects empty or whitespace-only `location`
+  with `400 InvalidRequestContent`, matching the vnet/subnet pattern.
+  Pinned by `TestRG_PUT_MissingLocation_Returns400` and
+  `TestRG_PUT_WhitespaceOnlyLocation_Returns400`.
+- `headSubnet`/`deleteSubnet`/`writeVNetList` coverage gaps backfilled
+  to 100% via `TestSubnet_HEAD_NotFound_Returns404_EmptyBody`,
+  `TestSubnet_DELETE_NotFound_Returns404`, and
+  `TestVNet_LIST_ByRG_FiltersOutSubnets`. `internal/arm` package
+  coverage climbed from 90.7% to 92.6%.
+
+### Added
+
 - Virtual Networks (`Microsoft.Network/virtualNetworks`) ARM CRUD + HEAD with
   cascade-delete and child-subnet embedding on GET.
 - Subnets (`Microsoft.Network/virtualNetworks/subnets`) ARM CRUD + HEAD with
