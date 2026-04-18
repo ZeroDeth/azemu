@@ -5,6 +5,26 @@ For what is implemented see `docs/PARITY.md`.
 
 ## Request flow
 
+```mermaid
+flowchart LR
+    dev["Developer / CI"] --> tf["Terraform CLI<br/>(azurerm provider)"]
+    tf -->|"HTTPS :4567"| meta["Metadata Service<br/>/metadata/endpoints"]
+    tf -->|"HTTPS :4567"| auth["Auth Service<br/>OAuth2 / OIDC / JWKS"]
+    tf -->|"HTTPS :4566"| arm["ARM Facade Router"]
+    arm --> subs["Subscriptions / Tenants"]
+    arm --> prov["Provider Registration"]
+    arm --> rg["Resource Groups<br/>(CRUD + cascade)"]
+    arm --> vnet["Virtual Networks<br/>(CRUD + child subnets)"]
+    arm --> sub["Subnets<br/>(CRUD, parent-aware)"]
+    arm --> planned["[v0.2+: DNS, Storage, KeyVault, ...]"]
+    rg --> store[("State Store")]
+    vnet --> store
+    sub --> store
+    store --> persist["File persistence<br/>(AZEMU_PERSIST_PATH)"]
+    store --> api["State API<br/>/api/state/{export,import,reset}"]
+    ops["Ops / tests"] -->|"HTTP :4568"| health["Health endpoint<br/>GET /health"]
+```
+
 ```text
 Developer / CI
     |
@@ -21,10 +41,10 @@ Terraform CLI -----> HTTPS :4567 -----> Metadata Service (/metadata/endpoints)
                                            +-- [v0.2+: DNS, Storage, KeyVault...]
                                          |
                                          v
-                                      State Store (in-memory)
+                                      State Store (memory or file)
                                          |
                                          v
-                                      Export/Import (JSON file)
+                                      State API (/api/state/{export,import,reset})
 ```
 
 Both ports serve HTTPS using the same self-signed ECDSA P-256 certificate.
