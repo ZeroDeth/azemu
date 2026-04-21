@@ -19,7 +19,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
+## [v0.1.0] - 2026-04-21
+
+### Added (Phase 5: governance and CI)
+
+- `CONTRIBUTING.md` with ground rules, dev environment, add-resource
+  walkthrough, test requirements, and PR checklist.
+- `CODE_OF_CONDUCT.md` referencing Contributor Covenant v2.1.
+- `SECURITY.md` with supported versions, private reporting channels
+  (GitHub Security Advisories, email), and 48h acknowledgement SLA.
+- `RELEASING.md` with the full release checklist (pre-release, changelog,
+  tag, goreleaser, post-release verification).
+- `.github/CODEOWNERS` with @ZeroDeth as default owner.
+- `.github/ISSUE_TEMPLATE/bug_report.md` asking for azemu/azurerm/terraform
+  versions, full error output, and `/api/unhandled` output.
+- `.github/ISSUE_TEMPLATE/feature_request.md`.
+- `.github/PULL_REQUEST_TEMPLATE.md` with pre-filled checklist.
+- `.github/workflows/ci.yml` with lint (golangci-lint, markdownlint), test
+  (`go test -race -coverprofile`), and build jobs. Triggers on push/PR to main.
+- `.github/workflows/release.yml` triggering goreleaser on tag push.
+- `.github/dependabot.yml` for gomod (weekly), github-actions (weekly),
+  and docker (monthly).
+- `.goreleaser.yml` building macOS/Linux/Windows (amd64+arm64) binaries and
+  Docker image to `ghcr.io/zerodeth/azemu`.
+- `.golangci.yml` excluding `fmt.Fprint*` and `(io.ReadCloser).Close` from
+  errcheck.
+- `.markdownlint-cli2.jsonc` disabling MD013, MD033, MD041.
+- `docs/PARITY.md` Proof column linking every Full row to its test file.
+- `docs/ARCHITECTURE.md` mermaid request-flow diagram.
+
+### Added (Phase 1-4)
 
 - `.claude/agents/*.md` — five frontmatter-driven subagent definitions
   (`arm-resource-implementer`, `test-writer`, `code-reviewer`,
