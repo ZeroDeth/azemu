@@ -12,6 +12,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/rs/zerolog/log"
 )
 
 type TokenService struct {
@@ -72,12 +73,14 @@ func (t *TokenService) token(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	if err := json.NewEncoder(w).Encode(map[string]interface{}{
 		"access_token": signed,
 		"token_type":   "Bearer",
 		"expires_in":   3600,
 		"resource":     "https://management.azure.com/",
-	})
+	}); err != nil {
+		log.Error().Err(err).Msg("failed to write token response")
+	}
 }
 
 // OpenIDConfig returns OIDC discovery document.
