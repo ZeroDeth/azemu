@@ -49,11 +49,13 @@ func LogUnhandledRequests(tracker *UnhandledTracker) http.HandlerFunc {
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusNotImplemented)
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		if err := json.NewEncoder(w).Encode(map[string]interface{}{
 			"error": map[string]interface{}{
 				"code":    "NotImplemented",
 				"message": "This endpoint is not implemented by azemu. See GET /api/unhandled for details.",
 			},
-		})
+		}); err != nil {
+			log.Error().Err(err).Str("path", r.URL.Path).Msg("failed to write error response")
+		}
 	}
 }

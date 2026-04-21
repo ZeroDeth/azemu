@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
+	"github.com/rs/zerolog/log"
 )
 
 // AzureHeaders adds standard Azure response headers to every response.
@@ -38,12 +39,14 @@ func RequireAPIVersion(next http.Handler) http.Handler {
 		if strings.HasPrefix(path, "/subscriptions") && r.URL.Query().Get("api-version") == "" {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(map[string]interface{}{
+			if err := json.NewEncoder(w).Encode(map[string]interface{}{
 				"error": map[string]interface{}{
 					"code":    "MissingApiVersionParameter",
 					"message": "The api-version query parameter is required for all ARM requests.",
 				},
-			})
+			}); err != nil {
+				log.Error().Err(err).Str("path", path).Msg("failed to write error response")
+			}
 			return
 		}
 
