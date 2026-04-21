@@ -12,6 +12,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/rs/zerolog/log"
 )
 
 type TokenService struct {
@@ -72,12 +73,14 @@ func (t *TokenService) token(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	if err := json.NewEncoder(w).Encode(map[string]interface{}{
 		"access_token": signed,
 		"token_type":   "Bearer",
 		"expires_in":   3600,
 		"resource":     "https://management.azure.com/",
-	})
+	}); err != nil {
+		log.Error().Err(err).Msg("failed to write token response")
+	}
 }
 
 // OpenIDConfig returns OIDC discovery document.
@@ -90,7 +93,7 @@ func (t *TokenService) OpenIDConfig(w http.ResponseWriter, r *http.Request) {
 	base := "https://" + host
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	if err := json.NewEncoder(w).Encode(map[string]interface{}{
 		"issuer":                                base + "/" + tenantID + "/",
 		"authorization_endpoint":                base + "/" + tenantID + "/oauth2/v2.0/authorize",
 		"token_endpoint":                        base + "/" + tenantID + "/oauth2/v2.0/token",
@@ -98,7 +101,9 @@ func (t *TokenService) OpenIDConfig(w http.ResponseWriter, r *http.Request) {
 		"response_types_supported":              []string{"code", "id_token", "token"},
 		"subject_types_supported":               []string{"pairwise"},
 		"id_token_signing_alg_values_supported": []string{"RS256"},
-	})
+	}); err != nil {
+		log.Error().Err(err).Msg("failed to write OIDC config response")
+	}
 }
 
 // JWKS returns the public key set for token verification.
@@ -108,7 +113,7 @@ func (t *TokenService) JWKS(w http.ResponseWriter, r *http.Request) {
 	e := big.NewInt(int64(pub.E)).Bytes()
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	if err := json.NewEncoder(w).Encode(map[string]interface{}{
 		"keys": []map[string]interface{}{
 			{
 				"kty": "RSA",
@@ -118,5 +123,7 @@ func (t *TokenService) JWKS(w http.ResponseWriter, r *http.Request) {
 				"e":   base64.RawURLEncoding.EncodeToString(e),
 			},
 		},
-	})
+	}); err != nil {
+		log.Error().Err(err).Msg("failed to write JWKS response")
+	}
 }
