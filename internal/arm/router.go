@@ -118,6 +118,24 @@ func (a *Router) Routes(r chi.Router) {
 	r.Delete("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/applicationgateways/{appGWName}", a.deleteAppGW)
 	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/applicationgateways", a.listAppGWsByRG)
 	r.Get("/{subscriptionID}/providers/microsoft.network/applicationgateways", a.listAppGWsBySub)
+
+	// DNS Zones (Microsoft.Network/dnsZones)
+	r.Put("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/dnszones/{zoneName}", a.putDNSZone)
+	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/dnszones/{zoneName}", a.getDNSZone)
+	r.Head("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/dnszones/{zoneName}", a.headDNSZone)
+	r.Delete("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/dnszones/{zoneName}", a.deleteDNSZone)
+	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/dnszones", a.listDNSZonesByRG)
+	r.Get("/{subscriptionID}/providers/microsoft.network/dnszones", a.listDNSZonesBySub)
+
+	// DNS Record Sets (Microsoft.Network/dnsZones/{recordType}/{recordName})
+	// The {recordType} parameter captures the lowercase record type (a, aaaa, cname, txt, mx, srv, ns, soa)
+	// after NormalizePath lowercases the path. Handlers uppercase it for storage.
+	r.Put("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/dnszones/{zoneName}/{recordType}/{recordName}", a.putDNSRecordSet)
+	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/dnszones/{zoneName}/{recordType}/{recordName}", a.getDNSRecordSet)
+	r.Head("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/dnszones/{zoneName}/{recordType}/{recordName}", a.headDNSRecordSet)
+	r.Delete("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/dnszones/{zoneName}/{recordType}/{recordName}", a.deleteDNSRecordSet)
+	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/dnszones/{zoneName}/{recordType}", a.listDNSRecordSetsByType)
+	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/dnszones/{zoneName}/all", a.listAllDNSRecordSets)
 }
 
 // --- Subscriptions ---
