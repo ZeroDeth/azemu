@@ -81,6 +81,35 @@ func (a *Router) Routes(r chi.Router) {
 	r.Delete("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/publicipaddresses/{publicIPName}", a.deletePublicIP)
 	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/publicipaddresses", a.listPublicIPsByRG)
 	r.Get("/{subscriptionID}/providers/microsoft.network/publicipaddresses", a.listPublicIPsBySub)
+
+	// Load Balancers (Microsoft.Network/loadBalancers)
+	r.Put("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/loadbalancers/{lbName}", a.putLB)
+	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/loadbalancers/{lbName}", a.getLB)
+	r.Head("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/loadbalancers/{lbName}", a.headLB)
+	r.Delete("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/loadbalancers/{lbName}", a.deleteLB)
+	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/loadbalancers", a.listLBsByRG)
+	r.Get("/{subscriptionID}/providers/microsoft.network/loadbalancers", a.listLBsBySub)
+
+	// Backend Address Pools (Microsoft.Network/loadBalancers/backendAddressPools)
+	r.Put("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/loadbalancers/{lbName}/backendaddresspools/{poolName}", a.putLBBackendPool)
+	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/loadbalancers/{lbName}/backendaddresspools/{poolName}", a.getLBBackendPool)
+	r.Head("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/loadbalancers/{lbName}/backendaddresspools/{poolName}", a.headLBBackendPool)
+	r.Delete("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/loadbalancers/{lbName}/backendaddresspools/{poolName}", a.deleteLBBackendPool)
+	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/loadbalancers/{lbName}/backendaddresspools", a.listLBBackendPools)
+
+	// Load Balancing Rules (Microsoft.Network/loadBalancers/loadBalancingRules)
+	r.Put("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/loadbalancers/{lbName}/loadbalancingrules/{ruleName}", a.putLBRule)
+	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/loadbalancers/{lbName}/loadbalancingrules/{ruleName}", a.getLBRule)
+	r.Head("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/loadbalancers/{lbName}/loadbalancingrules/{ruleName}", a.headLBRule)
+	r.Delete("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/loadbalancers/{lbName}/loadbalancingrules/{ruleName}", a.deleteLBRule)
+	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/loadbalancers/{lbName}/loadbalancingrules", a.listLBRules)
+
+	// Probes (Microsoft.Network/loadBalancers/probes)
+	r.Put("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/loadbalancers/{lbName}/probes/{probeName}", a.putLBProbe)
+	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/loadbalancers/{lbName}/probes/{probeName}", a.getLBProbe)
+	r.Head("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/loadbalancers/{lbName}/probes/{probeName}", a.headLBProbe)
+	r.Delete("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/loadbalancers/{lbName}/probes/{probeName}", a.deleteLBProbe)
+	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/loadbalancers/{lbName}/probes", a.listLBProbes)
 }
 
 // --- Subscriptions ---

@@ -242,6 +242,118 @@ func TestARM_PublicIPFullFlow(t *testing.T) {
 	resp.Body.Close()
 }
 
+// TestARM_LBFullFlow exercises the Load Balancer lifecycle: create an LB with
+// Standard SKU, add a backend pool, a rule, and a probe; verify all three are
+// embedded in the LB GET response; delete the LB and confirm children cascade.
+func TestARM_LBFullFlow(t *testing.T) {
+	srv := buildFullServer(t)
+	base := srv.URL
+
+	lbURL := base + "/subscriptions/sub1/resourcegroups/rg1/providers/microsoft.network/loadbalancers/lb1" + apiVersionQ
+	poolURL := lbURL[:len(lbURL)-len(apiVersionQ)] + "/backendaddresspools/pool1" + apiVersionQ
+	ruleURL := lbURL[:len(lbURL)-len(apiVersionQ)] + "/loadbalancingrules/rule1" + apiVersionQ
+	probeURL := lbURL[:len(lbURL)-len(apiVersionQ)] + "/probes/probe1" + apiVersionQ
+	listURL := base + "/subscriptions/sub1/resourcegroups/rg1/providers/microsoft.network/loadbalancers" + apiVersionQ
+
+	lbBody := `{
+		"location": "uksouth",
+		"sku": {"name": "Standard"},
+		"properties": {
+			"frontendIPConfigurations": [
+				{"name":"fe-config","properties":{"privateIPAllocationMethod":"Dynamic"}}
+			]
+		}
+	}`
+
+	// 1. Create LB.
+	resp := doJSON(t, http.MethodPut, lbURL, lbBody)
+	mustStatus(t, resp, http.StatusCreated)
+	body := decode(t, resp)
+	sku, ok := body["sku"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("sku missing: %v", body)
+	}
+	if sku["name"] != "Standard" {
+		t.Errorf("sku.name = %v, want Standard", sku["name"])
+	}
+	props := body["properties"].(map[string]interface{})
+	if props["provisioningState"] != "Succeeded" {
+		t.Errorf("provisioningState = %v, want Succeeded", props["provisioningState"])
+	}
+
+	// 2. Add backend pool, rule, probe.
+	resp = doJSON(t, http.MethodPut, poolURL, `{"properties":{}}`)
+	mustStatus(t, resp, http.StatusCreated)
+	resp.Body.Close()
+
+	resp = doJSON(t, http.MethodPut, ruleURL, `{"properties":{"protocol":"Tcp","frontendPort":80,"backendPort":80}}`)
+	mustStatus(t, resp, http.StatusCreated)
+	resp.Body.Close()
+
+	resp = doJSON(t, http.MethodPut, probeURL, `{"properties":{"protocol":"Http","port":80,"requestPath":"/health"}}`)
+	mustStatus(t, resp, http.StatusCreated)
+	resp.Body.Close()
+
+	// 3. GET LB: all three child types must be embedded.
+	resp = doJSON(t, http.MethodGet, lbURL, "")
+	mustStatus(t, resp, http.StatusOK)
+	got := decode(t, resp)
+	gotProps := got["properties"].(map[string]interface{})
+
+	pools, ok := gotProps["backendAddressPools"].([]interface{})
+	if !ok || len(pools) != 1 {
+		t.Fatalf("backendAddressPools = %v, want 1 item", gotProps["backendAddressPools"])
+	}
+	rules, ok := gotProps["loadBalancingRules"].([]interface{})
+	if !ok || len(rules) != 1 {
+		t.Fatalf("loadBalancingRules = %v, want 1 item", gotProps["loadBalancingRules"])
+	}
+	probes, ok := gotProps["probes"].([]interface{})
+	if !ok || len(probes) != 1 {
+		t.Fatalf("probes = %v, want 1 item", gotProps["probes"])
+	}
+
+	// 4. Idempotent PUT returns 200.
+	resp = doJSON(t, http.MethodPut, lbURL, lbBody)
+	mustStatus(t, resp, http.StatusOK)
+	resp.Body.Close()
+
+	// 5. LIST shows the LB.
+	resp = doJSON(t, http.MethodGet, listURL, "")
+	mustStatus(t, resp, http.StatusOK)
+	list := decode(t, resp)
+	items, ok := list["value"].([]interface{})
+	if !ok || len(items) != 1 {
+		t.Fatalf("list value = %v, want 1 item", list["value"])
+	}
+
+	// 6. DELETE LB is async (202 Accepted).
+	resp = doJSON(t, http.MethodDelete, lbURL, "")
+	mustStatus(t, resp, http.StatusAccepted)
+	if resp.Header.Get("Location") == "" {
+		t.Errorf("Location header missing on DELETE")
+	}
+	resp.Body.Close()
+
+	// 7. Children must cascade away.
+	resp = doJSON(t, http.MethodGet, poolURL, "")
+	mustStatus(t, resp, http.StatusNotFound)
+	resp.Body.Close()
+
+	resp = doJSON(t, http.MethodGet, ruleURL, "")
+	mustStatus(t, resp, http.StatusNotFound)
+	resp.Body.Close()
+
+	resp = doJSON(t, http.MethodGet, probeURL, "")
+	mustStatus(t, resp, http.StatusNotFound)
+	resp.Body.Close()
+
+	// 8. Subsequent GET on LB returns 404.
+	resp = doJSON(t, http.MethodGet, lbURL, "")
+	mustStatus(t, resp, http.StatusNotFound)
+	resp.Body.Close()
+}
+
 // TestARM_NSGRuleFullFlow exercises the NSG + security rule lifecycle:
 // create NSG, add a rule, verify it is embedded in the NSG response, delete
 // the NSG, and confirm the rule cascaded away.
