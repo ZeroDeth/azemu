@@ -225,8 +225,8 @@ Goal: every networking primitive a real three-tier web app needs. VNet + Subnet 
 | # | Task | ARM provider | Status | Notes |
 |---|---|---|---|---|
 | 6.1 | ~~VNet + Subnet ARM CRUD~~ | `Microsoft.Network/virtualNetworks` + `.../subnets` | DONE | Shipped out-of-phase in v0.1 on `feat/vnet-subnet`. 25 unit tests + integration coverage. |
-| 6.2 | `azurerm_public_ip` | `Microsoft.Network/publicIPAddresses` | TODO | Prerequisite for LB and Application Gateway. Allocation mode, SKU, IP version. |
-| 6.3 | `azurerm_network_security_group` + rules | `Microsoft.Network/networkSecurityGroups` | TODO | Rules stored as children, cascade delete on NSG delete. Attach-to-subnet wiring via `networkSecurityGroup.id` reference on subnet body. |
+| 6.2 | `azurerm_public_ip` | `Microsoft.Network/publicIPAddresses` | DONE | Static/Dynamic alloc, SKU, fake `ipAddress` assigned on creation and preserved on update. 15 unit tests + integration test. |
+| 6.3 | `azurerm_network_security_group` + rules | `Microsoft.Network/networkSecurityGroups` | DONE | Security rules as child resources under NSG id prefix; cascade delete; embedded in NSG GET/LIST. 30 unit tests + integration test. NSG-to-subnet wiring deferred (tracked in TODO). |
 | 6.4 | `azurerm_lb` + backend pool + rule + probe | `Microsoft.Network/loadBalancers` | TODO | The "Load Balancer" from the ROADMAP roster. Children modelled as path-extensions of the LB id so cascade delete works. |
 | 6.5 | `azurerm_application_gateway` | `Microsoft.Network/applicationGateways` | TODO | The "ingress" primitive. Minimal config: frontend IP, backend pool, HTTP listener, routing rule. |
 | 6.6 | `azurerm_dns_zone` + record sets (A, AAAA, CNAME, TXT, MX, SRV, NS, SOA) | `Microsoft.Network/dnsZones` + `.../{type}` | TODO | Auto-SOA and auto-NS on zone create. Record sets as children. |
