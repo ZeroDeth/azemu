@@ -135,7 +135,7 @@ func (a *Router) Routes(r chi.Router) {
 	r.Head("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/dnszones/{zoneName}/{recordType}/{recordName}", a.headDNSRecordSet)
 	r.Delete("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/dnszones/{zoneName}/{recordType}/{recordName}", a.deleteDNSRecordSet)
 	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/dnszones/{zoneName}/{recordType}", a.listDNSRecordSetsByType)
-	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/dnszones/{zoneName}/all", a.listAllDNSRecordSets)
+	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/dnszones/{zoneName}/recordsets", a.listAllDNSRecordSets)
 }
 
 // --- Subscriptions ---

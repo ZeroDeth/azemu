@@ -362,7 +362,7 @@ func TestARM_NSGRuleFullFlow(t *testing.T) {
 	base := srv.URL
 
 	nsgURL := base + "/subscriptions/sub1/resourcegroups/rg1/providers/microsoft.network/networksecuritygroups/nsg1" + apiVersionQ
-	ruleURL := nsgURL + "/securityrules/allow-http"
+	ruleURL := base + "/subscriptions/sub1/resourcegroups/rg1/providers/microsoft.network/networksecuritygroups/nsg1/securityrules/allow-http" + apiVersionQ
 	listURL := base + "/subscriptions/sub1/resourcegroups/rg1/providers/microsoft.network/networksecuritygroups" + apiVersionQ
 
 	nsgBody := `{"location":"uksouth"}`
@@ -515,7 +515,7 @@ func TestARM_DNSZoneFullFlow(t *testing.T) {
 	listURL := base + "/subscriptions/sub1/resourcegroups/rg1/providers/microsoft.network/dnszones" + apiVersionQ
 	aRecordURL := base + "/subscriptions/sub1/resourcegroups/rg1/providers/microsoft.network/dnszones/example.com/A/www" + apiVersionQ
 	txtRecordURL := base + "/subscriptions/sub1/resourcegroups/rg1/providers/microsoft.network/dnszones/example.com/TXT/verify" + apiVersionQ
-	listAllURL := base + "/subscriptions/sub1/resourcegroups/rg1/providers/microsoft.network/dnszones/example.com/all" + apiVersionQ
+	listAllURL := base + "/subscriptions/sub1/resourcegroups/rg1/providers/microsoft.network/dnszones/example.com/recordsets" + apiVersionQ
 
 	// 1. Create zone — should auto-seed SOA and NS.
 	resp := doJSON(t, http.MethodPut, zoneURL, `{"location":"global","tags":{}}`)

@@ -40,7 +40,7 @@ func dnsRecordListByTypeURL(srv, zone, recordType string) string {
 }
 
 func dnsRecordListAllURL(srv, zone string) string {
-	return fmt.Sprintf("%s/subscriptions/%s/resourcegroups/%s/providers/microsoft.network/dnszones/%s/all",
+	return fmt.Sprintf("%s/subscriptions/%s/resourcegroups/%s/providers/microsoft.network/dnszones/%s/recordsets",
 		srv, dnsTestSub, dnsTestRG, zone)
 }
 

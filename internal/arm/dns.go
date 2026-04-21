@@ -106,7 +106,7 @@ func dnsRecordSetResponse(rs *store.Resource, zoneName string) map[string]interf
 }
 
 // autoCreateSOA seeds the mandatory SOA record that every Azure DNS zone has at the apex.
-func (a *Router) autoCreateSOA(subID, rgName, zoneName string) {
+func (a *Router) autoCreateSOA(subID, rgName, zoneName string) error {
 	id := dnsRecordSetID(subID, rgName, zoneName, "SOA", "@")
 	res := &store.Resource{
 		ID:       id,
@@ -127,11 +127,11 @@ func (a *Router) autoCreateSOA(subID, rgName, zoneName string) {
 			},
 		},
 	}
-	_ = a.store.Put(id, res)
+	return a.store.Put(id, res)
 }
 
 // autoCreateNS seeds the mandatory NS record that every Azure DNS zone has at the apex.
-func (a *Router) autoCreateNS(subID, rgName, zoneName string) {
+func (a *Router) autoCreateNS(subID, rgName, zoneName string) error {
 	id := dnsRecordSetID(subID, rgName, zoneName, "NS", "@")
 	nsRecords := make([]map[string]interface{}, len(azureNameServers))
 	for i, ns := range azureNameServers {
@@ -148,7 +148,7 @@ func (a *Router) autoCreateNS(subID, rgName, zoneName string) {
 			"NSRecords": nsRecords,
 		},
 	}
-	_ = a.store.Put(id, res)
+	return a.store.Put(id, res)
 }
 
 // --- DNS Zone handlers ---
@@ -186,8 +186,16 @@ func (a *Router) putDNSZone(w http.ResponseWriter, r *http.Request) {
 
 	// Auto-seed SOA and NS at the apex on first create only.
 	if !exists {
-		a.autoCreateSOA(subID, rgName, name)
-		a.autoCreateNS(subID, rgName, name)
+		if err := a.autoCreateSOA(subID, rgName, name); err != nil {
+			writeAzureError(w, http.StatusInternalServerError, "InternalServerError",
+				fmt.Sprintf("auto-create SOA for zone %q: %s", name, err))
+			return
+		}
+		if err := a.autoCreateNS(subID, rgName, name); err != nil {
+			writeAzureError(w, http.StatusInternalServerError, "InternalServerError",
+				fmt.Sprintf("auto-create NS for zone %q: %s", name, err))
+			return
+		}
 	}
 
 	recordSets := a.store.List(id + "/")
@@ -409,7 +417,7 @@ func (a *Router) listDNSRecordSetsByType(w http.ResponseWriter, r *http.Request)
 	writeJSON(w, http.StatusOK, map[string]interface{}{"value": items})
 }
 
-// listAllDNSRecordSets handles GET .../dnszones/{zone}/all (list all record sets regardless of type).
+// listAllDNSRecordSets handles GET .../dnszones/{zone}/recordsets (list all record sets regardless of type).
 func (a *Router) listAllDNSRecordSets(w http.ResponseWriter, r *http.Request) {
 	subID := chi.URLParam(r, "subscriptionID")
 	rgName := chi.URLParam(r, "resourceGroupName")
