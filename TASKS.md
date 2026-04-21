@@ -2,8 +2,8 @@
 
 Version: 0.1
 Last updated: 2026-04-21
-Status: Phase 1 through Phase 4 acceptance MET. Phase 5 docs slice
-shipped (PR #9). Current focus: Phase 5 governance slice.
+Status: Phase 1 through Phase 5 COMPLETE. v0.1.0 tagged 2026-04-21.
+Current focus: Phase 6 (networking extended).
 
 > **Strategy, non-goals, and the per-release resource roster live in
 > `ROADMAP.md`.** `TASKS.md` is the execution ledger and `ROADMAP.md` is
@@ -207,7 +207,7 @@ contributor sees a real open-source project, not a toy.
 | 5.14 | Create `.github/ISSUE_TEMPLATE/bug_report.md` and `feature_request.md` | `.github/ISSUE_TEMPLATE/*.md` | DONE | Bug template asks azemu/azurerm/terraform versions, error output, /api/unhandled. |
 | 5.15 | Create `.github/PULL_REQUEST_TEMPLATE.md` | `.github/PULL_REQUEST_TEMPLATE.md` | DONE | Checklist: tests, pre-commit, parity, changelog, no unapproved deps. |
 | 5.16 | Add `renovate.json` (or stick with Dependabot) | `.github/dependabot.yml` | DONE | Chose Dependabot: simpler for a single-maintainer project, no external service. |
-| 5.17 | Tag v0.1.0 | | TODO | Blocked on 5.1 through 5.16 |
+| 5.17 | Tag v0.1.0 | | DONE | Tagged 2026-04-21. Release workflow triggers goreleaser. |
 
 Acceptance: `git tag v0.1.0`, CI passes, binary releases published, Docker image pushed to `ghcr.io/zerodeth/azemu:v0.1.0`, `ROADMAP.md` and `CONTRIBUTING.md` both linked from `README.md` above the fold.
 
