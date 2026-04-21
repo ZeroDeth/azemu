@@ -89,7 +89,7 @@ stay local.
 | Virtual Networks (CRUD + HEAD) | Full |
 | Subnets (CRUD + HEAD, parent-aware) | Full |
 | Health check (`GET /health` on `:4568`) | Full |
-| State export/import | Scaffold |
+| State export/import (file-backed) | Full |
 
 See [docs/PARITY.md](docs/PARITY.md) for the full compatibility matrix.
 
@@ -143,8 +143,9 @@ See [docs/SETUP.md](docs/SETUP.md) for the contributor onboarding guide.
 
 - [x] v0.1 Phase 1: Terraform apply/destroy round-trip against azurerm v4.x
 - [x] v0.1 Phase 2: Test coverage backfill (store, auth, middleware, config)
-- [ ] v0.1 Phase 3: Docker, docker-compose, examples, startup banner
-- [ ] v0.1 Phase 4: File-backed state, export/import HTTP endpoints
+- [x] v0.1 Phase 3: Docker, docker-compose, examples, startup banner
+- [x] v0.1 Phase 4: File-backed state, export/import HTTP endpoints
+- [ ] v0.1 Phase 5: Docs, governance, release prep (in progress)
 - [ ] v0.2: DNS zones, storage accounts, key vault secrets
 - [ ] v0.3: IMDS, workload identity, Azure DevOps OIDC
 
