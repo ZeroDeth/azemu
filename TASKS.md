@@ -1,10 +1,9 @@
 # TASKS.md -- azemu Implementation Plan
 
 Version: 0.1
-Last updated: 2026-04-11
-Status: Phase 1 + Phase 2 + Phase 2.5 + Phase 3 acceptance MET. All
-per-package coverage targets from `.claude/rules/tests.md` met or exceeded.
-Current focus: Phase 4 (state management).
+Last updated: 2026-04-21
+Status: Phase 1 through Phase 4 acceptance MET. Phase 5 docs slice
+shipped (PR #9). Current focus: Phase 5 governance slice.
 
 > **Strategy, non-goals, and the per-release resource roster live in
 > `ROADMAP.md`.** `TASKS.md` is the execution ledger and `ROADMAP.md` is
@@ -192,21 +191,21 @@ contributor sees a real open-source project, not a toy.
 
 | # | Task | File(s) | Status | Notes |
 |---|------|---------|--------|-------|
-| 5.1 | Create `docs/PARITY.md` with Full/Stub/None matrix | `docs/PARITY.md` | TODO | Per-resource table with a link to the test that proves each Full claim |
-| 5.2 | Create `docs/ARCHITECTURE.md` with extended design docs | `docs/ARCHITECTURE.md` | TODO | Include mermaid diagram from research report |
-| 5.3 | Create `CONTRIBUTING.md` | `CONTRIBUTING.md` | TODO | How to add a resource, test requirements, PR checklist, link to the `add-resource` skill |
-| 5.4 | Create `CHANGELOG.md` | `CHANGELOG.md` | TODO | Keep-a-changelog format; seed with Phase 1 and Phase 2 summaries |
+| 5.1 | Create `docs/PARITY.md` with Full/Stub/None matrix | `docs/PARITY.md` | DONE | Proof column links every Full row to its test. Shipped in PR #9. |
+| 5.2 | Create `docs/ARCHITECTURE.md` with extended design docs | `docs/ARCHITECTURE.md` | DONE | Mermaid request-flow diagram added. Shipped in PR #9. |
+| 5.3 | Create `CONTRIBUTING.md` | `CONTRIBUTING.md` | DONE | Ground rules, dev env, add-resource walkthrough, test bar, PR checklist. |
+| 5.4 | Create `CHANGELOG.md` | `CHANGELOG.md` | DONE | Keep-a-changelog format; Phase 1-4 entries. Shipped in PR #9. |
 | 5.5 | ~~Create `TODO.md`~~ | `TODO.md` | DONE | Populated during Phase 1 debugging; maintained ever since |
-| 5.6 | Finalise README.md: badges, quick-start, examples, roadmap link | `README.md` | TODO | Quick-start uses docker-compose; link `ROADMAP.md` above the fold |
+| 5.6 | Finalise README.md: badges, quick-start, examples, roadmap link | `README.md` | DONE | Roadmap checklist updated, Phase 3/4 flipped. Shipped in PR #9. |
 | 5.7 | Add GitHub Actions CI workflow | `.github/workflows/ci.yml` | TODO | `go vet`, `go test -race -coverprofile`, `go build`, integration suite under `-tags=integration`, markdownlint, golangci-lint |
 | 5.8 | Add Dependabot config | `.github/dependabot.yml` | TODO | go modules + github-actions + docker |
 | 5.9 | Create `goreleaser.yml` for binary releases | `.goreleaser.yml` | TODO | macOS/Linux/Windows + Docker image push to ghcr.io |
-| 5.10 | Create `CODE_OF_CONDUCT.md` | `CODE_OF_CONDUCT.md` | TODO | Contributor Covenant v2.1, standard template, contact email |
-| 5.11 | Create `SECURITY.md` | `SECURITY.md` | TODO | Supported versions, how to report a vulnerability, expected response time. Private channel (email or GitHub security advisories) not public issues |
-| 5.12 | Create `RELEASING.md` | `RELEASING.md` | TODO | Release steps: tag, run `goreleaser`, update `CHANGELOG.md`, write the release notes, announce. The checklist the maintainer follows so nothing is tribal knowledge |
-| 5.13 | Create `CODEOWNERS` | `.github/CODEOWNERS` | TODO | One owner per package until contributors grow; keeps PR reviewer routing explicit |
-| 5.14 | Create `.github/ISSUE_TEMPLATE/bug_report.md` and `feature_request.md` | `.github/ISSUE_TEMPLATE/*.md` | TODO | Bug report template MUST ask for azemu version, azurerm version, terraform version, full error output, and whether `/api/unhandled` shows anything. These four questions short-circuit 90% of M1-M5-class triage. |
-| 5.15 | Create `.github/PULL_REQUEST_TEMPLATE.md` | `.github/PULL_REQUEST_TEMPLATE.md` | TODO | Pre-filled checklist: tests added, docs updated, parity matrix updated if resource-level, changelog entry drafted |
+| 5.10 | Create `CODE_OF_CONDUCT.md` | `CODE_OF_CONDUCT.md` | DONE | References Contributor Covenant v2.1, contact email, enforcement summary. |
+| 5.11 | Create `SECURITY.md` | `SECURITY.md` | DONE | Supported versions, private reporting via GH advisories or email, 48h ack SLA. |
+| 5.12 | Create `RELEASING.md` | `RELEASING.md` | DONE | Pre-release checks, changelog prep, tag, goreleaser, post-release verify. |
+| 5.13 | Create `CODEOWNERS` | `.github/CODEOWNERS` | DONE | @ZeroDeth owns everything; per-package lines for future granularity. |
+| 5.14 | Create `.github/ISSUE_TEMPLATE/bug_report.md` and `feature_request.md` | `.github/ISSUE_TEMPLATE/*.md` | DONE | Bug template asks azemu/azurerm/terraform versions, error output, /api/unhandled. |
+| 5.15 | Create `.github/PULL_REQUEST_TEMPLATE.md` | `.github/PULL_REQUEST_TEMPLATE.md` | DONE | Checklist: tests, pre-commit, parity, changelog, no unapproved deps. |
 | 5.16 | Add `renovate.json` (or stick with Dependabot) | `renovate.json` | TODO | Decide one or the other, not both |
 | 5.17 | Tag v0.1.0 | | TODO | Blocked on 5.1 through 5.16 |
 
