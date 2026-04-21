@@ -1,0 +1,19 @@
+# Each line is a file pattern followed by one or more owners.
+# Order matters: later patterns take precedence.
+# Docs: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owner for everything
+* @ZeroDeth
+
+# ARM handlers and store
+/internal/arm/    @ZeroDeth
+/internal/store/  @ZeroDeth
+
+# Auth and metadata (security-sensitive)
+/internal/auth/     @ZeroDeth
+/internal/metadata/ @ZeroDeth
+
+# Steering and agent config
+/CLAUDE.md   @ZeroDeth
+/AGENTS.md   @ZeroDeth
+/.claude/    @ZeroDeth
