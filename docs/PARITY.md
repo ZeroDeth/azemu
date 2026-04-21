@@ -26,7 +26,7 @@ and should read Scaffold or Planned instead.
 | Tenants | Read-only | N/A | N/A | Full (mock) | [token_test.go](../internal/auth/token_test.go) (tenant-scoped routes) |
 | Provider Registration | Always succeeds | N/A | N/A | Full | covered by the Terraform round-trip in `make smoke` |
 | Resource Groups | Full | N/A | `azurerm_resource_group` | Full | [rg_test.go](../internal/arm/rg_test.go), [rg_resources_test.go](../internal/arm/rg_resources_test.go), [arm_test.go](../test/integration/arm_test.go) |
-| Virtual Networks | Full | N/A | `azurerm_virtual_network` | Full (inline subnets in PUT body ignored; use `azurerm_subnet`) | [vnet_test.go](../internal/arm/vnet_test.go), [arm_test.go](../test/integration/arm_test.go) |
+| Virtual Networks | Full | N/A | `azurerm_virtual_network` | Full (invalid/overlapping `addressPrefixes` rejected with 400; inline subnets in PUT body are dropped — use `azurerm_subnet` instead) | [vnet_test.go](../internal/arm/vnet_test.go), [arm_test.go](../test/integration/arm_test.go) |
 | Subnets | Full | N/A | `azurerm_subnet` | Full (404 `ParentResourceNotFound` if vnet missing; cascades with parent) | [subnet_test.go](../internal/arm/subnet_test.go), [arm_test.go](../test/integration/arm_test.go) |
 | Public IP Addresses | Full | N/A | `azurerm_public_ip` | Full (Static/Dynamic alloc, SKU, fake `ipAddress` assigned on creation, preserved on update) | [public_ip_test.go](../internal/arm/public_ip_test.go), [arm_test.go](../test/integration/arm_test.go) |
 | Network Security Groups | Full | N/A | `azurerm_network_security_group` | Full (security rules as child resources, cascade delete, embedded in NSG GET) | [nsg_test.go](../internal/arm/nsg_test.go), [arm_test.go](../test/integration/arm_test.go) |
