@@ -419,3 +419,90 @@ func TestARM_NSGRuleFullFlow(t *testing.T) {
 	mustStatus(t, resp, http.StatusNotFound)
 	resp.Body.Close()
 }
+
+// TestARM_AppGWFullFlow exercises the Application Gateway lifecycle: create
+// with a full Standard_v2 config, read back verifying inline properties are
+// preserved, idempotent PUT returns 200, list shows 1 entry, delete returns
+// 202 Accepted, subsequent GET returns 404.
+func TestARM_AppGWFullFlow(t *testing.T) {
+	srv := buildFullServer(t)
+	base := srv.URL
+
+	agwURL := base + "/subscriptions/sub1/resourcegroups/rg1/providers/microsoft.network/applicationgateways/agw1" + apiVersionQ
+	listURL := base + "/subscriptions/sub1/resourcegroups/rg1/providers/microsoft.network/applicationgateways" + apiVersionQ
+
+	agwBody := `{
+		"location": "uksouth",
+		"sku": {"name": "Standard_v2", "tier": "Standard_v2", "capacity": 2},
+		"properties": {
+			"gatewayIPConfigurations": [{"name":"gw-ip-cfg","properties":{"subnet":{"id":"/fake/subnet"}}}],
+			"frontendIPConfigurations": [{"name":"fe-ip-cfg","properties":{"publicIPAddress":{"id":"/fake/pip"}}}],
+			"frontendPorts": [{"name":"port-80","properties":{"port":80}}],
+			"backendAddressPools": [{"name":"backend-pool","properties":{"backendAddresses":[]}}],
+			"backendHttpSettingsCollection": [{"name":"http-settings","properties":{"port":80,"protocol":"Http","cookieBasedAffinity":"Disabled","requestTimeout":30}}],
+			"httpListeners": [{"name":"http-listener","properties":{"frontendIPConfiguration":{"id":"fe-ip-cfg"},"frontendPort":{"id":"port-80"},"protocol":"Http"}}],
+			"requestRoutingRules": [{"name":"routing-rule","properties":{"ruleType":"Basic","httpListener":{"id":"http-listener"},"backendAddressPool":{"id":"backend-pool"},"backendHttpSettings":{"id":"http-settings"},"priority":1}}]
+		}
+	}`
+
+	// 1. Create.
+	resp := doJSON(t, http.MethodPut, agwURL, agwBody)
+	mustStatus(t, resp, http.StatusCreated)
+	body := decode(t, resp)
+
+	sku, ok := body["sku"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("sku missing: %v", body)
+	}
+	if sku["name"] != "Standard_v2" {
+		t.Errorf("sku.name = %v, want Standard_v2", sku["name"])
+	}
+	props := body["properties"].(map[string]interface{})
+	if props["provisioningState"] != "Succeeded" {
+		t.Errorf("provisioningState = %v, want Succeeded", props["provisioningState"])
+	}
+	if props["operationalState"] != "Running" {
+		t.Errorf("operationalState = %v, want Running", props["operationalState"])
+	}
+
+	// 2. GET reads back inline properties intact.
+	resp = doJSON(t, http.MethodGet, agwURL, "")
+	mustStatus(t, resp, http.StatusOK)
+	got := decode(t, resp)
+	gotProps := got["properties"].(map[string]interface{})
+	pools, ok := gotProps["backendAddressPools"].([]interface{})
+	if !ok || len(pools) != 1 {
+		t.Errorf("backendAddressPools = %v, want 1 item", gotProps["backendAddressPools"])
+	}
+	rules, ok := gotProps["requestRoutingRules"].([]interface{})
+	if !ok || len(rules) != 1 {
+		t.Errorf("requestRoutingRules = %v, want 1 item", gotProps["requestRoutingRules"])
+	}
+
+	// 3. Idempotent PUT returns 200.
+	resp = doJSON(t, http.MethodPut, agwURL, agwBody)
+	mustStatus(t, resp, http.StatusOK)
+	resp.Body.Close()
+
+	// 4. LIST shows 1 entry.
+	resp = doJSON(t, http.MethodGet, listURL, "")
+	mustStatus(t, resp, http.StatusOK)
+	list := decode(t, resp)
+	items, ok := list["value"].([]interface{})
+	if !ok || len(items) != 1 {
+		t.Fatalf("list value = %v, want 1 item", list["value"])
+	}
+
+	// 5. DELETE is async (202 Accepted).
+	resp = doJSON(t, http.MethodDelete, agwURL, "")
+	mustStatus(t, resp, http.StatusAccepted)
+	if resp.Header.Get("Location") == "" {
+		t.Errorf("Location header missing on DELETE")
+	}
+	resp.Body.Close()
+
+	// 6. Subsequent GET returns 404.
+	resp = doJSON(t, http.MethodGet, agwURL, "")
+	mustStatus(t, resp, http.StatusNotFound)
+	resp.Body.Close()
+}

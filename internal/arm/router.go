@@ -110,6 +110,14 @@ func (a *Router) Routes(r chi.Router) {
 	r.Head("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/loadbalancers/{lbName}/probes/{probeName}", a.headLBProbe)
 	r.Delete("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/loadbalancers/{lbName}/probes/{probeName}", a.deleteLBProbe)
 	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/loadbalancers/{lbName}/probes", a.listLBProbes)
+
+	// Application Gateways (Microsoft.Network/applicationGateways)
+	r.Put("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/applicationgateways/{appGWName}", a.putAppGW)
+	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/applicationgateways/{appGWName}", a.getAppGW)
+	r.Head("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/applicationgateways/{appGWName}", a.headAppGW)
+	r.Delete("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/applicationgateways/{appGWName}", a.deleteAppGW)
+	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/applicationgateways", a.listAppGWsByRG)
+	r.Get("/{subscriptionID}/providers/microsoft.network/applicationgateways", a.listAppGWsBySub)
 }
 
 // --- Subscriptions ---
