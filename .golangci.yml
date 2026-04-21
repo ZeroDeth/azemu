@@ -1,0 +1,8 @@
+linters-settings:
+  errcheck:
+    exclude-functions:
+      - fmt.Fprint
+      - fmt.Fprintf
+      - fmt.Fprintln
+      - (io.ReadCloser).Close
+      - (*os.File).Close
