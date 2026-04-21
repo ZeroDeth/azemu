@@ -352,6 +352,88 @@ func TestVNet_LIST_Empty_ReturnsEmptyArray(t *testing.T) {
 	}
 }
 
+// --- Address-space validation tests (task 6.7) ---
+
+func TestVNet_PUT_InvalidCIDR_Returns400(t *testing.T) {
+	srv := newTestServer(t)
+	body := `{
+		"location": "uksouth",
+		"properties": {
+			"addressSpace": { "addressPrefixes": ["not-a-cidr"] }
+		}
+	}`
+	resp := httpPut(t, vnetURL(srv.URL, "sub1", "rg1", "vnet1"), body)
+	assertStatus(t, resp, http.StatusBadRequest)
+	errBody := decodeJSON(t, resp)
+	errObj := errBody["error"].(map[string]interface{})
+	if errObj["code"] != "InvalidAddressPrefix" {
+		t.Errorf("code = %v, want InvalidAddressPrefix", errObj["code"])
+	}
+}
+
+func TestVNet_PUT_OverlappingPrefixes_Returns400(t *testing.T) {
+	srv := newTestServer(t)
+	// 10.0.0.0/16 and 10.0.1.0/24 overlap (the /24 is inside the /16).
+	body := `{
+		"location": "uksouth",
+		"properties": {
+			"addressSpace": { "addressPrefixes": ["10.0.0.0/16", "10.0.1.0/24"] }
+		}
+	}`
+	resp := httpPut(t, vnetURL(srv.URL, "sub1", "rg1", "vnet1"), body)
+	assertStatus(t, resp, http.StatusBadRequest)
+	errBody := decodeJSON(t, resp)
+	errObj := errBody["error"].(map[string]interface{})
+	if errObj["code"] != "InvalidAddressPrefix" {
+		t.Errorf("code = %v, want InvalidAddressPrefix", errObj["code"])
+	}
+}
+
+func TestVNet_PUT_MultipleNonOverlappingPrefixes_Returns201(t *testing.T) {
+	srv := newTestServer(t)
+	// Two completely separate blocks — no overlap.
+	body := `{
+		"location": "uksouth",
+		"properties": {
+			"addressSpace": { "addressPrefixes": ["10.0.0.0/16", "192.168.0.0/24"] }
+		}
+	}`
+	resp := httpPut(t, vnetURL(srv.URL, "sub1", "rg1", "vnet1"), body)
+	assertStatus(t, resp, http.StatusCreated)
+	resp.Body.Close()
+}
+
+func TestVNet_PUT_NoAddressSpace_StillAccepted(t *testing.T) {
+	// Validation is skipped entirely when the caller omits addressSpace.
+	srv := newTestServer(t)
+	body := `{"location": "uksouth", "properties": {}}`
+	resp := httpPut(t, vnetURL(srv.URL, "sub1", "rg1", "vnet1"), body)
+	assertStatus(t, resp, http.StatusCreated)
+	resp.Body.Close()
+}
+
+func TestVNet_PUT_InlineSubnets_DroppedSilently(t *testing.T) {
+	// 6.8 decision: inline subnets in the PUT body are dropped. The VNet is
+	// stored without them, and GET returns an empty subnets array until the
+	// caller creates subnets via the dedicated .../subnets/{name} endpoint.
+	srv := newTestServer(t)
+	body := `{
+		"location": "uksouth",
+		"properties": {
+			"addressSpace": { "addressPrefixes": ["10.0.0.0/16"] },
+			"subnets": [{"name":"inline-sub","properties":{"addressPrefix":"10.0.1.0/24"}}]
+		}
+	}`
+	resp := httpPut(t, vnetURL(srv.URL, "sub1", "rg1", "vnet1"), body)
+	assertStatus(t, resp, http.StatusCreated)
+	respBody := decodeJSON(t, resp)
+	props := respBody["properties"].(map[string]interface{})
+	subnets := props["subnets"].([]interface{})
+	if len(subnets) != 0 {
+		t.Errorf("subnets = %v, want [] (inline subnets must be dropped)", subnets)
+	}
+}
+
 func TestVNet_MissingAPIVersion_Returns400(t *testing.T) {
 	srv := newTestServer(t)
 	// Use the raw helper so withAPIVersion does not inject the default.
