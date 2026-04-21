@@ -229,9 +229,9 @@ Goal: every networking primitive a real three-tier web app needs. VNet + Subnet 
 | 6.3 | `azurerm_network_security_group` + rules | `Microsoft.Network/networkSecurityGroups` | DONE | Security rules as child resources under NSG id prefix; cascade delete; embedded in NSG GET/LIST. 30 unit tests + integration test. NSG-to-subnet wiring deferred (tracked in TODO). |
 | 6.4 | `azurerm_lb` + backend pool + rule + probe | `Microsoft.Network/loadBalancers` | DONE | Backend pools, rules, and probes as child resources under LB id prefix; cascade delete; embedded in LB GET/LIST. SKU at top level (same pattern as Public IP). ~45 unit tests + integration test. |
 | 6.5 | `azurerm_application_gateway` | `Microsoft.Network/applicationGateways` | DONE | Monolithic PUT (no child endpoints); SKU with name/tier/capacity at top level; all inline sub-config arrays preserved verbatim; operationalState: Running. 17 unit tests + integration test. |
-| 6.6 | `azurerm_dns_zone` + record sets (A, AAAA, CNAME, TXT, MX, SRV, NS, SOA) | `Microsoft.Network/dnsZones` + `.../{type}` | TODO | Auto-SOA and auto-NS on zone create. Record sets as children. |
-| 6.7 | Address-space validation for VNets | `internal/arm/vnet.go` | TODO | Reject invalid CIDR, reject overlapping prefixes inside the same VNet. Currently `addressSpace` is passed through unvalidated. |
-| 6.8 | Inline subnets inside VNet PUT body: honour or keep dropping | `internal/arm/vnet.go`, `docs/PARITY.md` | TODO | Decision already documented in `TODO.md` "Known Gaps". Pick one and make it explicit in PARITY. |
+| 6.6 | `azurerm_dns_zone` + record sets (A, AAAA, CNAME, TXT, MX, SRV, NS, SOA) | `Microsoft.Network/dnsZones` + `.../{type}` | DONE | Auto-SOA + auto-NS on zone create. Single `{recordType}` chi param handles all 8 record types. 40 unit tests + integration test covering cascade delete, FQDN computation, numberOfRecordSets, and multi-type round-trip. |
+| 6.7 | Address-space validation for VNets | `internal/arm/vnet.go` | DONE | `validateAddressPrefixes` rejects invalid CIDRs and overlapping prefixes with 400 `InvalidAddressPrefix`. Missing `addressSpace` is still accepted (backward compat). 5 new unit tests. |
+| 6.8 | Inline subnets inside VNet PUT body: honour or keep dropping | `internal/arm/vnet.go`, `docs/PARITY.md` | DONE | Decision: keep dropping. Avoids split-brain between inline data and child store entries. Documented in PARITY.md notes and pinned by `TestVNet_PUT_InlineSubnets_DroppedSilently`. |
 
 ### Phase 6.5: Use-case scenarios for v0.2
 

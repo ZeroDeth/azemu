@@ -3,6 +3,7 @@ package arm
 import (
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/http"
 	"strings"
 
@@ -36,6 +37,28 @@ type vnetBody struct {
 	Properties map[string]interface{} `json:"properties"`
 }
 
+// validateAddressPrefixes checks that every CIDR in the slice is parseable
+// and that no two prefixes overlap. Returns a non-nil error on the first
+// violation found.
+func validateAddressPrefixes(prefixes []string) error {
+	nets := make([]*net.IPNet, 0, len(prefixes))
+	for _, p := range prefixes {
+		_, ipNet, err := net.ParseCIDR(p)
+		if err != nil {
+			return fmt.Errorf("invalid address prefix %q: not a valid CIDR block", p)
+		}
+		nets = append(nets, ipNet)
+	}
+	for i := 0; i < len(nets); i++ {
+		for j := i + 1; j < len(nets); j++ {
+			if nets[i].Contains(nets[j].IP) || nets[j].Contains(nets[i].IP) {
+				return fmt.Errorf("address prefixes %q and %q overlap", prefixes[i], prefixes[j])
+			}
+		}
+	}
+	return nil
+}
+
 func (a *Router) putVNet(w http.ResponseWriter, r *http.Request) {
 	subID := chi.URLParam(r, "subscriptionID")
 	rgName := chi.URLParam(r, "resourceGroupName")
@@ -50,6 +73,28 @@ func (a *Router) putVNet(w http.ResponseWriter, r *http.Request) {
 		writeAzureError(w, http.StatusBadRequest, "InvalidRequestContent",
 			"location is required")
 		return
+	}
+
+	// Validate addressSpace.addressPrefixes when the caller supplies them.
+	if body.Properties != nil {
+		if addrSpace, ok := body.Properties["addressSpace"].(map[string]interface{}); ok {
+			if rawPrefixes, ok := addrSpace["addressPrefixes"].([]interface{}); ok {
+				prefixes := make([]string, 0, len(rawPrefixes))
+				for _, v := range rawPrefixes {
+					s, ok := v.(string)
+					if !ok {
+						writeAzureError(w, http.StatusBadRequest, "InvalidAddressPrefix",
+							"addressPrefixes entries must be strings")
+						return
+					}
+					prefixes = append(prefixes, s)
+				}
+				if err := validateAddressPrefixes(prefixes); err != nil {
+					writeAzureError(w, http.StatusBadRequest, "InvalidAddressPrefix", err.Error())
+					return
+				}
+			}
+		}
 	}
 
 	// Drop any inline "subnets" the client sent — azemu v0.1 only recognises

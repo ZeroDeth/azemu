@@ -362,7 +362,7 @@ func TestARM_NSGRuleFullFlow(t *testing.T) {
 	base := srv.URL
 
 	nsgURL := base + "/subscriptions/sub1/resourcegroups/rg1/providers/microsoft.network/networksecuritygroups/nsg1" + apiVersionQ
-	ruleURL := nsgURL + "/securityrules/allow-http"
+	ruleURL := base + "/subscriptions/sub1/resourcegroups/rg1/providers/microsoft.network/networksecuritygroups/nsg1/securityrules/allow-http" + apiVersionQ
 	listURL := base + "/subscriptions/sub1/resourcegroups/rg1/providers/microsoft.network/networksecuritygroups" + apiVersionQ
 
 	nsgBody := `{"location":"uksouth"}`
@@ -503,6 +503,136 @@ func TestARM_AppGWFullFlow(t *testing.T) {
 
 	// 6. Subsequent GET returns 404.
 	resp = doJSON(t, http.MethodGet, agwURL, "")
+	mustStatus(t, resp, http.StatusNotFound)
+	resp.Body.Close()
+}
+
+func TestARM_DNSZoneFullFlow(t *testing.T) {
+	srv := buildFullServer(t)
+	base := srv.URL
+
+	zoneURL := base + "/subscriptions/sub1/resourcegroups/rg1/providers/microsoft.network/dnszones/example.com" + apiVersionQ
+	listURL := base + "/subscriptions/sub1/resourcegroups/rg1/providers/microsoft.network/dnszones" + apiVersionQ
+	aRecordURL := base + "/subscriptions/sub1/resourcegroups/rg1/providers/microsoft.network/dnszones/example.com/A/www" + apiVersionQ
+	txtRecordURL := base + "/subscriptions/sub1/resourcegroups/rg1/providers/microsoft.network/dnszones/example.com/TXT/verify" + apiVersionQ
+	listAllURL := base + "/subscriptions/sub1/resourcegroups/rg1/providers/microsoft.network/dnszones/example.com/recordsets" + apiVersionQ
+
+	// 1. Create zone — should auto-seed SOA and NS.
+	resp := doJSON(t, http.MethodPut, zoneURL, `{"location":"global","tags":{}}`)
+	mustStatus(t, resp, http.StatusCreated)
+	body := decode(t, resp)
+	if body["location"] != "global" {
+		t.Errorf("location = %v, want global", body["location"])
+	}
+	props := body["properties"].(map[string]interface{})
+	if props["provisioningState"] != "Succeeded" {
+		t.Errorf("provisioningState = %v, want Succeeded", props["provisioningState"])
+	}
+	if props["zoneType"] != "Public" {
+		t.Errorf("zoneType = %v, want Public", props["zoneType"])
+	}
+	ns, ok := props["nameServers"].([]interface{})
+	if !ok || len(ns) == 0 {
+		t.Errorf("nameServers missing or empty")
+	}
+	// Auto-seeded SOA + NS = numberOfRecordSets 2.
+	if props["numberOfRecordSets"].(float64) != 2 {
+		t.Errorf("numberOfRecordSets = %v, want 2 after create", props["numberOfRecordSets"])
+	}
+
+	// 2. Auto-seeded SOA is readable.
+	soaURL := base + "/subscriptions/sub1/resourcegroups/rg1/providers/microsoft.network/dnszones/example.com/SOA/@" + apiVersionQ
+	resp = doJSON(t, http.MethodGet, soaURL, "")
+	mustStatus(t, resp, http.StatusOK)
+	soaBody := decode(t, resp)
+	if soaBody["type"] != "Microsoft.Network/dnsZones/SOA" {
+		t.Errorf("SOA type = %v, want Microsoft.Network/dnsZones/SOA", soaBody["type"])
+	}
+	soaProps := soaBody["properties"].(map[string]interface{})
+	if soaProps["fqdn"] != "example.com." {
+		t.Errorf("SOA fqdn = %v, want example.com.", soaProps["fqdn"])
+	}
+
+	// 3. Add an A record.
+	resp = doJSON(t, http.MethodPut, aRecordURL,
+		`{"properties":{"TTL":300,"ARecords":[{"ipv4Address":"1.2.3.4"}]}}`)
+	mustStatus(t, resp, http.StatusCreated)
+	aBody := decode(t, resp)
+	if aBody["type"] != "Microsoft.Network/dnsZones/A" {
+		t.Errorf("A record type = %v, want Microsoft.Network/dnsZones/A", aBody["type"])
+	}
+	aProps := aBody["properties"].(map[string]interface{})
+	if aProps["fqdn"] != "www.example.com." {
+		t.Errorf("A fqdn = %v, want www.example.com.", aProps["fqdn"])
+	}
+
+	// 4. Add a TXT record.
+	resp = doJSON(t, http.MethodPut, txtRecordURL,
+		`{"properties":{"TTL":300,"TXTRecords":[{"value":["v=spf1 ~all"]}]}}`)
+	mustStatus(t, resp, http.StatusCreated)
+	resp.Body.Close()
+
+	// 5. Zone GET shows numberOfRecordSets = 4 (SOA + NS + A + TXT).
+	resp = doJSON(t, http.MethodGet, zoneURL, "")
+	mustStatus(t, resp, http.StatusOK)
+	body = decode(t, resp)
+	props = body["properties"].(map[string]interface{})
+	if props["numberOfRecordSets"].(float64) != 4 {
+		t.Errorf("numberOfRecordSets = %v, want 4", props["numberOfRecordSets"])
+	}
+
+	// 6. Idempotent PUT on the zone returns 200.
+	resp = doJSON(t, http.MethodPut, zoneURL, `{"location":"global","tags":{"env":"test"}}`)
+	mustStatus(t, resp, http.StatusOK)
+	resp.Body.Close()
+
+	// 7. LIST by RG shows 1 zone.
+	resp = doJSON(t, http.MethodGet, listURL, "")
+	mustStatus(t, resp, http.StatusOK)
+	list := decode(t, resp)
+	items, ok := list["value"].([]interface{})
+	if !ok || len(items) != 1 {
+		t.Fatalf("list value = %v, want 1 zone", list["value"])
+	}
+
+	// 8. list all record sets returns SOA + NS + A + TXT.
+	resp = doJSON(t, http.MethodGet, listAllURL, "")
+	mustStatus(t, resp, http.StatusOK)
+	allList := decode(t, resp)
+	allItems, ok := allList["value"].([]interface{})
+	if !ok || len(allItems) != 4 {
+		t.Errorf("list all returned %v items, want 4", len(allItems))
+	}
+
+	// 9. Delete the A record individually.
+	resp = doJSON(t, http.MethodDelete, aRecordURL, "")
+	mustStatus(t, resp, http.StatusAccepted)
+	if resp.Header.Get("Location") == "" {
+		t.Errorf("Location header missing on record DELETE")
+	}
+	resp.Body.Close()
+	resp = doJSON(t, http.MethodGet, aRecordURL, "")
+	mustStatus(t, resp, http.StatusNotFound)
+	resp.Body.Close()
+
+	// 10. DELETE zone cascades all remaining record sets.
+	resp = doJSON(t, http.MethodDelete, zoneURL, "")
+	mustStatus(t, resp, http.StatusAccepted)
+	if resp.Header.Get("Location") == "" {
+		t.Errorf("Location header missing on zone DELETE")
+	}
+	resp.Body.Close()
+
+	// Zone gone.
+	resp = doJSON(t, http.MethodGet, zoneURL, "")
+	mustStatus(t, resp, http.StatusNotFound)
+	resp.Body.Close()
+	// Auto-seeded SOA and NS gone.
+	resp = doJSON(t, http.MethodGet, soaURL, "")
+	mustStatus(t, resp, http.StatusNotFound)
+	resp.Body.Close()
+	// TXT gone (cascaded).
+	resp = doJSON(t, http.MethodGet, txtRecordURL, "")
 	mustStatus(t, resp, http.StatusNotFound)
 	resp.Body.Close()
 }

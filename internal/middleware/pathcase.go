@@ -38,6 +38,18 @@ var canonicalLiteralSegments = map[string]string{
 	"microsoft.dns":       "microsoft.dns",
 	"virtualnetworks":     "virtualnetworks",
 	"subnets":             "subnets",
+	// Phase 6 resource types — each maps the camelCase ARM literal to its
+	// lowercase chi route form so real clients (azurerm, az CLI) are matched.
+	"networksecuritygroups": "networksecuritygroups",
+	"securityrules":         "securityrules",
+	"publicipaddresses":     "publicipaddresses",
+	"loadbalancers":         "loadbalancers",
+	"backendaddresspools":   "backendaddresspools",
+	"loadbalancingrules":    "loadbalancingrules",
+	"probes":                "probes",
+	"applicationgateways":   "applicationgateways",
+	"dnszones":              "dnszones",
+	"recordsets":            "recordsets",
 }
 
 // duplicateSlashes matches runs of two or more "/" characters. Some real

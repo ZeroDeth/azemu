@@ -68,10 +68,11 @@ The bundle file is written with mode 0600 because it contains the private key.
   `putResourceGroup` and `putVNet`. Pinned by
   `TestRG_PUT_NilTags_NormalisedToEmptyObject` and
   `TestVNet_PUT_NilTags_NormalisedToEmptyObject`.
-- **Inline subnets in VNet PUT body are dropped:** azemu v0.1 only recognises
-  subnets created via the separate `.../subnets/{name}` endpoint, matching
-  how `azurerm_subnet` issues writes. Real ARM accepts both. Documented in
-  `docs/PARITY.md`.
+- ~~**Inline subnets in VNet PUT body are dropped:**~~ **RESOLVED 2026-04-22**
+  (task 6.8). Decision is to keep dropping inline subnets; this avoids a
+  split-brain between the inline data and the child store entries that
+  `getVNet` assembles at read time. Documented in `docs/PARITY.md` and
+  pinned by `TestVNet_PUT_InlineSubnets_DroppedSilently`.
 - ~~**`putResourceGroup` accepts empty location:** `resourcegroup.go` predates
   the validation pattern used in `vnet.go` and `subnet.go`.~~
   **RESOLVED 2026-04-11** during the Phase 2 closeout batch.

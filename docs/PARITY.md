@@ -26,13 +26,13 @@ and should read Scaffold or Planned instead.
 | Tenants | Read-only | N/A | N/A | Full (mock) | [token_test.go](../internal/auth/token_test.go) (tenant-scoped routes) |
 | Provider Registration | Always succeeds | N/A | N/A | Full | covered by the Terraform round-trip in `make smoke` |
 | Resource Groups | Full | N/A | `azurerm_resource_group` | Full | [rg_test.go](../internal/arm/rg_test.go), [rg_resources_test.go](../internal/arm/rg_resources_test.go), [arm_test.go](../test/integration/arm_test.go) |
-| Virtual Networks | Full | N/A | `azurerm_virtual_network` | Full (inline subnets in PUT body ignored; use `azurerm_subnet`) | [vnet_test.go](../internal/arm/vnet_test.go), [arm_test.go](../test/integration/arm_test.go) |
+| Virtual Networks | Full | N/A | `azurerm_virtual_network` | Full (invalid/overlapping `addressPrefixes` rejected with 400; inline subnets in PUT body are dropped — use `azurerm_subnet` instead) | [vnet_test.go](../internal/arm/vnet_test.go), [arm_test.go](../test/integration/arm_test.go) |
 | Subnets | Full | N/A | `azurerm_subnet` | Full (404 `ParentResourceNotFound` if vnet missing; cascades with parent) | [subnet_test.go](../internal/arm/subnet_test.go), [arm_test.go](../test/integration/arm_test.go) |
 | Public IP Addresses | Full | N/A | `azurerm_public_ip` | Full (Static/Dynamic alloc, SKU, fake `ipAddress` assigned on creation, preserved on update) | [public_ip_test.go](../internal/arm/public_ip_test.go), [arm_test.go](../test/integration/arm_test.go) |
 | Network Security Groups | Full | N/A | `azurerm_network_security_group` | Full (security rules as child resources, cascade delete, embedded in NSG GET) | [nsg_test.go](../internal/arm/nsg_test.go), [arm_test.go](../test/integration/arm_test.go) |
 | Load Balancers | Full | N/A | `azurerm_lb`, `azurerm_lb_backend_address_pool`, `azurerm_lb_rule`, `azurerm_lb_probe` | Full (backend pools, rules, probes as child resources; cascade delete; embedded in LB GET; SKU at top level) | [lb_test.go](../internal/arm/lb_test.go), [arm_test.go](../test/integration/arm_test.go) |
 | Application Gateways | Full | N/A | `azurerm_application_gateway` | Full (monolithic PUT; SKU at top level with name/tier/capacity; all inline sub-config preserved; operationalState: Running) | [appgw_test.go](../internal/arm/appgw_test.go), [arm_test.go](../test/integration/arm_test.go) |
-| DNS Zones | None | N/A | `azurerm_dns_zone` | Planned (v0.2) | -- |
+| DNS Zones | Full | N/A | `azurerm_dns_zone`, `azurerm_dns_a_record`, `azurerm_dns_aaaa_record`, `azurerm_dns_cname_record`, `azurerm_dns_txt_record`, `azurerm_dns_mx_record`, `azurerm_dns_srv_record`, `azurerm_dns_ns_record` | Full (auto-SOA + auto-NS on zone create; A, AAAA, CNAME, TXT, MX, SRV, NS, SOA record sets as children; cascade delete) | [dns_test.go](../internal/arm/dns_test.go), [arm_test.go](../test/integration/arm_test.go) |
 | Storage Accounts | None | None | `azurerm_storage_account` | Planned (v0.2) | -- |
 | Key Vault Secrets | None | None | `azurerm_key_vault_secret` | Planned (v0.2) | -- |
 
