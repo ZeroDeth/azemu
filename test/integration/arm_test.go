@@ -157,3 +157,153 @@ func TestARM_VNetSubnetFullFlow(t *testing.T) {
 		t.Errorf("x-ms-request-id header missing")
 	}
 }
+
+// TestARM_PublicIPFullFlow exercises the Public IP lifecycle: create, read,
+// verify SKU and fake ipAddress are present, update (idempotent PUT), delete,
+// confirm 404.
+func TestARM_PublicIPFullFlow(t *testing.T) {
+	srv := buildFullServer(t)
+	base := srv.URL
+
+	pipURL := base + "/subscriptions/sub1/resourcegroups/rg1/providers/microsoft.network/publicipaddresses/pip1" + apiVersionQ
+	listURL := base + "/subscriptions/sub1/resourcegroups/rg1/providers/microsoft.network/publicipaddresses" + apiVersionQ
+
+	pipBody := `{
+		"location": "uksouth",
+		"sku": {"name": "Standard"},
+		"properties": {
+			"publicIPAllocationMethod": "Static",
+			"publicIPAddressVersion": "IPv4"
+		}
+	}`
+
+	// 1. Create.
+	resp := doJSON(t, http.MethodPut, pipURL, pipBody)
+	mustStatus(t, resp, http.StatusCreated)
+	body := decode(t, resp)
+
+	props, ok := body["properties"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("properties missing: %v", body)
+	}
+	if props["provisioningState"] != "Succeeded" {
+		t.Errorf("provisioningState = %v, want Succeeded", props["provisioningState"])
+	}
+	ip, ok := props["ipAddress"].(string)
+	if !ok || ip == "" {
+		t.Errorf("ipAddress missing or empty: %v", props["ipAddress"])
+	}
+	sku, ok := body["sku"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("sku missing: %v", body)
+	}
+	if sku["name"] != "Standard" {
+		t.Errorf("sku.name = %v, want Standard", sku["name"])
+	}
+
+	// 2. GET reads back the same IP.
+	resp = doJSON(t, http.MethodGet, pipURL, "")
+	mustStatus(t, resp, http.StatusOK)
+	got := decode(t, resp)
+	gotProps := got["properties"].(map[string]interface{})
+	if gotProps["ipAddress"] != ip {
+		t.Errorf("GET ipAddress = %v, want %v", gotProps["ipAddress"], ip)
+	}
+
+	// 3. Second PUT (update) preserves the assigned IP and returns 200.
+	resp = doJSON(t, http.MethodPut, pipURL, pipBody)
+	mustStatus(t, resp, http.StatusOK)
+	updated := decode(t, resp)
+	updatedProps := updated["properties"].(map[string]interface{})
+	if updatedProps["ipAddress"] != ip {
+		t.Errorf("update changed ipAddress: got %v, want %v", updatedProps["ipAddress"], ip)
+	}
+
+	// 4. LIST shows the resource.
+	resp = doJSON(t, http.MethodGet, listURL, "")
+	mustStatus(t, resp, http.StatusOK)
+	list := decode(t, resp)
+	items, ok := list["value"].([]interface{})
+	if !ok || len(items) != 1 {
+		t.Fatalf("list value = %v, want 1 item", list["value"])
+	}
+
+	// 5. DELETE is async (202 Accepted).
+	resp = doJSON(t, http.MethodDelete, pipURL, "")
+	mustStatus(t, resp, http.StatusAccepted)
+	if resp.Header.Get("Location") == "" {
+		t.Errorf("Location header missing on DELETE")
+	}
+	resp.Body.Close()
+
+	// 6. Subsequent GET must return 404.
+	resp = doJSON(t, http.MethodGet, pipURL, "")
+	mustStatus(t, resp, http.StatusNotFound)
+	resp.Body.Close()
+}
+
+// TestARM_NSGRuleFullFlow exercises the NSG + security rule lifecycle:
+// create NSG, add a rule, verify it is embedded in the NSG response, delete
+// the NSG, and confirm the rule cascaded away.
+func TestARM_NSGRuleFullFlow(t *testing.T) {
+	srv := buildFullServer(t)
+	base := srv.URL
+
+	nsgURL := base + "/subscriptions/sub1/resourcegroups/rg1/providers/microsoft.network/networksecuritygroups/nsg1" + apiVersionQ
+	ruleURL := nsgURL + "/securityrules/allow-http"
+	listURL := base + "/subscriptions/sub1/resourcegroups/rg1/providers/microsoft.network/networksecuritygroups" + apiVersionQ
+
+	nsgBody := `{"location":"uksouth"}`
+	ruleBody := `{"properties":{"priority":100,"protocol":"Tcp","access":"Allow","direction":"Inbound","sourceAddressPrefix":"*","sourcePortRange":"*","destinationAddressPrefix":"*","destinationPortRange":"80"}}`
+
+	// 1. Create NSG.
+	resp := doJSON(t, http.MethodPut, nsgURL, nsgBody)
+	mustStatus(t, resp, http.StatusCreated)
+	body := decode(t, resp)
+	props := body["properties"].(map[string]interface{})
+	rules := props["securityRules"].([]interface{})
+	if len(rules) != 0 {
+		t.Fatalf("fresh NSG should have 0 rules, got %d", len(rules))
+	}
+
+	// 2. Add a security rule.
+	resp = doJSON(t, http.MethodPut, ruleURL, ruleBody)
+	mustStatus(t, resp, http.StatusCreated)
+	ruleBody2 := decode(t, resp)
+	if ruleBody2["name"] != "allow-http" {
+		t.Errorf("rule name = %v, want allow-http", ruleBody2["name"])
+	}
+
+	// 3. GET NSG: rule must be embedded in securityRules array.
+	resp = doJSON(t, http.MethodGet, nsgURL, "")
+	mustStatus(t, resp, http.StatusOK)
+	got := decode(t, resp)
+	gotProps := got["properties"].(map[string]interface{})
+	gotRules, ok := gotProps["securityRules"].([]interface{})
+	if !ok || len(gotRules) != 1 {
+		t.Fatalf("securityRules = %v, want 1 rule", gotProps["securityRules"])
+	}
+	gotRule := gotRules[0].(map[string]interface{})
+	if gotRule["name"] != "allow-http" {
+		t.Errorf("embedded rule name = %v, want allow-http", gotRule["name"])
+	}
+
+	// 4. LIST NSGs shows 1 entry; rules are not included as separate items.
+	resp = doJSON(t, http.MethodGet, listURL, "")
+	mustStatus(t, resp, http.StatusOK)
+	list := decode(t, resp)
+	items := list["value"].([]interface{})
+	if len(items) != 1 {
+		t.Fatalf("list count = %d, want 1", len(items))
+	}
+
+	// 5. DELETE NSG — rule cascades.
+	resp = doJSON(t, http.MethodDelete, nsgURL, "")
+	mustStatus(t, resp, http.StatusAccepted)
+	resp.Body.Close()
+
+	// 6. Rule GET must be 404 after cascade.
+	resp = doJSON(t, http.MethodGet, ruleURL, "")
+	mustStatus(t, resp, http.StatusNotFound)
+	resp.Body.Close()
+}

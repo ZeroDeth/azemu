@@ -58,6 +58,29 @@ func (a *Router) Routes(r chi.Router) {
 	r.Head("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/virtualnetworks/{vnetName}/subnets/{subnetName}", a.headSubnet)
 	r.Delete("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/virtualnetworks/{vnetName}/subnets/{subnetName}", a.deleteSubnet)
 	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/virtualnetworks/{vnetName}/subnets", a.listSubnets)
+
+	// Network Security Groups (Microsoft.Network/networkSecurityGroups)
+	r.Put("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/networksecuritygroups/{nsgName}", a.putNSG)
+	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/networksecuritygroups/{nsgName}", a.getNSG)
+	r.Head("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/networksecuritygroups/{nsgName}", a.headNSG)
+	r.Delete("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/networksecuritygroups/{nsgName}", a.deleteNSG)
+	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/networksecuritygroups", a.listNSGsByRG)
+	r.Get("/{subscriptionID}/providers/microsoft.network/networksecuritygroups", a.listNSGsBySub)
+
+	// Security Rules (Microsoft.Network/networkSecurityGroups/securityRules)
+	r.Put("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/networksecuritygroups/{nsgName}/securityrules/{ruleName}", a.putRule)
+	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/networksecuritygroups/{nsgName}/securityrules/{ruleName}", a.getRule)
+	r.Head("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/networksecuritygroups/{nsgName}/securityrules/{ruleName}", a.headRule)
+	r.Delete("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/networksecuritygroups/{nsgName}/securityrules/{ruleName}", a.deleteRule)
+	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/networksecuritygroups/{nsgName}/securityrules", a.listRules)
+
+	// Public IP addresses (Microsoft.Network/publicIPAddresses)
+	r.Put("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/publicipaddresses/{publicIPName}", a.putPublicIP)
+	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/publicipaddresses/{publicIPName}", a.getPublicIP)
+	r.Head("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/publicipaddresses/{publicIPName}", a.headPublicIP)
+	r.Delete("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/publicipaddresses/{publicIPName}", a.deletePublicIP)
+	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/publicipaddresses", a.listPublicIPsByRG)
+	r.Get("/{subscriptionID}/providers/microsoft.network/publicipaddresses", a.listPublicIPsBySub)
 }
 
 // --- Subscriptions ---
