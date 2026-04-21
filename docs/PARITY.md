@@ -30,7 +30,7 @@ and should read Scaffold or Planned instead.
 | Subnets | Full | N/A | `azurerm_subnet` | Full (404 `ParentResourceNotFound` if vnet missing; cascades with parent) | [subnet_test.go](../internal/arm/subnet_test.go), [arm_test.go](../test/integration/arm_test.go) |
 | Public IP Addresses | Full | N/A | `azurerm_public_ip` | Full (Static/Dynamic alloc, SKU, fake `ipAddress` assigned on creation, preserved on update) | [public_ip_test.go](../internal/arm/public_ip_test.go), [arm_test.go](../test/integration/arm_test.go) |
 | Network Security Groups | Full | N/A | `azurerm_network_security_group` | Full (security rules as child resources, cascade delete, embedded in NSG GET) | [nsg_test.go](../internal/arm/nsg_test.go), [arm_test.go](../test/integration/arm_test.go) |
-| Load Balancers | None | N/A | `azurerm_lb` | Planned (v0.2) | -- |
+| Load Balancers | Full | N/A | `azurerm_lb`, `azurerm_lb_backend_address_pool`, `azurerm_lb_rule`, `azurerm_lb_probe` | Full (backend pools, rules, probes as child resources; cascade delete; embedded in LB GET; SKU at top level) | [lb_test.go](../internal/arm/lb_test.go), [arm_test.go](../test/integration/arm_test.go) |
 | Application Gateways | None | N/A | `azurerm_application_gateway` | Planned (v0.2) | -- |
 | DNS Zones | None | N/A | `azurerm_dns_zone` | Planned (v0.2) | -- |
 | Storage Accounts | None | None | `azurerm_storage_account` | Planned (v0.2) | -- |
