@@ -7,7 +7,8 @@ before:
     - go mod tidy
 
 builds:
-  - main: ./cmd/azemu
+  - id: azemu
+    main: ./cmd/azemu
     binary: azemu
     ldflags:
       - -s -w
@@ -23,21 +24,36 @@ builds:
       - arm64
 
 archives:
-  - format: tar.gz
+  - id: azemu
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    formats:
+      - tar.gz
     format_overrides:
       - goos: windows
-        format: zip
+        formats:
+          - zip
 
+# Single-arch (linux/amd64) docker image. Multi-arch (add linux/arm64
+# and a docker_manifests block) is tracked as a follow-up.
 dockers:
-  - image_templates:
+  - id: azemu-linux-amd64
+    ids:
+      - azemu
+    goos: linux
+    goarch: amd64
+    image_templates:
       - "ghcr.io/zerodeth/azemu:{{ .Version }}"
       - "ghcr.io/zerodeth/azemu:latest"
-    dockerfile: Dockerfile
+    dockerfile: Dockerfile.release
+    use: docker
     build_flag_templates:
+      - "--platform=linux/amd64"
       - "--label=org.opencontainers.image.title={{ .ProjectName }}"
       - "--label=org.opencontainers.image.version={{ .Version }}"
       - "--label=org.opencontainers.image.source=https://github.com/ZeroDeth/azemu"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+      - "--label=org.opencontainers.image.created={{ .Date }}"
+      - "--label=org.opencontainers.image.licenses=MIT"
 
 checksum:
   name_template: "checksums.txt"

@@ -5,6 +5,9 @@
 bin/
 *.exe
 
+# goreleaser output
+dist/
+
 # Terraform
 .terraform/
 *.tfstate

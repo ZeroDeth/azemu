@@ -1,0 +1,32 @@
+# syntax=docker/dockerfile:1
+#
+# Dockerfile.release
+#
+# Release image for goreleaser. Unlike the top-level Dockerfile (which
+# is a multi-stage source-compile image used by `docker compose up -d
+# --build` for local development), this file only copies the
+# pre-built binary that goreleaser places alongside it in the build
+# context. It never downloads Go, never touches go.mod, and never
+# compiles anything.
+#
+# Contract with .goreleaser.yml:
+#   - dockers[].dockerfile: Dockerfile.release
+#   - dockers[].ids: must match the binary build id producing the
+#     linux/{amd64,arm64} artefacts.
+#   - The binary named `azemu` is expected at the build-context root.
+#     goreleaser places it there automatically.
+
+FROM alpine:3.20
+RUN apk add --no-cache ca-certificates wget
+
+# Persistent TLS cert bundle; bind-mounted from host via docker-compose.
+RUN mkdir -p /azemu
+VOLUME /azemu
+
+ENV AZEMU_CERT_PATH=/azemu/cert-bundle.pem
+ENV AZEMU_METADATA_HOST=127.0.0.1:4567
+
+COPY azemu /usr/local/bin/azemu
+
+EXPOSE 4566 4567 4568
+ENTRYPOINT ["azemu"]
