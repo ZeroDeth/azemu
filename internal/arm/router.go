@@ -14,11 +14,12 @@ import (
 )
 
 type Router struct {
-	store store.Store
+	store           store.Store
+	azuriteEndpoint string // e.g. "http://azurite:10000" — blob service base URL
 }
 
-func NewRouter(s store.Store) *Router {
-	return &Router{store: s}
+func NewRouter(s store.Store, azuriteEndpoint string) *Router {
+	return &Router{store: s, azuriteEndpoint: azuriteEndpoint}
 }
 
 func (a *Router) Routes(r chi.Router) {
@@ -144,6 +145,10 @@ func (a *Router) Routes(r chi.Router) {
 	r.Delete("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.storage/storageaccounts/{accountName}", a.deleteStorageAccount)
 	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.storage/storageaccounts", a.listStorageAccountsByRG)
 	r.Get("/{subscriptionID}/providers/microsoft.storage/storageaccounts", a.listStorageAccountsBySub)
+	// listKeys — called by the azurerm provider to populate account key in state.
+	// Returns Azurite's well-known key so SDK clients can authenticate against
+	// the Azurite sidecar without extra configuration.
+	r.Post("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.storage/storageaccounts/{accountName}/listkeys", a.listStorageAccountKeys)
 
 	// Storage Blob Containers (Microsoft.Storage/storageAccounts/blobServices/containers)
 	// The path segment "default" is a fixed literal (not a parameter) matching the real ARM API.

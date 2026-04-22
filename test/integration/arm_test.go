@@ -34,7 +34,7 @@ import (
 func buildFullServer(t *testing.T) *httptest.Server {
 	t.Helper()
 	s := store.NewMemoryStore()
-	ar := arm.NewRouter(s)
+	ar := arm.NewRouter(s, "http://azurite-test:10000")
 	r := chi.NewRouter()
 	r.Use(mw.NormalizePath)
 	r.Use(mw.AzureHeaders)

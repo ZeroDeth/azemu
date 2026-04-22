@@ -20,6 +20,13 @@ func storageAccountListByRGURL(srvURL, sub, rg string) string {
 	)
 }
 
+func storageAccountListKeysURL(srvURL, sub, rg, name string) string {
+	return fmt.Sprintf(
+		"%s/subscriptions/%s/resourcegroups/%s/providers/microsoft.storage/storageaccounts/%s/listkeys",
+		srvURL, sub, rg, name,
+	)
+}
+
 func storageAccountListBySubURL(srvURL, sub string) string {
 	return fmt.Sprintf(
 		"%s/subscriptions/%s/providers/microsoft.storage/storageaccounts",
@@ -96,7 +103,9 @@ func TestStorageAccount_PUT_Creates_Returns201(t *testing.T) {
 	if !ok {
 		t.Fatalf("primaryEndpoints missing or wrong type: %T", props["primaryEndpoints"])
 	}
-	wantBlob := "https://mystorageacct1.blob.core.windows.net/"
+	// newTestServer passes "http://azurite-test:10000" as the Azurite endpoint.
+	// Path-style URL: http://azurite-test:10000/{accountName}/
+	wantBlob := "http://azurite-test:10000/mystorageacct1/"
 	if endpoints["blob"] != wantBlob {
 		t.Errorf("primaryEndpoints.blob = %v, want %s", endpoints["blob"], wantBlob)
 	}
@@ -365,6 +374,69 @@ func TestStorageAccount_DefaultAccessTier_WhenOmitted(t *testing.T) {
 	props := body["properties"].(map[string]interface{})
 	if props["accessTier"] != "Hot" {
 		t.Errorf("accessTier = %v, want Hot (default when omitted)", props["accessTier"])
+	}
+	resp.Body.Close()
+}
+
+func TestStorageAccount_ListKeys_Returns200WithAzuriteKey(t *testing.T) {
+	srv := newTestServer(t)
+	acctURL := storageAccountURL(srv.URL, "sub1", "rg1", "keyacct")
+	keysURL := storageAccountListKeysURL(srv.URL, "sub1", "rg1", "keyacct")
+
+	resp := httpPut(t, acctURL, storageAccountBodyLRS)
+	assertStatus(t, resp, http.StatusCreated)
+	resp.Body.Close()
+
+	resp = httpPost(t, keysURL, "")
+	assertStatus(t, resp, http.StatusOK)
+
+	body := decodeJSON(t, resp)
+	keys, ok := body["keys"].([]interface{})
+	if !ok || len(keys) != 2 {
+		t.Fatalf("keys = %v, want array of 2", body["keys"])
+	}
+	k1 := keys[0].(map[string]interface{})
+	if k1["keyName"] != "key1" {
+		t.Errorf("keys[0].keyName = %v, want key1", k1["keyName"])
+	}
+	if k1["value"] != azuriteDevKey {
+		t.Errorf("keys[0].value = %v, want azuriteDevKey", k1["value"])
+	}
+	if k1["permissions"] != "FULL" {
+		t.Errorf("keys[0].permissions = %v, want FULL", k1["permissions"])
+	}
+}
+
+func TestStorageAccount_ListKeys_NotFound_Returns404(t *testing.T) {
+	srv := newTestServer(t)
+	keysURL := storageAccountListKeysURL(srv.URL, "sub1", "rg1", "notexist")
+
+	resp := httpPost(t, keysURL, "")
+	assertStatus(t, resp, http.StatusNotFound)
+	resp.Body.Close()
+}
+
+func TestStorageAccount_PrimaryEndpoints_UseAzuritePathStyle(t *testing.T) {
+	srv := newTestServer(t)
+	resp := httpPut(t, storageAccountURL(srv.URL, "sub1", "rg1", "pathstyleacct"), storageAccountBodyLRS)
+	assertStatus(t, resp, http.StatusCreated)
+
+	body := decodeJSON(t, resp)
+	props := body["properties"].(map[string]interface{})
+	endpoints := props["primaryEndpoints"].(map[string]interface{})
+
+	// newTestServer uses "http://azurite-test:10000" as the Azurite endpoint.
+	wantBlob := "http://azurite-test:10000/pathstyleacct/"
+	wantQueue := "http://azurite-test:10001/pathstyleacct/"
+	wantTable := "http://azurite-test:10002/pathstyleacct/"
+	if endpoints["blob"] != wantBlob {
+		t.Errorf("blob = %v, want %s", endpoints["blob"], wantBlob)
+	}
+	if endpoints["queue"] != wantQueue {
+		t.Errorf("queue = %v, want %s", endpoints["queue"], wantQueue)
+	}
+	if endpoints["table"] != wantTable {
+		t.Errorf("table = %v, want %s", endpoints["table"], wantTable)
 	}
 	resp.Body.Close()
 }

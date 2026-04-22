@@ -29,6 +29,12 @@ type Config struct {
 	// ExportPath dumps the current state to this file, then exits
 	// immediately. CLI-only (--export flag), no env var.
 	ExportPath string
+	// AzuriteEndpoint is the base URL of the Azurite blob service sidecar.
+	// ARM storage account responses use this value to populate
+	// primaryEndpoints.blob (and derive queue/table ports) so SDK clients
+	// can authenticate against real Azurite data-plane endpoints.
+	// Source: AZEMU_AZURITE_ENDPOINT env var. Default: http://azurite:10000.
+	AzuriteEndpoint string
 }
 
 func Load() *Config {
@@ -42,6 +48,7 @@ func Load() *Config {
 	}
 	cfg.MetadataHost = envOr("AZEMU_METADATA_HOST", "localhost:4567")
 	cfg.PersistPath = envOr("AZEMU_PERSIST_PATH", "")
+	cfg.AzuriteEndpoint = envOr("AZEMU_AZURITE_ENDPOINT", "http://azurite:10000")
 	return cfg
 }
 

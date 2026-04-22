@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
@@ -44,18 +45,39 @@ func storageSKUTier(skuName string) string {
 	return "Standard"
 }
 
-// storagePrimaryEndpoints returns the fake primary endpoint URLs for a storage
-// account. The account name is used as the subdomain, matching real Azure's
-// naming scheme so Terraform state fields like primary_blob_endpoint are
-// populated with plausible values.
-func storagePrimaryEndpoints(name string) map[string]interface{} {
+// azuriteDevKey is the well-known Azurite development storage account key.
+// The azurerm provider calls listKeys before any data-plane operation; returning
+// this key lets SDK clients authenticate against the Azurite sidecar without
+// additional configuration. Source: https://github.com/Azure/Azurite#default-storage-account
+const azuriteDevKey = "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw=="
+
+// storagePrimaryEndpoints returns path-style Azurite endpoint URLs for a
+// storage account. azuriteBase is the blob service base URL (e.g.
+// "http://azurite:10000"). Queue and table ports follow Azurite's convention:
+// blob=10000, queue=10001, table=10002. Path-style URLs avoid any /etc/hosts
+// wildcard requirement.
+func storagePrimaryEndpoints(azuriteBase, accountName string) map[string]interface{} {
+	blobBase := azuriteBase
+	queueBase := azuriteBase
+	tableBase := azuriteBase
+
+	if u, err := url.Parse(azuriteBase); err == nil {
+		host := u.Hostname()
+		scheme := u.Scheme
+		blobBase = fmt.Sprintf("%s://%s:10000", scheme, host)
+		queueBase = fmt.Sprintf("%s://%s:10001", scheme, host)
+		tableBase = fmt.Sprintf("%s://%s:10002", scheme, host)
+	}
+
 	return map[string]interface{}{
-		"blob":  fmt.Sprintf("https://%s.blob.core.windows.net/", name),
-		"queue": fmt.Sprintf("https://%s.queue.core.windows.net/", name),
-		"table": fmt.Sprintf("https://%s.table.core.windows.net/", name),
-		"file":  fmt.Sprintf("https://%s.file.core.windows.net/", name),
-		"web":   fmt.Sprintf("https://%s.z6.web.core.windows.net/", name),
-		"dfs":   fmt.Sprintf("https://%s.dfs.core.windows.net/", name),
+		"blob":  fmt.Sprintf("%s/%s/", blobBase, accountName),
+		"queue": fmt.Sprintf("%s/%s/", queueBase, accountName),
+		"table": fmt.Sprintf("%s/%s/", tableBase, accountName),
+		// Azurite does not emulate the file service; use the blob base so the
+		// field is non-empty and parseable by the provider.
+		"file": fmt.Sprintf("%s/%s/", blobBase, accountName),
+		"web":  fmt.Sprintf("%s/%s/", blobBase, accountName),
+		"dfs":  fmt.Sprintf("%s/%s/", blobBase, accountName),
 	}
 }
 
@@ -103,7 +125,7 @@ func (a *Router) putStorageAccount(w http.ResponseWriter, r *http.Request) {
 	body.Properties["provisioningState"] = "Succeeded"
 	body.Properties["primaryLocation"] = strings.ToLower(body.Location)
 	body.Properties["statusOfPrimary"] = "available"
-	body.Properties["primaryEndpoints"] = storagePrimaryEndpoints(name)
+	body.Properties["primaryEndpoints"] = storagePrimaryEndpoints(a.azuriteEndpoint, name)
 
 	// Default accessTier to Hot if not supplied.
 	if _, ok := body.Properties["accessTier"]; !ok {
@@ -212,6 +234,42 @@ func (a *Router) listStorageAccountsBySub(w http.ResponseWriter, r *http.Request
 	subID := chi.URLParam(r, "subscriptionID")
 	prefix := fmt.Sprintf("/subscriptions/%s/resourceGroups/", subID)
 	a.writeStorageAccountList(w, prefix)
+}
+
+// listStorageAccountKeys handles POST .../listkeys. The azurerm provider calls
+// this endpoint to retrieve storage account credentials before writing any
+// data-plane resource. Returning Azurite's well-known development key means SDK
+// clients that point at the Azurite sidecar can authenticate without manual
+// key management.
+func (a *Router) listStorageAccountKeys(w http.ResponseWriter, r *http.Request) {
+	subID := chi.URLParam(r, "subscriptionID")
+	rgName := chi.URLParam(r, "resourceGroupName")
+	name := chi.URLParam(r, "accountName")
+	id := storageAccountID(subID, rgName, name)
+
+	if _, ok := a.store.Get(id); !ok {
+		writeAzureError(w, http.StatusNotFound, "ResourceNotFound",
+			fmt.Sprintf("The Resource 'Microsoft.Storage/storageAccounts/%s' under resource group '%s' was not found.", name, rgName))
+		return
+	}
+
+	log.Info().Str("resource_id", id).Msg("storage account listKeys")
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"keys": []map[string]interface{}{
+			{
+				"keyName":      "key1",
+				"value":        azuriteDevKey,
+				"permissions":  "FULL",
+				"creationTime": "2026-01-01T00:00:00Z",
+			},
+			{
+				"keyName":      "key2",
+				"value":        azuriteDevKey,
+				"permissions":  "FULL",
+				"creationTime": "2026-01-01T00:00:00Z",
+			},
+		},
+	})
 }
 
 func (a *Router) writeStorageAccountList(w http.ResponseWriter, prefix string) {
