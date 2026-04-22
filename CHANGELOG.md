@@ -19,6 +19,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (Phase 7: Storage, Key Vault)
+
+- `Microsoft.Storage/storageAccounts` CRUD + HEAD + list-by-RG + list-by-sub.
+  Name uniqueness check across subscription. SKU/kind at top level; soft-delete
+  and access-tier defaults. (`azurerm_storage_account`)
+- `Microsoft.Storage/storageAccounts/blobServices/containers` CRUD + HEAD + list.
+  Parent-existence check; cascade delete when account is deleted.
+  (`azurerm_storage_container`)
+- `POST .../storageAccounts/{name}/listKeys`: returns Azurite's well-known
+  development account key so SDK clients authenticate against the Azurite
+  sidecar without extra configuration.
+- `primaryEndpoints` block in storage account responses now returns path-style
+  Azurite endpoint URLs (blob `:10000`, queue `:10001`, table `:10002`) derived
+  from `AZEMU_AZURITE_ENDPOINT`.
+- `AZEMU_AZURITE_ENDPOINT` env var (default `http://azurite:10000`). azemu
+  derives queue and table base URLs from this single knob.
+- `docker-compose.yml`: `azurite` service (`mcr.microsoft.com/azure-storage/azurite`)
+  with ports 10000-10002, named volume, healthcheck, and `depends_on`
+  (condition: `service_healthy`) so azemu starts only after Azurite is ready.
+- `Microsoft.KeyVault/vaults` CRUD + HEAD + list-by-RG + list-by-sub.
+  `vaultUri` computed as `https://{name}.vault.azure.net/`; SKU defaults to
+  `standard`; soft-delete defaults to 90 days. (`azurerm_key_vault`)
+- `docs/adr/0001-delegate-storage-data-plane-to-azurite.md`: Architecture
+  Decision Record capturing the Azurite delegation decision and its
+  rationale, alternatives, and consequences. Status: Implemented.
+- `docs/SETUP.md`: Storage and Azurite section; `AZEMU_AZURITE_ENDPOINT` in
+  the env-var table; Azurite port table.
+
 ## [v0.1.0] - 2026-04-21
 
 ### Added (Phase 5: governance and CI)
