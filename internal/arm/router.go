@@ -136,6 +136,22 @@ func (a *Router) Routes(r chi.Router) {
 	r.Delete("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/dnszones/{zoneName}/{recordType}/{recordName}", a.deleteDNSRecordSet)
 	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/dnszones/{zoneName}/{recordType}", a.listDNSRecordSetsByType)
 	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/dnszones/{zoneName}/recordsets", a.listAllDNSRecordSets)
+
+	// Storage Accounts (Microsoft.Storage/storageAccounts)
+	r.Put("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.storage/storageaccounts/{accountName}", a.putStorageAccount)
+	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.storage/storageaccounts/{accountName}", a.getStorageAccount)
+	r.Head("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.storage/storageaccounts/{accountName}", a.headStorageAccount)
+	r.Delete("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.storage/storageaccounts/{accountName}", a.deleteStorageAccount)
+	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.storage/storageaccounts", a.listStorageAccountsByRG)
+	r.Get("/{subscriptionID}/providers/microsoft.storage/storageaccounts", a.listStorageAccountsBySub)
+
+	// Storage Blob Containers (Microsoft.Storage/storageAccounts/blobServices/containers)
+	// The path segment "default" is a fixed literal (not a parameter) matching the real ARM API.
+	r.Put("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.storage/storageaccounts/{accountName}/blobservices/default/containers/{containerName}", a.putStorageContainer)
+	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.storage/storageaccounts/{accountName}/blobservices/default/containers/{containerName}", a.getStorageContainer)
+	r.Head("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.storage/storageaccounts/{accountName}/blobservices/default/containers/{containerName}", a.headStorageContainer)
+	r.Delete("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.storage/storageaccounts/{accountName}/blobservices/default/containers/{containerName}", a.deleteStorageContainer)
+	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.storage/storageaccounts/{accountName}/blobservices/default/containers", a.listStorageContainers)
 }
 
 // --- Subscriptions ---

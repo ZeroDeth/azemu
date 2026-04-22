@@ -636,3 +636,139 @@ func TestARM_DNSZoneFullFlow(t *testing.T) {
 	mustStatus(t, resp, http.StatusNotFound)
 	resp.Body.Close()
 }
+
+// TestARM_StorageAccountFullFlow exercises the storage account and container
+// lifecycle: create account, verify SKU and endpoints, create containers, list
+// them, delete a container, delete the account and confirm cascade.
+func TestARM_StorageAccountFullFlow(t *testing.T) {
+	srv := buildFullServer(t)
+	base := srv.URL
+
+	acctURL := base + "/subscriptions/sub1/resourcegroups/rg1/providers/microsoft.storage/storageaccounts/integrationacct" + apiVersionQ
+	cont1URL := base + "/subscriptions/sub1/resourcegroups/rg1/providers/microsoft.storage/storageaccounts/integrationacct/blobservices/default/containers/cont1" + apiVersionQ
+	cont2URL := base + "/subscriptions/sub1/resourcegroups/rg1/providers/microsoft.storage/storageaccounts/integrationacct/blobservices/default/containers/cont2" + apiVersionQ
+	listURL := base + "/subscriptions/sub1/resourcegroups/rg1/providers/microsoft.storage/storageaccounts/integrationacct/blobservices/default/containers" + apiVersionQ
+
+	// 1. Create storage account.
+	resp := doJSON(t, http.MethodPut, acctURL, `{
+		"location": "uksouth",
+		"sku": {"name": "Standard_LRS"},
+		"kind": "StorageV2",
+		"properties": {"accessTier": "Hot"}
+	}`)
+	mustStatus(t, resp, http.StatusCreated)
+	acctBody := decode(t, resp)
+
+	// Verify SKU and kind are at top level.
+	sku, ok := acctBody["sku"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("sku missing in storage account response")
+	}
+	if sku["name"] != "Standard_LRS" {
+		t.Errorf("sku.name = %v, want Standard_LRS", sku["name"])
+	}
+	if acctBody["kind"] != "StorageV2" {
+		t.Errorf("kind = %v, want StorageV2", acctBody["kind"])
+	}
+
+	// Verify primary endpoints are populated.
+	props, ok := acctBody["properties"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("properties missing in storage account response")
+	}
+	endpoints, ok := props["primaryEndpoints"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("primaryEndpoints missing")
+	}
+	wantBlob := "https://integrationacct.blob.core.windows.net/"
+	if endpoints["blob"] != wantBlob {
+		t.Errorf("primaryEndpoints.blob = %v, want %s", endpoints["blob"], wantBlob)
+	}
+
+	// 2. Verify idempotent PUT returns 200.
+	resp = doJSON(t, http.MethodPut, acctURL, `{
+		"location": "uksouth",
+		"sku": {"name": "Standard_LRS"},
+		"kind": "StorageV2",
+		"properties": {}
+	}`)
+	mustStatus(t, resp, http.StatusOK)
+	resp.Body.Close()
+
+	// 3. GET the account.
+	resp = doJSON(t, http.MethodGet, acctURL, "")
+	mustStatus(t, resp, http.StatusOK)
+	resp.Body.Close()
+
+	// 4. Create two containers.
+	resp = doJSON(t, http.MethodPut, cont1URL, `{"properties":{"publicAccess":"None"}}`)
+	mustStatus(t, resp, http.StatusCreated)
+	cont1Body := decode(t, resp)
+	if cont1Body["name"] != "cont1" {
+		t.Errorf("container name = %v, want cont1", cont1Body["name"])
+	}
+	contProps, ok := cont1Body["properties"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("container properties missing")
+	}
+	if contProps["publicAccess"] != "None" {
+		t.Errorf("publicAccess = %v, want None", contProps["publicAccess"])
+	}
+
+	resp = doJSON(t, http.MethodPut, cont2URL, `{"properties":{"publicAccess":"None"}}`)
+	mustStatus(t, resp, http.StatusCreated)
+	resp.Body.Close()
+
+	// 5. List containers — expect 2.
+	resp = doJSON(t, http.MethodGet, listURL, "")
+	mustStatus(t, resp, http.StatusOK)
+	listBody := decode(t, resp)
+	items, ok := listBody["value"].([]interface{})
+	if !ok || len(items) != 2 {
+		t.Fatalf("container list = %v, want 2 items", listBody["value"])
+	}
+
+	// 6. Delete cont1 individually.
+	resp = doJSON(t, http.MethodDelete, cont1URL, "")
+	mustStatus(t, resp, http.StatusAccepted)
+	if resp.Header.Get("Location") == "" {
+		t.Error("Location header missing on container DELETE")
+	}
+	resp.Body.Close()
+
+	resp = doJSON(t, http.MethodGet, cont1URL, "")
+	mustStatus(t, resp, http.StatusNotFound)
+	resp.Body.Close()
+
+	// cont2 still exists.
+	resp = doJSON(t, http.MethodGet, cont2URL, "")
+	mustStatus(t, resp, http.StatusOK)
+	resp.Body.Close()
+
+	// 7. Delete the storage account — cascades cont2.
+	resp = doJSON(t, http.MethodDelete, acctURL, "")
+	mustStatus(t, resp, http.StatusAccepted)
+	if resp.Header.Get("Location") == "" {
+		t.Error("Location header missing on account DELETE")
+	}
+	resp.Body.Close()
+
+	// Account gone.
+	resp = doJSON(t, http.MethodGet, acctURL, "")
+	mustStatus(t, resp, http.StatusNotFound)
+	resp.Body.Close()
+
+	// cont2 cascaded away.
+	resp = doJSON(t, http.MethodGet, cont2URL, "")
+	mustStatus(t, resp, http.StatusNotFound)
+	resp.Body.Close()
+
+	// 8. Azure request headers must be present (middleware).
+	resp = doJSON(t, http.MethodPut,
+		base+"/subscriptions/sub1/resourcegroups/rg1/providers/microsoft.storage/storageaccounts/headercheck"+apiVersionQ,
+		`{"location":"uksouth","sku":{"name":"Standard_LRS"},"kind":"StorageV2","properties":{}}`)
+	if got := resp.Header.Get("x-ms-request-id"); got == "" {
+		t.Error("x-ms-request-id header missing on storage account PUT")
+	}
+	resp.Body.Close()
+}

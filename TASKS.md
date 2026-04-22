@@ -253,8 +253,8 @@ entries in the metadata response.
 
 | # | Task | ARM provider | Status | Notes |
 |---|---|---|---|---|
-| 7.1 | `azurerm_storage_account` | `Microsoft.Storage/storageAccounts` | TODO | Management plane. Name uniqueness check across subscription. |
-| 7.2 | `azurerm_storage_container` | `.../storageAccounts/blobServices/containers` | TODO | Minimal blob data-plane surface for what `azurerm_storage_container` actually writes. Not a full `azcopy` target (see ROADMAP non-goals). |
+| 7.1 | `azurerm_storage_account` | `Microsoft.Storage/storageAccounts` | DONE | Management plane. Name uniqueness check across subscription. SKU/kind at top level; fake primary endpoints (blob/queue/table/file/web/dfs). |
+| 7.2 | `azurerm_storage_container` | `.../storageAccounts/blobServices/containers` | DONE | Blob containers as child resources under account id prefix. Parent existence check. Cascade delete when account is deleted. |
 | 7.3 | `azurerm_key_vault` | `Microsoft.KeyVault/vaults` | TODO | Management plane. Access policies as children. |
 | 7.4 | `azurerm_key_vault_secret` | `...vaults/secrets` | TODO | Secrets data plane. Versioned. |
 | 7.5 | `azurerm_cdn_profile` + `azurerm_cdn_endpoint` | `Microsoft.Cdn/profiles` + `.../endpoints` | TODO | The "CDN" from the ROADMAP roster. |
