@@ -13,7 +13,7 @@ Format follows a light variant of [MADR](https://adr.github.io/madr/).
 
 | ID | Title | Status |
 |----|-------|--------|
-| 0001 | [Delegate Storage data plane to Azurite](0001-delegate-storage-data-plane-to-azurite.md) | Accepted |
+| 0001 | [Delegate Storage data plane to Azurite](0001-delegate-storage-data-plane-to-azurite.md) | Implemented |
 
 ## When to write an ADR
 

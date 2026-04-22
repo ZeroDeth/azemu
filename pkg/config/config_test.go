@@ -40,6 +40,9 @@ func TestLoad_Defaults(t *testing.T) {
 	if cfg.CertPath != "" {
 		t.Errorf("CertPath = %q, want empty string", cfg.CertPath)
 	}
+	if want := "http://azurite:10000"; cfg.AzuriteEndpoint != want {
+		t.Errorf("AzuriteEndpoint = %q, want %q", cfg.AzuriteEndpoint, want)
+	}
 }
 
 // TestLoad_EnvVarOverrides is table-driven over every env var Load() reads.
@@ -82,6 +85,13 @@ func TestLoad_EnvVarOverrides(t *testing.T) {
 			value:   "/tmp/azemu-bundle.pem",
 			field:   "CertPath",
 			extract: func(c *Config) string { return c.CertPath },
+		},
+		{
+			name:    "AZEMU_AZURITE_ENDPOINT",
+			env:     "AZEMU_AZURITE_ENDPOINT",
+			value:   "http://localhost:10000",
+			field:   "AzuriteEndpoint",
+			extract: func(c *Config) string { return c.AzuriteEndpoint },
 		},
 	}
 
@@ -197,6 +207,7 @@ func clearAzemuEnv(t *testing.T) {
 		"AZEMU_TENANT_ID",
 		"AZEMU_METADATA_HOST",
 		"AZEMU_CERT_PATH",
+		"AZEMU_AZURITE_ENDPOINT",
 		"AZEMU_HTTP_PORT",
 		"AZEMU_HTTPS_PORT",
 		"AZEMU_HEALTH_PORT",

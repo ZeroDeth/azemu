@@ -14,12 +14,15 @@ flowchart LR
     arm --> subs["Subscriptions / Tenants"]
     arm --> prov["Provider Registration"]
     arm --> rg["Resource Groups<br/>(CRUD + cascade)"]
-    arm --> vnet["Virtual Networks<br/>(CRUD + child subnets)"]
-    arm --> sub["Subnets<br/>(CRUD, parent-aware)"]
-    arm --> planned["[v0.2+: DNS, Storage, KeyVault, ...]"]
+    arm --> net["Networking<br/>(VNet, Subnet, NSG,<br/>PublicIP, LB, AppGW, DNS)"]
+    arm --> storage["Storage<br/>(storageAccounts,<br/>blob containers,<br/>listKeys)"]
+    arm --> kv["Key Vault<br/>(vaults, mgmt plane)"]
+    arm --> planned["[v0.2+: CDN, KV secrets, ...]"]
+    storage -->|"Azurite dev key<br/>+ path-style endpoints"| azurite["Azurite sidecar<br/>HTTP :10000-10002"]
     rg --> store[("State Store")]
-    vnet --> store
-    sub --> store
+    net --> store
+    storage --> store
+    kv --> store
     store --> persist["File persistence<br/>(AZEMU_PERSIST_PATH)"]
     store --> api["State API<br/>/api/state/{export,import,reset}"]
     ops["Ops / tests"] -->|"HTTP :4568"| health["Health endpoint<br/>GET /health"]
@@ -36,15 +39,23 @@ Terraform CLI -----> HTTPS :4567 -----> Metadata Service (/metadata/endpoints)
                                            +-- Subscriptions / Tenants
                                            +-- Provider Registration
                                            +-- Resource Groups (CRUD + cascade)
-                                           +-- Virtual Networks (CRUD + child subnets)
-                                           +-- Subnets (CRUD, parent-aware)
-                                           +-- [v0.2+: DNS, Storage, KeyVault...]
+                                           +-- Networking (VNet, Subnet, NSG,
+                                           |   PublicIP, LB, AppGW, DNS zones+records)
+                                           +-- Storage (storageAccounts, blob containers,
+                                           |   listKeys -> Azurite dev key)
+                                           +-- Key Vault (vaults, management plane)
+                                           +-- [v0.2+: CDN, KV secrets, ...]
                                          |
                                          v
                                       State Store (memory or file)
                                          |
                                          v
                                       State API (/api/state/{export,import,reset})
+
+Azurite sidecar (HTTP :10000-10002)
+    ^
+    |  path-style endpoints returned in primaryEndpoints block
+    +-- ARM Storage handlers (AZEMU_AZURITE_ENDPOINT)
 ```
 
 Both ports serve HTTPS using the same self-signed ECDSA P-256 certificate.
@@ -89,20 +100,33 @@ internal/
   arm/resourcegroup.go         resource group CRUD (cascade delete via store prefix)
   arm/vnet.go                  virtual networks CRUD + HEAD + embedded child subnets
   arm/subnet.go                subnets CRUD + HEAD with parent-vnet existence check
+  arm/nsg.go                   network security groups + security rules (child resources)
+  arm/public_ip.go             public IP addresses CRUD + HEAD
+  arm/lb.go                    load balancers + backend pools, rules, probes
+  arm/appgw.go                 application gateways (monolithic PUT)
+  arm/dns.go                   DNS zones + record sets (A/AAAA/CNAME/TXT/MX/SRV/NS/SOA)
+  arm/storage_account.go       storage accounts CRUD + listKeys (Azurite dev key)
+  arm/storage_container.go     blob containers CRUD (child of storage account)
+  arm/keyvault.go              key vaults CRUD (management plane; vaultUri computed)
   arm/helpers.go               shared ARM response builders, error formatting
   store/store.go               Store interface definition
   store/memory.go              in-memory implementation
+  store/file.go                write-through file-backed implementation
   middleware/azure.go          Azure headers, api-version enforcement
   middleware/pathcase.go       NormalizePath: lowercase canonical ARM literals, collapse `//`
   middleware/logging.go        request/response logging with zerolog
   middleware/unhandled.go      catch-all for unrouted paths (log + 501)
 pkg/
-  config/config.go             env-based config (HTTPPort/HTTPSPort/CertPath/...)
+  config/config.go             env-based config (ports, CertPath, AzuriteEndpoint, ...)
   armtypes/types.go            shared ARM request/response structs
 test/
-  terraform/main.tf            azurerm provider config for end-to-end tests
-  integration/arm_test.go      in-process httptest CRUD across RG/VNet/Subnet
-docs/                          extended documentation
+  integration/arm_test.go      in-process httptest CRUD across all implemented resources
+docs/
+  adr/                         Architecture Decision Records (ADR 0001: Azurite delegation)
+  ARCHITECTURE.md              this file
+  CONVENTIONS.md               Go style, ARM contracts, auth contracts, testing strategy
+  PARITY.md                    Full/Stub/None matrix per resource
+  SETUP.md                     contributor onboarding (flox + manual paths)
 .claude/rules/                 path-scoped rules for coding agents
 .flox/env/manifest.toml        pinned dev env (Go, Terraform, pre-commit, ...)
 .pre-commit-config.yaml        whitespace + go vet/build + golangci-lint + markdownlint

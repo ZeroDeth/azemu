@@ -2,8 +2,8 @@
 
 Version: 0.1
 Last updated: 2026-04-21
-Status: Phase 1 through Phase 5 COMPLETE. v0.1.0 tagged 2026-04-21.
-Current focus: Phase 6 (networking extended).
+Status: Phase 1 through Phase 6 COMPLETE. v0.1.0 tagged 2026-04-21.
+Current focus: Phase 7 (Storage, Key Vault, CDN).
 
 > **Strategy, non-goals, and the per-release resource roster live in
 > `ROADMAP.md`.** `TASKS.md` is the execution ledger and `ROADMAP.md` is
@@ -253,12 +253,12 @@ entries in the metadata response.
 
 | # | Task | ARM provider | Status | Notes |
 |---|---|---|---|---|
-| 7.1 | `azurerm_storage_account` | `Microsoft.Storage/storageAccounts` | TODO | Management plane. Name uniqueness check across subscription. |
-| 7.2 | `azurerm_storage_container` | `.../storageAccounts/blobServices/containers` | TODO | Minimal blob data-plane surface for what `azurerm_storage_container` actually writes. Not a full `azcopy` target (see ROADMAP non-goals). |
-| 7.3 | `azurerm_key_vault` | `Microsoft.KeyVault/vaults` | TODO | Management plane. Access policies as children. |
+| 7.1 | `azurerm_storage_account` | `Microsoft.Storage/storageAccounts` | DONE | Management plane. Name uniqueness check across subscription. SKU/kind at top level. `primaryEndpoints` returns Azurite path-style URLs (blob :10000, queue :10001, table :10002) derived from `AZEMU_AZURITE_ENDPOINT`. `POST listkeys` returns Azurite dev key. |
+| 7.2 | `azurerm_storage_container` | `.../storageAccounts/blobServices/containers` | DONE | Blob containers as child resources under account id prefix. Parent existence check. Cascade delete when account is deleted. |
+| 7.3 | `azurerm_key_vault` | `Microsoft.KeyVault/vaults` | DONE | Management plane. `vaultUri` computed as `https://{name}.vault.azure.net/`. SKU/soft-delete defaults. 18 unit tests + integration test. |
 | 7.4 | `azurerm_key_vault_secret` | `...vaults/secrets` | TODO | Secrets data plane. Versioned. |
 | 7.5 | `azurerm_cdn_profile` + `azurerm_cdn_endpoint` | `Microsoft.Cdn/profiles` + `.../endpoints` | TODO | The "CDN" from the ROADMAP roster. |
-| 7.6 | Verify `suffixes.*` in metadata response still match go-azure-sdk expectations for Storage/KV/CDN | `internal/metadata/service.go` | TODO | Add regression tests for the three suffix families. |
+| 7.6 | Verify `suffixes.*` in metadata response still match go-azure-sdk expectations for Storage/KV/CDN | `internal/metadata/service.go` | DONE | `TestMetadata_CanonicalSuffixNames` pins `storage: "core.windows.net"` and `keyVaultDns: "vault.azure.net"`. CDN uses ARM endpoints directly, no suffix entry needed. |
 
 ### Phase 8: Identity, AKS, Azure DevOps bridge (v0.3)
 

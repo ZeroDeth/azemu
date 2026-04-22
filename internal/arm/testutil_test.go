@@ -29,7 +29,7 @@ const defaultAPIVersion = "2023-09-01"
 func newTestServer(t *testing.T) *httptest.Server {
 	t.Helper()
 	s := store.NewMemoryStore()
-	ar := NewRouter(s)
+	ar := NewRouter(s, "http://azurite-test:10000")
 	r := chi.NewRouter()
 	// Mirror the production middleware order from cmd/azemu/main.go so
 	// tests exercise the same path-normalization, header stamping, and
@@ -98,6 +98,26 @@ func httpHead(t *testing.T, url string) *http.Response {
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		t.Fatalf("do HEAD %s: %v", url, err)
+	}
+	return resp
+}
+
+func httpPost(t *testing.T, url, body string) *http.Response {
+	t.Helper()
+	var bodyReader *bytes.Buffer
+	if body != "" {
+		bodyReader = bytes.NewBufferString(body)
+	} else {
+		bodyReader = bytes.NewBufferString("{}")
+	}
+	req, err := http.NewRequest(http.MethodPost, withAPIVersion(url), bodyReader)
+	if err != nil {
+		t.Fatalf("new request: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("do POST %s: %v", url, err)
 	}
 	return resp
 }

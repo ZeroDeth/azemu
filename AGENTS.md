@@ -127,6 +127,7 @@ implementation, test-then-fix, coverage push) live in
 | `docs/PARITY.md` | Full/Stub/None matrix per resource |
 | `docs/SETUP.md` | Contributor onboarding (flox + manual paths) |
 | `docs/TROUBLESHOOTING.md` | Common errors and fixes |
+| `docs/adr/*.md` | Architecture Decision Records (immutable; new ADR supersedes old) |
 | `.claude/agents/*.md` | Subagent role definitions (frontmatter-driven, auto-delegated) |
 | `.claude/skills/*/SKILL.md` | Slash-invokable playbooks (add-resource, modify-store, validate-terraform, before-commit) |
 | `.claude/rules/*.md` | Path-scoped rules that load only when matching files are touched |
