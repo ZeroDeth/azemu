@@ -87,12 +87,53 @@ Sourced from `.flox/env/manifest.toml [vars]` and `pkg/config/config.go`:
 | `AZEMU_ARM_PORT` | No | `4566` | ARM HTTPS port (informational; binary is hard-coded today) |
 | `AZEMU_META_PORT` | No | `4567` | Metadata HTTPS port (informational) |
 | `AZEMU_CERT_PATH` | No | unset | When set, persist the self-signed cert+key as a PEM bundle at this path; trust once and restart freely. When unset, a fresh cert is generated and written to OS temp on every startup. |
+| `AZEMU_AZURITE_ENDPOINT` | No | `http://azurite:10000` | Blob service base URL for the Azurite sidecar. azemu derives queue (port 10001) and table (port 10002) endpoints from this. Set to `http://localhost:10000` when running Azurite directly on the host. |
 | `AZEMU_SUBSCRIPTION_ID` | No | `00000000-0000-0000-0000-000000000000` | Mock subscription returned by ARM list endpoints |
 | `AZEMU_TENANT_ID` | No | `00000000-0000-0000-0000-000000000001` | Mock tenant returned by token / OIDC endpoints |
 | `AZEMU_METADATA_HOST` | No | `localhost:4567` | Host substituted into URLs in `/metadata/endpoints` |
 | `ARM_METADATA_HOSTNAME` | Yes (Terraform) | flox sets `127.0.0.1:4567` | Tells `azurerm` to discover endpoints via azemu instead of real Azure |
 | `ARM_SUBSCRIPTION_ID` / `ARM_TENANT_ID` / `ARM_CLIENT_ID` / `ARM_CLIENT_SECRET` | Yes (Terraform) | flox sets all four | Mock credentials; azemu accepts any value |
 | `TF_DIR` | No | `test/terraform` | Working directory for the `tf-*` profile aliases |
+
+## Storage and Azurite
+
+azemu owns the ARM management plane for `Microsoft.Storage/storageAccounts` and
+`Microsoft.Storage/storageAccounts/blobServices/containers`. The Storage data
+plane (blob upload/download, queue messages, table rows) is delegated to
+[Azurite](https://github.com/Azure/Azurite), Microsoft's official Azure Storage
+emulator.
+
+When using `docker compose up`, the `azurite` service starts automatically
+alongside azemu. azemu returns path-style Azurite endpoint URLs in the
+`primaryEndpoints` block of every storage account response, and the `listKeys`
+endpoint returns Azurite's well-known development key. SDK clients that are
+pointed at these endpoints can authenticate against Azurite without any
+extra configuration.
+
+When running azemu directly on the host (outside Docker):
+
+1. Start Azurite:
+
+   ```bash
+   docker run -d -p 10000:10000 -p 10001:10001 -p 10002:10002 \
+     mcr.microsoft.com/azure-storage/azurite \
+     azurite --blobHost 0.0.0.0 --queueHost 0.0.0.0 --tableHost 0.0.0.0
+   ```
+
+2. Point azemu at the local instance:
+
+   ```bash
+   export AZEMU_AZURITE_ENDPOINT=http://localhost:10000
+   ./bin/azemu
+   ```
+
+Azurite ports:
+
+| Port | Service |
+|---|---|
+| 10000 | Blob |
+| 10001 | Queue |
+| 10002 | Table |
 
 ## TLS certificate trust
 

@@ -1,7 +1,8 @@
 # ADR 0001: Delegate Storage data plane to Azurite
 
-- Status: Accepted
+- Status: Implemented
 - Date: 2026-04-21
+- Implemented: 2026-04-22
 - Deciders: @ZeroDeth
 - Supersedes: none
 
@@ -152,18 +153,40 @@ In concrete terms:
    variant can be documented as an opt-in later if a user needs SDK code
    that rejects path-style account names.
 
-## Implementation notes (for Phase 7)
+## Implementation (Phase 7, completed 2026-04-22)
 
-- Phase 7 task breakdown in `TASKS.md` needs a `listKeys` subtask, a
-  `primaryEndpoints` rewrite subtask, and a compose-file subtask.
-- `docker-compose.yml` picks up an `azurite` service with a volume for
-  `__blobstorage__`, `__queuestorage__`, and the Azurite metadata files.
-- `examples/terraform/scenarios/static-site/` becomes the first scenario
-  that exercises the sidecar end-to-end.
-- `docs/SETUP.md` grows a Storage section covering
-  `AZEMU_AZURITE_ENDPOINT` and the flox-side "start Azurite" helper.
-- `docs/PARITY.md` grows a Storage row with a Proof column that links to
-  both the ARM handler tests and the scenario integration test.
+The following was built and shipped on branch `feat/phase7-storage-account`:
+
+- `pkg/config/config.go`: `AZEMU_AZURITE_ENDPOINT` env var (default
+  `http://azurite:10000`). azemu derives queue (`:10001`) and table
+  (`:10002`) base URLs from this single knob by replacing the port.
+- `internal/arm/router.go`: `Router.azuriteEndpoint` field; `NewRouter`
+  signature updated to accept it; `POST .../listkeys` route added.
+- `internal/arm/storage_account.go`: `storagePrimaryEndpoints` rewritten
+  to produce path-style Azurite URLs for blob/queue/table/file/web/dfs.
+  `listStorageAccountKeys` handler returns Azurite's well-known dev key.
+- `docker-compose.yml`: `azurite` service using
+  `mcr.microsoft.com/azure-storage/azurite` with ports 10000-10002,
+  a named volume (`azurite-data`), a healthcheck, and `depends_on`
+  (condition: service\_healthy) so azemu only starts after Azurite is ready.
+- `docs/SETUP.md`: Storage and Azurite section added; `AZEMU_AZURITE_ENDPOINT`
+  documented in the env-var table.
+- `docs/PARITY.md`: Storage Accounts row updated; data plane column now
+  reads "Delegated to Azurite".
+
+**Note on URL style:** the ADR described "IP-style URLs
+(`http://localhost:10000/<account>`)" as the default. What shipped uses the
+same path-style layout but derives the host from `AZEMU_AZURITE_ENDPOINT`,
+so the hostname inside Docker is `azurite` rather than `localhost`. This
+is strictly compatible with the decision; the docker-compose hostname is
+what users actually see inside Docker networks.
+
+**Deferred items** (not blocked by this ADR but not yet implemented):
+
+- `regenerateKey` action endpoint.
+- `.../fileServices/shares` ARM sub-resources.
+- `examples/terraform/scenarios/static-site/` end-to-end scenario
+  (tracked as Phase 6.5.2 in `TASKS.md`).
 
 ## References
 

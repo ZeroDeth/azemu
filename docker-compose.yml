@@ -1,4 +1,20 @@
 services:
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite
+    command: azurite --blobHost 0.0.0.0 --queueHost 0.0.0.0 --tableHost 0.0.0.0
+    ports:
+      - "10000:10000"
+      - "10001:10001"
+      - "10002:10002"
+    volumes:
+      - azurite-data:/data
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "10000"]
+      interval: 5s
+      timeout: 2s
+      retries: 10
+      start_period: 5s
+
   azemu:
     build: .
     image: azemu:dev
@@ -9,11 +25,18 @@ services:
     environment:
       AZEMU_CERT_PATH: /azemu/cert-bundle.pem
       AZEMU_METADATA_HOST: 127.0.0.1:4567
+      AZEMU_AZURITE_ENDPOINT: http://azurite:10000
     volumes:
       - ./.azemu:/azemu
+    depends_on:
+      azurite:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:4568/health"]
       interval: 5s
       timeout: 2s
       retries: 10
       start_period: 3s
+
+volumes:
+  azurite-data:
