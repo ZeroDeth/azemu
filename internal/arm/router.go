@@ -150,6 +150,14 @@ func (a *Router) Routes(r chi.Router) {
 	// the Azurite sidecar without extra configuration.
 	r.Post("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.storage/storageaccounts/{accountName}/listkeys", a.listStorageAccountKeys)
 
+	// Key Vaults (Microsoft.KeyVault/vaults)
+	r.Put("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.keyvault/vaults/{vaultName}", a.putKeyVault)
+	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.keyvault/vaults/{vaultName}", a.getKeyVault)
+	r.Head("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.keyvault/vaults/{vaultName}", a.headKeyVault)
+	r.Delete("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.keyvault/vaults/{vaultName}", a.deleteKeyVault)
+	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.keyvault/vaults", a.listKeyVaultsByRG)
+	r.Get("/{subscriptionID}/providers/microsoft.keyvault/vaults", a.listKeyVaultsBySub)
+
 	// Storage Blob Containers (Microsoft.Storage/storageAccounts/blobServices/containers)
 	// The path segment "default" is a fixed literal (not a parameter) matching the real ARM API.
 	r.Put("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.storage/storageaccounts/{accountName}/blobservices/default/containers/{containerName}", a.putStorageContainer)

@@ -1,0 +1,190 @@
+package arm
+
+import (
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"strings"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
+	"github.com/rs/zerolog/log"
+
+	"github.com/zerodeth/azemu/internal/store"
+)
+
+const keyVaultTypeString = "Microsoft.KeyVault/vaults"
+
+func keyVaultID(subID, rgName, name string) string {
+	return fmt.Sprintf(
+		"/subscriptions/%s/resourceGroups/%s/providers/Microsoft.KeyVault/vaults/%s",
+		subID, rgName, name,
+	)
+}
+
+// keyVaultBody is the subset of the azurerm_key_vault PUT payload that
+// azemu understands. All vault configuration lives inside properties (unlike
+// storage accounts, where sku is a top-level field).
+type keyVaultBody struct {
+	Location   string                 `json:"location"`
+	Tags       map[string]string      `json:"tags"`
+	Properties map[string]interface{} `json:"properties"`
+}
+
+func (a *Router) putKeyVault(w http.ResponseWriter, r *http.Request) {
+	subID := chi.URLParam(r, "subscriptionID")
+	rgName := chi.URLParam(r, "resourceGroupName")
+	name := chi.URLParam(r, "vaultName")
+
+	var body keyVaultBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeAzureError(w, http.StatusBadRequest, "InvalidRequestContent", err.Error())
+		return
+	}
+	if strings.TrimSpace(body.Location) == "" {
+		writeAzureError(w, http.StatusBadRequest, "InvalidRequestContent",
+			"location is required")
+		return
+	}
+
+	if body.Properties == nil {
+		body.Properties = map[string]interface{}{}
+	}
+	body.Properties["provisioningState"] = "Succeeded"
+	body.Properties["vaultUri"] = fmt.Sprintf("https://%s.vault.azure.net/", name)
+
+	// Default SKU to standard if not supplied.
+	if _, ok := body.Properties["sku"]; !ok {
+		body.Properties["sku"] = map[string]interface{}{"family": "A", "name": "standard"}
+	}
+	// Default accessPolicies to empty slice if absent.
+	if _, ok := body.Properties["accessPolicies"]; !ok {
+		body.Properties["accessPolicies"] = []interface{}{}
+	}
+	// Default softDelete settings that real Azure enforces.
+	if _, ok := body.Properties["enableSoftDelete"]; !ok {
+		body.Properties["enableSoftDelete"] = true
+	}
+	if _, ok := body.Properties["softDeleteRetentionInDays"]; !ok {
+		body.Properties["softDeleteRetentionInDays"] = float64(90)
+	}
+
+	id := keyVaultID(subID, rgName, name)
+	res := &store.Resource{
+		ID:         id,
+		Name:       name,
+		Type:       keyVaultTypeString,
+		Location:   strings.ToLower(body.Location),
+		Tags:       normaliseTags(body.Tags),
+		Properties: body.Properties,
+	}
+
+	_, exists := a.store.Get(id)
+	if err := a.store.Put(id, res); err != nil {
+		writeAzureError(w, http.StatusInternalServerError, "InternalServerError",
+			fmt.Sprintf("put key vault %q: %s", name, err))
+		return
+	}
+
+	status := http.StatusCreated
+	if exists {
+		status = http.StatusOK
+	}
+	log.Info().Str("resource_id", id).Bool("existed", exists).Msg("key vault upsert")
+	writeJSON(w, status, keyVaultResponse(res))
+}
+
+func (a *Router) getKeyVault(w http.ResponseWriter, r *http.Request) {
+	subID := chi.URLParam(r, "subscriptionID")
+	rgName := chi.URLParam(r, "resourceGroupName")
+	name := chi.URLParam(r, "vaultName")
+	id := keyVaultID(subID, rgName, name)
+
+	res, ok := a.store.Get(id)
+	if !ok {
+		writeAzureError(w, http.StatusNotFound, "ResourceNotFound",
+			fmt.Sprintf("The Resource 'Microsoft.KeyVault/vaults/%s' under resource group '%s' was not found.", name, rgName))
+		return
+	}
+	writeJSON(w, http.StatusOK, keyVaultResponse(res))
+}
+
+func (a *Router) headKeyVault(w http.ResponseWriter, r *http.Request) {
+	subID := chi.URLParam(r, "subscriptionID")
+	rgName := chi.URLParam(r, "resourceGroupName")
+	name := chi.URLParam(r, "vaultName")
+	id := keyVaultID(subID, rgName, name)
+
+	if _, ok := a.store.Get(id); !ok {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (a *Router) deleteKeyVault(w http.ResponseWriter, r *http.Request) {
+	subID := chi.URLParam(r, "subscriptionID")
+	rgName := chi.URLParam(r, "resourceGroupName")
+	name := chi.URLParam(r, "vaultName")
+	id := keyVaultID(subID, rgName, name)
+
+	if !a.store.Delete(id) {
+		writeAzureError(w, http.StatusNotFound, "ResourceNotFound",
+			fmt.Sprintf("The Resource 'Microsoft.KeyVault/vaults/%s' under resource group '%s' was not found.", name, rgName))
+		return
+	}
+
+	log.Info().Str("resource_id", id).Msg("key vault deleted")
+	w.Header().Set("Location",
+		fmt.Sprintf("/subscriptions/%s/operationresults/%s", subID, uuid.New().String()))
+	w.WriteHeader(http.StatusAccepted)
+}
+
+func (a *Router) listKeyVaultsByRG(w http.ResponseWriter, r *http.Request) {
+	subID := chi.URLParam(r, "subscriptionID")
+	rgName := chi.URLParam(r, "resourceGroupName")
+	prefix := fmt.Sprintf(
+		"/subscriptions/%s/resourceGroups/%s/providers/Microsoft.KeyVault/vaults/",
+		subID, rgName,
+	)
+	a.writeKeyVaultList(w, prefix)
+}
+
+func (a *Router) listKeyVaultsBySub(w http.ResponseWriter, r *http.Request) {
+	subID := chi.URLParam(r, "subscriptionID")
+	prefix := fmt.Sprintf("/subscriptions/%s/resourceGroups/", subID)
+	a.writeKeyVaultList(w, prefix)
+}
+
+func (a *Router) writeKeyVaultList(w http.ResponseWriter, prefix string) {
+	items := []map[string]interface{}{}
+	for _, res := range a.store.List(prefix) {
+		if res.Type != keyVaultTypeString {
+			continue
+		}
+		items = append(items, keyVaultResponse(res))
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"value": items})
+}
+
+// keyVaultResponse builds the canonical ARM response for a key vault.
+// provisioningState is always "Succeeded" regardless of what was stored.
+func keyVaultResponse(v *store.Resource) map[string]interface{} {
+	props := map[string]interface{}{
+		"provisioningState": "Succeeded",
+	}
+	for k, val := range v.Properties {
+		if k == "provisioningState" {
+			continue
+		}
+		props[k] = val
+	}
+	return map[string]interface{}{
+		"id":         v.ID,
+		"name":       v.Name,
+		"type":       v.Type,
+		"location":   v.Location,
+		"tags":       v.Tags,
+		"properties": props,
+	}
+}

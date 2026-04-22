@@ -772,3 +772,78 @@ func TestARM_StorageAccountFullFlow(t *testing.T) {
 	}
 	resp.Body.Close()
 }
+
+// TestARM_KeyVaultFullFlow exercises the Key Vault management plane lifecycle:
+// create, read, idempotent update, list, delete, confirm 404.
+func TestARM_KeyVaultFullFlow(t *testing.T) {
+	srv := buildFullServer(t)
+	base := srv.URL
+
+	vaultURL := base + "/subscriptions/sub1/resourcegroups/rg1/providers/microsoft.keyvault/vaults/mytestvault" + apiVersionQ
+	listURL := base + "/subscriptions/sub1/resourcegroups/rg1/providers/microsoft.keyvault/vaults" + apiVersionQ
+
+	vaultBody := `{
+		"location": "uksouth",
+		"properties": {
+			"sku": {"family": "A", "name": "standard"},
+			"tenantId": "00000000-0000-0000-0000-000000000001",
+			"accessPolicies": [],
+			"enableSoftDelete": true,
+			"softDeleteRetentionInDays": 90,
+			"enableRbacAuthorization": false
+		}
+	}`
+
+	// 1. Create returns 201.
+	resp := doJSON(t, http.MethodPut, vaultURL, vaultBody)
+	mustStatus(t, resp, http.StatusCreated)
+	created := decode(t, resp)
+	if created["name"] != "mytestvault" {
+		t.Errorf("name = %v, want mytestvault", created["name"])
+	}
+	props, ok := created["properties"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("properties missing")
+	}
+	if props["vaultUri"] != "https://mytestvault.vault.azure.net/" {
+		t.Errorf("vaultUri = %v, want https://mytestvault.vault.azure.net/", props["vaultUri"])
+	}
+	if props["provisioningState"] != "Succeeded" {
+		t.Errorf("provisioningState = %v, want Succeeded", props["provisioningState"])
+	}
+
+	// 2. Idempotent PUT returns 200.
+	resp = doJSON(t, http.MethodPut, vaultURL, vaultBody)
+	mustStatus(t, resp, http.StatusOK)
+	resp.Body.Close()
+
+	// 3. GET returns the vault.
+	resp = doJSON(t, http.MethodGet, vaultURL, "")
+	mustStatus(t, resp, http.StatusOK)
+	got := decode(t, resp)
+	if got["type"] != "Microsoft.KeyVault/vaults" {
+		t.Errorf("type = %v, want Microsoft.KeyVault/vaults", got["type"])
+	}
+
+	// 4. LIST shows the vault.
+	resp = doJSON(t, http.MethodGet, listURL, "")
+	mustStatus(t, resp, http.StatusOK)
+	list := decode(t, resp)
+	items, ok := list["value"].([]interface{})
+	if !ok || len(items) != 1 {
+		t.Fatalf("list value = %v, want 1 item", list["value"])
+	}
+
+	// 5. DELETE is async (202 Accepted) with Location header.
+	resp = doJSON(t, http.MethodDelete, vaultURL, "")
+	mustStatus(t, resp, http.StatusAccepted)
+	if resp.Header.Get("Location") == "" {
+		t.Error("Location header missing on DELETE")
+	}
+	resp.Body.Close()
+
+	// 6. GET returns 404 after delete.
+	resp = doJSON(t, http.MethodGet, vaultURL, "")
+	mustStatus(t, resp, http.StatusNotFound)
+	resp.Body.Close()
+}
