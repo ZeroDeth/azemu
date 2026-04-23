@@ -108,8 +108,9 @@ func (a *Router) putKeyVaultSecret(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Store/update current-version pointer.
+	// Determine 201 vs 200: first write if no current pointer yet exists.
 	currentKey := secretCurrentKey(vaultName, secretName)
+	_, isUpdate := a.store.Get(currentKey)
 	if err := a.store.Put(currentKey, &store.Resource{
 		ID:         currentKey,
 		Name:       secretName,
@@ -121,8 +122,12 @@ func (a *Router) putKeyVaultSecret(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	status := http.StatusCreated
+	if isUpdate {
+		status = http.StatusOK
+	}
 	log.Info().Str("vault", vaultName).Str("secret", secretName).Str("version", version).Msg("key vault secret upsert")
-	writeJSON(w, http.StatusOK, kvSecretResponse(props))
+	writeJSON(w, status, kvSecretResponse(props))
 }
 
 func (a *Router) getKeyVaultSecret(w http.ResponseWriter, r *http.Request) {
@@ -185,10 +190,13 @@ func (a *Router) deleteKeyVaultSecret(w http.ResponseWriter, r *http.Request) {
 	a.store.Delete(currentKey)
 
 	log.Info().Str("vault", vaultName).Str("secret", secretName).Msg("key vault secret deleted")
-	// Key Vault delete returns the deleted secret's last state (200 OK).
-	// Return a minimal deleted-secret body; the azurerm provider checks the
-	// status code only.
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	// ARM async delete: 202 Accepted + Location header pointing at a stable
+	// operation result URL. Callers that poll the Location receive 200 immediately
+	// (azemu has no real async queue).
+	opID := uuid.New().String()
+	w.Header().Set("Location", fmt.Sprintf("%s/keyvault/%s/operations/%s", a.kvEndpoint, vaultName, opID))
+	writeJSON(w, http.StatusAccepted, map[string]interface{}{
+		"status":             "Succeeded",
 		"recoveryId":         fmt.Sprintf("%s/keyvault/%s/deletedsecrets/%s", a.kvEndpoint, vaultName, secretName),
 		"deletedDate":        time.Now().Unix(),
 		"scheduledPurgeDate": time.Now().Add(90 * 24 * time.Hour).Unix(),

@@ -61,7 +61,7 @@ func (s *OIDCService) oidcToken(w http.ResponseWriter, r *http.Request) {
 
 	now := time.Now()
 	host := r.Host
-	issuer := "https://" + host + "/ado"
+	issuer := "http://" + host + "/ado"
 
 	claims := map[string]interface{}{
 		"iss":    issuer,
@@ -98,9 +98,11 @@ func (s *OIDCService) oidcToken(w http.ResponseWriter, r *http.Request) {
 }
 
 // openIDConfig returns the OIDC discovery document.
+// The ADO server runs on plain HTTP (port 4569), so jwks_uri must use http://
+// to avoid TLS errors when OIDC clients fetch the key set.
 func (s *OIDCService) openIDConfig(w http.ResponseWriter, r *http.Request) {
 	host := r.Host
-	base := "https://" + host + "/ado"
+	base := "http://" + host + "/ado"
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(map[string]interface{}{

@@ -28,10 +28,10 @@ func kvSecretVersionsURL(srvURL, vaultName, secretName string) string {
 const secretBody = `{"value":"super-secret","contentType":"text/plain"}`
 const secretBodyUpdated = `{"value":"super-secret-v2","contentType":"text/plain"}`
 
-func TestKVSecret_PUT_Creates_Returns200(t *testing.T) {
+func TestKVSecret_PUT_Creates_Returns201(t *testing.T) {
 	srv := newTestServer(t)
 	resp := httpPut(t, kvSecretURL(srv.URL, "myvault", "mysecret"), secretBody)
-	assertStatus(t, resp, http.StatusOK)
+	assertStatus(t, resp, http.StatusCreated)
 
 	body := decodeJSON(t, resp)
 	if body["value"] != "super-secret" {
@@ -59,7 +59,7 @@ func TestKVSecret_PUT_Idempotent_Returns200(t *testing.T) {
 func TestKVSecret_PUT_ResponseHasAttributes(t *testing.T) {
 	srv := newTestServer(t)
 	resp := httpPut(t, kvSecretURL(srv.URL, "myvault", "mysecret"), secretBody)
-	assertStatus(t, resp, http.StatusOK)
+	assertStatus(t, resp, http.StatusCreated)
 
 	body := decodeJSON(t, resp)
 	attrs, ok := body["attributes"].(map[string]interface{})
@@ -77,7 +77,7 @@ func TestKVSecret_PUT_ResponseHasAttributes(t *testing.T) {
 func TestKVSecret_PUT_ResponseHasVersionInID(t *testing.T) {
 	srv := newTestServer(t)
 	resp := httpPut(t, kvSecretURL(srv.URL, "myvault", "mysecret"), secretBody)
-	assertStatus(t, resp, http.StatusOK)
+	assertStatus(t, resp, http.StatusCreated)
 
 	body := decodeJSON(t, resp)
 	id, _ := body["id"].(string)
@@ -134,7 +134,7 @@ func TestKVSecret_GET_NotFound_Returns404(t *testing.T) {
 func TestKVSecret_GET_SpecificVersion(t *testing.T) {
 	srv := newTestServer(t)
 	putResp := httpPut(t, kvSecretURL(srv.URL, "myvault", "mysecret"), secretBody)
-	assertStatus(t, putResp, http.StatusOK)
+	assertStatus(t, putResp, http.StatusCreated)
 
 	putBody := decodeJSON(t, putResp)
 	id, _ := putBody["id"].(string)
@@ -158,13 +158,16 @@ func TestKVSecret_GET_UnknownVersion_Returns404(t *testing.T) {
 	assertStatus(t, resp, http.StatusNotFound)
 }
 
-func TestKVSecret_DELETE_Returns200(t *testing.T) {
+func TestKVSecret_DELETE_Returns202(t *testing.T) {
 	srv := newTestServer(t)
 	httpPut(t, kvSecretURL(srv.URL, "myvault", "mysecret"), secretBody)
 
 	resp := httpDelete(t, kvSecretURL(srv.URL, "myvault", "mysecret"))
-	assertStatus(t, resp, http.StatusOK)
+	assertStatus(t, resp, http.StatusAccepted)
 
+	if resp.Header.Get("Location") == "" {
+		t.Error("DELETE missing Location header")
+	}
 	body := decodeJSON(t, resp)
 	if body["recoveryId"] == nil {
 		t.Error("recoveryId missing from delete response")
@@ -266,7 +269,7 @@ func TestKVSecret_LIST_Versions_SecretNotFound_Returns404(t *testing.T) {
 func TestKVSecret_Tags_NormalisedToEmptyObject(t *testing.T) {
 	srv := newTestServer(t)
 	resp := httpPut(t, kvSecretURL(srv.URL, "myvault", "mysecret"), `{"value":"x"}`)
-	assertStatus(t, resp, http.StatusOK)
+	assertStatus(t, resp, http.StatusCreated)
 
 	body := decodeJSON(t, resp)
 	tags, ok := body["tags"].(map[string]interface{})
