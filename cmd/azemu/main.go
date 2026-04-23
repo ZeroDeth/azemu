@@ -19,6 +19,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
+	"github.com/zerodeth/azemu/internal/ado"
 	"github.com/zerodeth/azemu/internal/arm"
 	"github.com/zerodeth/azemu/internal/auth"
 	"github.com/zerodeth/azemu/internal/metadata"
@@ -100,7 +101,13 @@ func main() {
 		log.Fatal().Err(err).Msg("failed to create token service")
 	}
 	metaSvc := metadata.NewService(cfg)
-	armRouter := arm.NewRouter(state, cfg.AzuriteEndpoint)
+	armRouter := arm.NewRouter(state, cfg.AzuriteEndpoint, cfg.KeyVaultEndpoint)
+	imdsSvc := auth.NewIMDSService(tokenSvc)
+	adoOIDC, err := ado.NewOIDCService()
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to create ADO OIDC service")
+	}
+	adoSC := ado.NewServiceConnectionService()
 
 	r := chi.NewRouter()
 	r.Use(chimw.RequestID)
@@ -154,6 +161,10 @@ func main() {
 		_, _ = w.Write([]byte(`{"status":"reset"}`))
 	})
 
+	// IMDS token endpoint must be mounted BEFORE /metadata so chi's radix trie
+	// picks the more specific /metadata/identity prefix first.
+	r.Route("/metadata/identity", imdsSvc.Routes)
+
 	// Metadata endpoints (HTTPS, used by azurerm provider)
 	r.Route("/metadata", metaSvc.Routes)
 
@@ -162,6 +173,18 @@ func main() {
 
 	// ARM endpoints
 	r.Route("/subscriptions", armRouter.Routes)
+
+	// Key Vault data-plane endpoints (secrets). The vaultUri returned by the
+	// management plane GET/PUT is rewritten to point here so the azurerm provider
+	// can create and read azurerm_key_vault_secret resources against azemu.
+	r.Route("/keyvault", armRouter.KeyVaultDataPlaneRoutes)
+
+	// ADO OIDC token endpoint and service connection REST API (plain HTTP on
+	// ADOPort; SYSTEM_OIDCREQUESTURI in a real ADO agent is plain HTTP).
+	r.Route("/ado", func(r chi.Router) {
+		adoOIDC.Routes(r)
+		adoSC.ServiceConnectionRoutes(r)
+	})
 
 	// Load existing TLS cert from AZEMU_CERT_PATH if set, otherwise generate
 	// fresh. Persistence eliminates the per-restart keychain trust friction
@@ -235,7 +258,16 @@ func main() {
 		WriteTimeout: 30 * time.Second,
 	}
 
-	errCh := make(chan error, 3)
+	// ADO OIDC server (plain HTTP; SYSTEM_OIDCREQUESTURI is always plain HTTP
+	// on a real ADO pipeline worker).
+	adoSrv := &http.Server{
+		Addr:         fmt.Sprintf(":%d", cfg.ADOPort),
+		Handler:      r,
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 30 * time.Second,
+	}
+
+	errCh := make(chan error, 4)
 	go func() {
 		if err := healthSrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			errCh <- fmt.Errorf("health server: %w", err)
@@ -249,6 +281,11 @@ func main() {
 	go func() {
 		if err := httpsSrv.ListenAndServeTLS("", ""); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			errCh <- fmt.Errorf("metadata server: %w", err)
+		}
+	}()
+	go func() {
+		if err := adoSrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			errCh <- fmt.Errorf("ado server: %w", err)
 		}
 	}()
 
@@ -273,6 +310,9 @@ func main() {
 	if err := httpsSrv.Shutdown(ctx); err != nil {
 		log.Warn().Err(err).Msg("metadata server shutdown")
 	}
+	if err := adoSrv.Shutdown(ctx); err != nil {
+		log.Warn().Err(err).Msg("ado server shutdown")
+	}
 }
 
 func printBanner(w *os.File, cfg *config.Config, certPath string) {
@@ -280,6 +320,7 @@ func printBanner(w *os.File, cfg *config.Config, certPath string) {
 	fmt.Fprintf(w, "  ARM (HTTPS)        https://localhost:%d\n", cfg.HTTPPort)
 	fmt.Fprintf(w, "  metadata (HTTPS)   https://localhost:%d\n", cfg.HTTPSPort)
 	fmt.Fprintf(w, "  health (HTTP)      http://localhost:%d/health\n", cfg.HealthPort)
+	fmt.Fprintf(w, "  ADO OIDC (HTTP)    http://localhost:%d/ado\n", cfg.ADOPort)
 	fmt.Fprintf(w, "  cert bundle        %s\n", certPath)
 	if cfg.PersistPath != "" {
 		fmt.Fprintf(w, "  persist            %s\n", cfg.PersistPath)
@@ -302,9 +343,12 @@ func printUsage(w *os.File) {
 	fmt.Fprintf(w, "  AZEMU_METADATA_HOST       Host for URLs in /metadata/endpoints (default localhost:4567)\n")
 	fmt.Fprintf(w, "  AZEMU_SUBSCRIPTION_ID     Mock subscription ID (default 00000000-...)\n")
 	fmt.Fprintf(w, "  AZEMU_TENANT_ID           Mock tenant ID (default 00000000-...)\n")
-	fmt.Fprintf(w, "  AZEMU_AZURITE_ENDPOINT    Azurite blob base URL for storage endpoints (default http://azurite:10000)\n\n")
+	fmt.Fprintf(w, "  AZEMU_AZURITE_ENDPOINT    Azurite blob base URL for storage endpoints (default http://azurite:10000)\n")
+	fmt.Fprintf(w, "  AZEMU_KV_ENDPOINT         Key Vault data-plane base URL embedded in vaultUri (default https://localhost:4566)\n")
+	fmt.Fprintf(w, "  AZEMU_ADO_PORT            Plain-HTTP port for ADO OIDC and service connection emulation (default 4569)\n\n")
 	fmt.Fprintf(w, "Ports:\n")
 	fmt.Fprintf(w, "  :4566   ARM API (HTTPS)\n")
 	fmt.Fprintf(w, "  :4567   Metadata / OAuth2 / OIDC (HTTPS)\n")
-	fmt.Fprintf(w, "  :4568   Health check (plain HTTP)\n\n")
+	fmt.Fprintf(w, "  :4568   Health check (plain HTTP)\n")
+	fmt.Fprintf(w, "  :4569   ADO OIDC / service connections (plain HTTP)\n\n")
 }

@@ -2,8 +2,8 @@
 
 Version: 0.1
 Last updated: 2026-04-21
-Status: Phase 1 through Phase 6 COMPLETE. v0.1.0 tagged 2026-04-21.
-Current focus: Phase 7 (Storage, Key Vault, CDN).
+Status: Phase 1 through Phase 8 COMPLETE (minus 8.2 federated creds and 8.7/8.8 scenarios). v0.1.0 tagged 2026-04-21.
+Current focus: Phase 8 closeout + Phase 9 planning.
 
 > **Strategy, non-goals, and the per-release resource roster live in
 > `ROADMAP.md`.** `TASKS.md` is the execution ledger and `ROADMAP.md` is
@@ -256,8 +256,8 @@ entries in the metadata response.
 | 7.1 | `azurerm_storage_account` | `Microsoft.Storage/storageAccounts` | DONE | Management plane. Name uniqueness check across subscription. SKU/kind at top level. `primaryEndpoints` returns Azurite path-style URLs (blob :10000, queue :10001, table :10002) derived from `AZEMU_AZURITE_ENDPOINT`. `POST listkeys` returns Azurite dev key. |
 | 7.2 | `azurerm_storage_container` | `.../storageAccounts/blobServices/containers` | DONE | Blob containers as child resources under account id prefix. Parent existence check. Cascade delete when account is deleted. |
 | 7.3 | `azurerm_key_vault` | `Microsoft.KeyVault/vaults` | DONE | Management plane. `vaultUri` computed as `https://{name}.vault.azure.net/`. SKU/soft-delete defaults. 18 unit tests + integration test. |
-| 7.4 | `azurerm_key_vault_secret` | `...vaults/secrets` | TODO | Secrets data plane. Versioned. |
-| 7.5 | `azurerm_cdn_profile` + `azurerm_cdn_endpoint` | `Microsoft.Cdn/profiles` + `.../endpoints` | TODO | The "CDN" from the ROADMAP roster. |
+| 7.4 | `azurerm_key_vault_secret` | `...vaults/secrets` | DONE | Secrets data plane on `/keyvault/{name}/secrets`. `vaultUri` in vault response rewritten to `AZEMU_KV_ENDPOINT/keyvault/{name}/`. Versioned (each PUT creates new UUID version). Cascade delete when vault is deleted. 14 unit tests. |
+| 7.5 | `azurerm_cdn_profile` + `azurerm_cdn_endpoint` | `Microsoft.Cdn/profiles` + `.../endpoints` | DONE | CDN profile with SKU at top level; endpoint `hostName` computed as `{name}.azureedge.net`; cascade delete; parent-existence check. ~25 unit tests. |
 | 7.6 | Verify `suffixes.*` in metadata response still match go-azure-sdk expectations for Storage/KV/CDN | `internal/metadata/service.go` | DONE | `TestMetadata_CanonicalSuffixNames` pins `storage: "core.windows.net"` and `keyVaultDns: "vault.azure.net"`. CDN uses ARM endpoints directly, no suffix entry needed. |
 
 ### Phase 8: Identity, AKS, Azure DevOps bridge (v0.3)
@@ -268,12 +268,12 @@ azemu with zero cloud cost. See ROADMAP v0.3 and the non-goals section.
 
 | # | Task | ARM provider / endpoint | Status | Notes |
 |---|---|---|---|---|
-| 8.1 | `azurerm_user_assigned_identity` | `Microsoft.ManagedIdentity/userAssignedIdentities` | TODO | Prerequisite for federated identity credentials. |
+| 8.1 | `azurerm_user_assigned_identity` | `Microsoft.ManagedIdentity/userAssignedIdentities` | DONE | Deterministic `principalId`/`clientId` via `uuid.NewSHA1` for stable Terraform round-trips. 17 unit tests. |
 | 8.2 | `azurerm_federated_identity_credential` | `.../userAssignedIdentities/{name}/federatedIdentityCredentials` | TODO | issuer/subject/audience matching. The machinery workload identity needs. |
-| 8.3 | IMDS token endpoint | `169.254.169.254/metadata/identity/oauth2/token` (host binding optional) | TODO | Pair with 8.2. |
-| 8.4 | `azurerm_kubernetes_cluster` | `Microsoft.ContainerService/managedClusters` | TODO (Stub only) | Management plane only. No live Kubernetes control plane. Explicit non-goal. |
-| 8.5 | Azure DevOps OIDC issuer endpoint | `SYSTEM_OIDCREQUESTURI` compatible | TODO | New package `internal/ado/`. |
-| 8.6 | ADO service connection CRUD | `dev.azure.com/{org}/{project}/_apis/serviceendpoint/endpoints` | TODO | Minimal surface the `azuredevops` Terraform provider hits during workload-identity flows. |
+| 8.3 | IMDS token endpoint | `/metadata/identity/oauth2/token` (mounted before `/metadata` in chi) | DONE | RS256 JWT; `Metadata: true` header enforced; `expires_in` as string per IMDS contract. 7 unit tests. |
+| 8.4 | `azurerm_kubernetes_cluster` + agent pools | `Microsoft.ContainerService/managedClusters` | DONE | Management plane only. Default k8s version 1.29.0; computed fqdn; cascade-delete node pools on cluster delete. ~30 unit tests. |
+| 8.5 | Azure DevOps OIDC issuer endpoint | `SYSTEM_OIDCREQUESTURI` compatible; plain HTTP on `:4569` | DONE | New package `internal/ado/`. Own RSA-2048 key independent of TokenService. `/.well-known/openid-configuration` + `/discovery/keys` + OIDC token endpoint. 10 unit tests. |
+| 8.6 | ADO service connection CRUD | `/{org}/{project}/_apis/serviceendpoint/endpoints` | DONE | In-memory store with `sync.RWMutex`. Auto-assigns UUID. `isReady: true`, `owner: "Library"` on create/update. Name-filter on list. 14 unit tests. |
 | 8.7 | `scenarios/aks-workload/` | — | TODO | RG + VNet + Subnet + AKS + Managed Identity + Key Vault. |
 | 8.8 | `scenarios/ado-pipeline/` | — | TODO | ADO service connection + workload identity federation + Key Vault + Storage. |
 

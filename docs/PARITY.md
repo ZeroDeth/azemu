@@ -34,17 +34,20 @@ and should read Scaffold or Planned instead.
 | Application Gateways | Full | N/A | `azurerm_application_gateway` | Full (monolithic PUT; SKU at top level with name/tier/capacity; all inline sub-config preserved; operationalState: Running) | [appgw_test.go](../internal/arm/appgw_test.go), [arm_test.go](../test/integration/arm_test.go) |
 | DNS Zones | Full | N/A | `azurerm_dns_zone`, `azurerm_dns_a_record`, `azurerm_dns_aaaa_record`, `azurerm_dns_cname_record`, `azurerm_dns_txt_record`, `azurerm_dns_mx_record`, `azurerm_dns_srv_record`, `azurerm_dns_ns_record` | Full (auto-SOA + auto-NS on zone create; A, AAAA, CNAME, TXT, MX, SRV, NS, SOA record sets as children; cascade delete) | [dns_test.go](../internal/arm/dns_test.go), [arm_test.go](../test/integration/arm_test.go) |
 | Storage Accounts | Full | Delegated to Azurite | `azurerm_storage_account`, `azurerm_storage_container` | Full (management plane; Azurite path-style endpoints; `listKeys` returns Azurite dev key; name uniqueness check; blob containers as child resources with cascade delete) | [storage_account_test.go](../internal/arm/storage_account_test.go), [storage_container_test.go](../internal/arm/storage_container_test.go), [arm_test.go](../test/integration/arm_test.go) |
-| Key Vault | Full | None | `azurerm_key_vault` | Full (management plane; `vaultUri` computed; SKU/soft-delete defaults; `azurerm_key_vault_secret` data plane planned v0.2) | [keyvault_test.go](../internal/arm/keyvault_test.go), [arm_test.go](../test/integration/arm_test.go) |
+| Key Vault | Full | Full | `azurerm_key_vault`, `azurerm_key_vault_secret` | Full (management plane; `vaultUri` rewritten to azemu's `/keyvault/{name}/` data-plane path; SKU/soft-delete defaults; secrets with versioning, list, and cascade delete on vault destroy) | [keyvault_test.go](../internal/arm/keyvault_test.go), [keyvault_secret_test.go](../internal/arm/keyvault_secret_test.go), [arm_test.go](../test/integration/arm_test.go) |
+| CDN | Full | N/A | `azurerm_cdn_profile`, `azurerm_cdn_endpoint` | Full (profile SKU at top level; endpoint `hostName` computed as `{name}.azureedge.net`; cascade delete; parent-existence check on endpoint PUT) | [cdn_test.go](../internal/arm/cdn_test.go), [arm_test.go](../test/integration/arm_test.go) |
+| User Assigned Identity | Full | N/A | `azurerm_user_assigned_identity` | Full (deterministic `principalId`/`clientId` via SHA-1 UUID for stable plan/apply/refresh; DELETE async 202) | [identity_test.go](../internal/arm/identity_test.go) |
+| AKS Managed Cluster | Full (stub) | N/A | `azurerm_kubernetes_cluster`, `azurerm_kubernetes_cluster_node_pool` | Full management plane (computed fqdn, default k8s version 1.29.0, SKU + identity at top level, cascade-delete node pools, parent-existence check on pool PUT) | [aks_test.go](../internal/arm/aks_test.go) |
 
 ## Identity
 
 | Capability | Status | Notes |
 |-----------|--------|-------|
 | Service principal (client_id/secret) | Full | Accepts any credentials |
-| Managed identity (IMDS) | None | Planned (v0.3) |
-| Workload identity (OIDC federation) | None | Planned (v0.3) |
-| Azure DevOps OIDC (`SYSTEM_OIDCREQUESTURI`) | None | Planned (v0.3) |
-| ADO Service Connections CRUD | None | Planned (v0.3) |
+| Managed identity (IMDS) | Full | IMDS token endpoint at `/metadata/identity/oauth2/token`; `Metadata: true` header enforced; `expires_in` as string per IMDS spec; RS256 JWT signed with same key as OAuth2 service. Proof: [imds_test.go](../internal/auth/imds_test.go) |
+| Workload identity (OIDC federation) | None | `azurerm_federated_identity_credential` not yet implemented. Planned (v0.3). |
+| Azure DevOps OIDC (`SYSTEM_OIDCREQUESTURI`) | Full | Plain HTTP on `:4569`; own RSA-2048 signing key; `/.well-known/openid-configuration` + `/discovery/keys` + OIDC token endpoint; JWT `sub` = `sc://{org}/{project}/azemu-service-connection`. Proof: [oidc_test.go](../internal/ado/oidc_test.go) |
+| ADO Service Connections CRUD | Full | `/{org}/{project}/_apis/serviceendpoint/endpoints`; auto-assigns UUID; `isReady: true`, `owner: "Library"`; name-filter on list; DELETE is sync 204 (not ARM-style async). Proof: [serviceconnection_test.go](../internal/ado/serviceconnection_test.go) |
 
 ## Developer Tooling
 

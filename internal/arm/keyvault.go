@@ -51,7 +51,10 @@ func (a *Router) putKeyVault(w http.ResponseWriter, r *http.Request) {
 		body.Properties = map[string]interface{}{}
 	}
 	body.Properties["provisioningState"] = "Succeeded"
-	body.Properties["vaultUri"] = fmt.Sprintf("https://%s.vault.azure.net/", name)
+	// vaultUri points at azemu's own HTTPS endpoint so that the azurerm
+	// provider's subsequent azurerm_key_vault_secret requests land on the
+	// Key Vault data-plane routes mounted at /keyvault/{name}/.
+	body.Properties["vaultUri"] = fmt.Sprintf("%s/keyvault/%s/", a.kvEndpoint, name)
 
 	// Default SKU to standard if not supplied.
 	if _, ok := body.Properties["sku"]; !ok {
@@ -132,6 +135,14 @@ func (a *Router) deleteKeyVault(w http.ResponseWriter, r *http.Request) {
 		writeAzureError(w, http.StatusNotFound, "ResourceNotFound",
 			fmt.Sprintf("The Resource 'Microsoft.KeyVault/vaults/%s' under resource group '%s' was not found.", name, rgName))
 		return
+	}
+
+	// Cascade-delete all Key Vault data-plane secrets stored under this vault.
+	// Secrets are stored at /keyvault/{name}/secrets/... and must be cleaned up
+	// independently because they use a different key prefix than the ARM resource.
+	secretsPrefix := fmt.Sprintf("/keyvault/%s/", name)
+	for _, res := range a.store.List(secretsPrefix) {
+		a.store.Delete(res.ID)
 	}
 
 	log.Info().Str("resource_id", id).Msg("key vault deleted")

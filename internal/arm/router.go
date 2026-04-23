@@ -16,10 +16,11 @@ import (
 type Router struct {
 	store           store.Store
 	azuriteEndpoint string // e.g. "http://azurite:10000" — blob service base URL
+	kvEndpoint      string // e.g. "https://localhost:4566" — Key Vault data-plane base URL
 }
 
-func NewRouter(s store.Store, azuriteEndpoint string) *Router {
-	return &Router{store: s, azuriteEndpoint: azuriteEndpoint}
+func NewRouter(s store.Store, azuriteEndpoint, kvEndpoint string) *Router {
+	return &Router{store: s, azuriteEndpoint: azuriteEndpoint, kvEndpoint: kvEndpoint}
 }
 
 func (a *Router) Routes(r chi.Router) {
@@ -165,6 +166,60 @@ func (a *Router) Routes(r chi.Router) {
 	r.Head("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.storage/storageaccounts/{accountName}/blobservices/default/containers/{containerName}", a.headStorageContainer)
 	r.Delete("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.storage/storageaccounts/{accountName}/blobservices/default/containers/{containerName}", a.deleteStorageContainer)
 	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.storage/storageaccounts/{accountName}/blobservices/default/containers", a.listStorageContainers)
+
+	// CDN Profiles (Microsoft.Cdn/profiles)
+	r.Put("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.cdn/profiles/{profileName}", a.putCDNProfile)
+	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.cdn/profiles/{profileName}", a.getCDNProfile)
+	r.Head("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.cdn/profiles/{profileName}", a.headCDNProfile)
+	r.Delete("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.cdn/profiles/{profileName}", a.deleteCDNProfile)
+	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.cdn/profiles", a.listCDNProfilesByRG)
+	r.Get("/{subscriptionID}/providers/microsoft.cdn/profiles", a.listCDNProfilesBySub)
+
+	// CDN Endpoints (Microsoft.Cdn/profiles/endpoints)
+	r.Put("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.cdn/profiles/{profileName}/endpoints/{endpointName}", a.putCDNEndpoint)
+	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.cdn/profiles/{profileName}/endpoints/{endpointName}", a.getCDNEndpoint)
+	r.Head("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.cdn/profiles/{profileName}/endpoints/{endpointName}", a.headCDNEndpoint)
+	r.Delete("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.cdn/profiles/{profileName}/endpoints/{endpointName}", a.deleteCDNEndpoint)
+	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.cdn/profiles/{profileName}/endpoints", a.listCDNEndpoints)
+
+	// User Assigned Identities (Microsoft.ManagedIdentity/userAssignedIdentities)
+	r.Put("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.managedidentity/userassignedidentities/{identityName}", a.putUserAssignedIdentity)
+	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.managedidentity/userassignedidentities/{identityName}", a.getUserAssignedIdentity)
+	r.Head("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.managedidentity/userassignedidentities/{identityName}", a.headUserAssignedIdentity)
+	r.Delete("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.managedidentity/userassignedidentities/{identityName}", a.deleteUserAssignedIdentity)
+	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.managedidentity/userassignedidentities", a.listUserAssignedIdentitiesByRG)
+	r.Get("/{subscriptionID}/providers/microsoft.managedidentity/userassignedidentities", a.listUserAssignedIdentitiesBySub)
+
+	// AKS Clusters (Microsoft.ContainerService/managedClusters)
+	r.Put("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.containerservice/managedclusters/{clusterName}", a.putAKSCluster)
+	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.containerservice/managedclusters/{clusterName}", a.getAKSCluster)
+	r.Head("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.containerservice/managedclusters/{clusterName}", a.headAKSCluster)
+	r.Delete("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.containerservice/managedclusters/{clusterName}", a.deleteAKSCluster)
+	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.containerservice/managedclusters", a.listAKSClustersByRG)
+	r.Get("/{subscriptionID}/providers/microsoft.containerservice/managedclusters", a.listAKSClustersBySub)
+
+	// AKS Agent Pools (Microsoft.ContainerService/managedClusters/agentPools)
+	r.Put("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.containerservice/managedclusters/{clusterName}/agentpools/{poolName}", a.putAKSNodePool)
+	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.containerservice/managedclusters/{clusterName}/agentpools/{poolName}", a.getAKSNodePool)
+	r.Head("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.containerservice/managedclusters/{clusterName}/agentpools/{poolName}", a.headAKSNodePool)
+	r.Delete("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.containerservice/managedclusters/{clusterName}/agentpools/{poolName}", a.deleteAKSNodePool)
+	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.containerservice/managedclusters/{clusterName}/agentpools", a.listAKSNodePools)
+}
+
+// KeyVaultDataPlaneRoutes mounts the Key Vault secrets data-plane API.
+// Routes are registered under a "/keyvault" prefix in main.go so the full
+// paths are "/keyvault/{vaultName}/secrets/{secretName}" etc. The azurerm
+// provider discovers these URLs from the vaultUri field returned by the
+// management-plane GET/PUT for azurerm_key_vault.
+// The "versions" literal is registered before "/{version}" so chi's radix
+// trie matches it as a literal segment before the wildcard.
+func (a *Router) KeyVaultDataPlaneRoutes(r chi.Router) {
+	r.Get("/{vaultName}/secrets/{secretName}/versions", a.listKeyVaultSecretVersions)
+	r.Get("/{vaultName}/secrets/{secretName}/{version}", a.getKeyVaultSecretVersion)
+	r.Put("/{vaultName}/secrets/{secretName}", a.putKeyVaultSecret)
+	r.Get("/{vaultName}/secrets/{secretName}", a.getKeyVaultSecret)
+	r.Delete("/{vaultName}/secrets/{secretName}", a.deleteKeyVaultSecret)
+	r.Get("/{vaultName}/secrets", a.listKeyVaultSecrets)
 }
 
 // --- Subscriptions ---
@@ -200,6 +255,7 @@ var defaultProviders = []string{
 	"Microsoft.Resources", "Microsoft.Network", "Microsoft.Storage",
 	"Microsoft.Compute", "Microsoft.KeyVault", "Microsoft.Web",
 	"Microsoft.ContainerRegistry", "Microsoft.Dns",
+	"Microsoft.ManagedIdentity", "Microsoft.ContainerService",
 }
 
 func (a *Router) listProviders(w http.ResponseWriter, r *http.Request) {
