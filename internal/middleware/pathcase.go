@@ -50,6 +50,20 @@ var canonicalLiteralSegments = map[string]string{
 	"applicationgateways":   "applicationgateways",
 	"dnszones":              "dnszones",
 	"recordsets":            "recordsets",
+	// Phase 7 resource types
+	"storageaccounts": "storageaccounts",
+	"blobservices":    "blobservices",
+	"containers":      "containers",
+	"vaults":          "vaults",
+	"microsoft.cdn":   "microsoft.cdn",
+	"profiles":        "profiles",
+	"endpoints":       "endpoints",
+	// Phase 8 resource types
+	"microsoft.managedidentity":  "microsoft.managedidentity",
+	"userassignedidentities":     "userassignedidentities",
+	"microsoft.containerservice": "microsoft.containerservice",
+	"managedclusters":            "managedclusters",
+	"agentpools":                 "agentpools",
 }
 
 // duplicateSlashes matches runs of two or more "/" characters. Some real

@@ -11,3 +11,15 @@ resource "azurerm_key_vault" "example" {
     environment = "dev"
   }
 }
+
+resource "azurerm_key_vault_secret" "example" {
+  name         = "example-secret"
+  value        = "my-super-secret-value"
+  key_vault_id = azurerm_key_vault.example.id
+
+  tags = {
+    environment = "dev"
+  }
+
+  depends_on = [azurerm_key_vault.example]
+}

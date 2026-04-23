@@ -29,7 +29,7 @@ const defaultAPIVersion = "2023-09-01"
 func newTestServer(t *testing.T) *httptest.Server {
 	t.Helper()
 	s := store.NewMemoryStore()
-	ar := NewRouter(s, "http://azurite-test:10000")
+	ar := NewRouter(s, "http://azurite-test:10000", "https://kv-test")
 	r := chi.NewRouter()
 	// Mirror the production middleware order from cmd/azemu/main.go so
 	// tests exercise the same path-normalization, header stamping, and
@@ -38,6 +38,7 @@ func newTestServer(t *testing.T) *httptest.Server {
 	r.Use(mw.AzureHeaders)
 	r.Use(mw.RequireAPIVersion)
 	r.Route("/subscriptions", ar.Routes)
+	r.Route("/keyvault", ar.KeyVaultDataPlaneRoutes)
 	srv := httptest.NewServer(r)
 	t.Cleanup(srv.Close)
 	return srv
