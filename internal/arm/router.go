@@ -181,6 +181,29 @@ func (a *Router) Routes(r chi.Router) {
 	r.Head("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.cdn/profiles/{profileName}/endpoints/{endpointName}", a.headCDNEndpoint)
 	r.Delete("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.cdn/profiles/{profileName}/endpoints/{endpointName}", a.deleteCDNEndpoint)
 	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.cdn/profiles/{profileName}/endpoints", a.listCDNEndpoints)
+
+	// User Assigned Identities (Microsoft.ManagedIdentity/userAssignedIdentities)
+	r.Put("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.managedidentity/userassignedidentities/{identityName}", a.putUserAssignedIdentity)
+	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.managedidentity/userassignedidentities/{identityName}", a.getUserAssignedIdentity)
+	r.Head("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.managedidentity/userassignedidentities/{identityName}", a.headUserAssignedIdentity)
+	r.Delete("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.managedidentity/userassignedidentities/{identityName}", a.deleteUserAssignedIdentity)
+	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.managedidentity/userassignedidentities", a.listUserAssignedIdentitiesByRG)
+	r.Get("/{subscriptionID}/providers/microsoft.managedidentity/userassignedidentities", a.listUserAssignedIdentitiesBySub)
+
+	// AKS Clusters (Microsoft.ContainerService/managedClusters)
+	r.Put("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.containerservice/managedclusters/{clusterName}", a.putAKSCluster)
+	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.containerservice/managedclusters/{clusterName}", a.getAKSCluster)
+	r.Head("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.containerservice/managedclusters/{clusterName}", a.headAKSCluster)
+	r.Delete("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.containerservice/managedclusters/{clusterName}", a.deleteAKSCluster)
+	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.containerservice/managedclusters", a.listAKSClustersByRG)
+	r.Get("/{subscriptionID}/providers/microsoft.containerservice/managedclusters", a.listAKSClustersBySub)
+
+	// AKS Agent Pools (Microsoft.ContainerService/managedClusters/agentPools)
+	r.Put("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.containerservice/managedclusters/{clusterName}/agentpools/{poolName}", a.putAKSNodePool)
+	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.containerservice/managedclusters/{clusterName}/agentpools/{poolName}", a.getAKSNodePool)
+	r.Head("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.containerservice/managedclusters/{clusterName}/agentpools/{poolName}", a.headAKSNodePool)
+	r.Delete("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.containerservice/managedclusters/{clusterName}/agentpools/{poolName}", a.deleteAKSNodePool)
+	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.containerservice/managedclusters/{clusterName}/agentpools", a.listAKSNodePools)
 }
 
 // KeyVaultDataPlaneRoutes mounts the Key Vault secrets data-plane API.
@@ -232,6 +255,7 @@ var defaultProviders = []string{
 	"Microsoft.Resources", "Microsoft.Network", "Microsoft.Storage",
 	"Microsoft.Compute", "Microsoft.KeyVault", "Microsoft.Web",
 	"Microsoft.ContainerRegistry", "Microsoft.Dns",
+	"Microsoft.ManagedIdentity", "Microsoft.ContainerService",
 }
 
 func (a *Router) listProviders(w http.ResponseWriter, r *http.Request) {

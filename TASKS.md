@@ -2,8 +2,8 @@
 
 Version: 0.1
 Last updated: 2026-04-21
-Status: Phase 1 through Phase 6 COMPLETE. v0.1.0 tagged 2026-04-21.
-Current focus: Phase 7 (Storage, Key Vault, CDN).
+Status: Phase 1 through Phase 8 COMPLETE (minus 8.2 federated creds and 8.7/8.8 scenarios). v0.1.0 tagged 2026-04-21.
+Current focus: Phase 8 closeout + Phase 9 planning.
 
 > **Strategy, non-goals, and the per-release resource roster live in
 > `ROADMAP.md`.** `TASKS.md` is the execution ledger and `ROADMAP.md` is
@@ -268,12 +268,12 @@ azemu with zero cloud cost. See ROADMAP v0.3 and the non-goals section.
 
 | # | Task | ARM provider / endpoint | Status | Notes |
 |---|---|---|---|---|
-| 8.1 | `azurerm_user_assigned_identity` | `Microsoft.ManagedIdentity/userAssignedIdentities` | TODO | Prerequisite for federated identity credentials. |
+| 8.1 | `azurerm_user_assigned_identity` | `Microsoft.ManagedIdentity/userAssignedIdentities` | DONE | Deterministic `principalId`/`clientId` via `uuid.NewSHA1` for stable Terraform round-trips. 17 unit tests. |
 | 8.2 | `azurerm_federated_identity_credential` | `.../userAssignedIdentities/{name}/federatedIdentityCredentials` | TODO | issuer/subject/audience matching. The machinery workload identity needs. |
-| 8.3 | IMDS token endpoint | `169.254.169.254/metadata/identity/oauth2/token` (host binding optional) | TODO | Pair with 8.2. |
-| 8.4 | `azurerm_kubernetes_cluster` | `Microsoft.ContainerService/managedClusters` | TODO (Stub only) | Management plane only. No live Kubernetes control plane. Explicit non-goal. |
-| 8.5 | Azure DevOps OIDC issuer endpoint | `SYSTEM_OIDCREQUESTURI` compatible | TODO | New package `internal/ado/`. |
-| 8.6 | ADO service connection CRUD | `dev.azure.com/{org}/{project}/_apis/serviceendpoint/endpoints` | TODO | Minimal surface the `azuredevops` Terraform provider hits during workload-identity flows. |
+| 8.3 | IMDS token endpoint | `/metadata/identity/oauth2/token` (mounted before `/metadata` in chi) | DONE | RS256 JWT; `Metadata: true` header enforced; `expires_in` as string per IMDS contract. 7 unit tests. |
+| 8.4 | `azurerm_kubernetes_cluster` + agent pools | `Microsoft.ContainerService/managedClusters` | DONE | Management plane only. Default k8s version 1.29.0; computed fqdn; cascade-delete node pools on cluster delete. ~30 unit tests. |
+| 8.5 | Azure DevOps OIDC issuer endpoint | `SYSTEM_OIDCREQUESTURI` compatible; plain HTTP on `:4569` | DONE | New package `internal/ado/`. Own RSA-2048 key independent of TokenService. `/.well-known/openid-configuration` + `/discovery/keys` + OIDC token endpoint. 10 unit tests. |
+| 8.6 | ADO service connection CRUD | `/{org}/{project}/_apis/serviceendpoint/endpoints` | DONE | In-memory store with `sync.RWMutex`. Auto-assigns UUID. `isReady: true`, `owner: "Library"` on create/update. Name-filter on list. 14 unit tests. |
 | 8.7 | `scenarios/aks-workload/` | — | TODO | RG + VNet + Subnet + AKS + Managed Identity + Key Vault. |
 | 8.8 | `scenarios/ado-pipeline/` | — | TODO | ADO service connection + workload identity federation + Key Vault + Storage. |
 
