@@ -256,8 +256,8 @@ entries in the metadata response.
 | 7.1 | `azurerm_storage_account` | `Microsoft.Storage/storageAccounts` | DONE | Management plane. Name uniqueness check across subscription. SKU/kind at top level. `primaryEndpoints` returns Azurite path-style URLs (blob :10000, queue :10001, table :10002) derived from `AZEMU_AZURITE_ENDPOINT`. `POST listkeys` returns Azurite dev key. |
 | 7.2 | `azurerm_storage_container` | `.../storageAccounts/blobServices/containers` | DONE | Blob containers as child resources under account id prefix. Parent existence check. Cascade delete when account is deleted. |
 | 7.3 | `azurerm_key_vault` | `Microsoft.KeyVault/vaults` | DONE | Management plane. `vaultUri` computed as `https://{name}.vault.azure.net/`. SKU/soft-delete defaults. 18 unit tests + integration test. |
-| 7.4 | `azurerm_key_vault_secret` | `...vaults/secrets` | TODO | Secrets data plane. Versioned. |
-| 7.5 | `azurerm_cdn_profile` + `azurerm_cdn_endpoint` | `Microsoft.Cdn/profiles` + `.../endpoints` | TODO | The "CDN" from the ROADMAP roster. |
+| 7.4 | `azurerm_key_vault_secret` | `...vaults/secrets` | DONE | Secrets data plane on `/keyvault/{name}/secrets`. `vaultUri` in vault response rewritten to `AZEMU_KV_ENDPOINT/keyvault/{name}/`. Versioned (each PUT creates new UUID version). Cascade delete when vault is deleted. 14 unit tests. |
+| 7.5 | `azurerm_cdn_profile` + `azurerm_cdn_endpoint` | `Microsoft.Cdn/profiles` + `.../endpoints` | DONE | CDN profile with SKU at top level; endpoint `hostName` computed as `{name}.azureedge.net`; cascade delete; parent-existence check. ~25 unit tests. |
 | 7.6 | Verify `suffixes.*` in metadata response still match go-azure-sdk expectations for Storage/KV/CDN | `internal/metadata/service.go` | DONE | `TestMetadata_CanonicalSuffixNames` pins `storage: "core.windows.net"` and `keyVaultDns: "vault.azure.net"`. CDN uses ARM endpoints directly, no suffix entry needed. |
 
 ### Phase 8: Identity, AKS, Azure DevOps bridge (v0.3)

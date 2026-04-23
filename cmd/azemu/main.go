@@ -100,7 +100,7 @@ func main() {
 		log.Fatal().Err(err).Msg("failed to create token service")
 	}
 	metaSvc := metadata.NewService(cfg)
-	armRouter := arm.NewRouter(state, cfg.AzuriteEndpoint)
+	armRouter := arm.NewRouter(state, cfg.AzuriteEndpoint, cfg.KeyVaultEndpoint)
 
 	r := chi.NewRouter()
 	r.Use(chimw.RequestID)
@@ -162,6 +162,11 @@ func main() {
 
 	// ARM endpoints
 	r.Route("/subscriptions", armRouter.Routes)
+
+	// Key Vault data-plane endpoints (secrets). The vaultUri returned by the
+	// management plane GET/PUT is rewritten to point here so the azurerm provider
+	// can create and read azurerm_key_vault_secret resources against azemu.
+	r.Route("/keyvault", armRouter.KeyVaultDataPlaneRoutes)
 
 	// Load existing TLS cert from AZEMU_CERT_PATH if set, otherwise generate
 	// fresh. Persistence eliminates the per-restart keychain trust friction
@@ -302,7 +307,8 @@ func printUsage(w *os.File) {
 	fmt.Fprintf(w, "  AZEMU_METADATA_HOST       Host for URLs in /metadata/endpoints (default localhost:4567)\n")
 	fmt.Fprintf(w, "  AZEMU_SUBSCRIPTION_ID     Mock subscription ID (default 00000000-...)\n")
 	fmt.Fprintf(w, "  AZEMU_TENANT_ID           Mock tenant ID (default 00000000-...)\n")
-	fmt.Fprintf(w, "  AZEMU_AZURITE_ENDPOINT    Azurite blob base URL for storage endpoints (default http://azurite:10000)\n\n")
+	fmt.Fprintf(w, "  AZEMU_AZURITE_ENDPOINT    Azurite blob base URL for storage endpoints (default http://azurite:10000)\n")
+	fmt.Fprintf(w, "  AZEMU_KV_ENDPOINT         Key Vault data-plane base URL embedded in vaultUri (default https://localhost:4566)\n\n")
 	fmt.Fprintf(w, "Ports:\n")
 	fmt.Fprintf(w, "  :4566   ARM API (HTTPS)\n")
 	fmt.Fprintf(w, "  :4567   Metadata / OAuth2 / OIDC (HTTPS)\n")

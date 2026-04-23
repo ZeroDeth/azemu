@@ -16,10 +16,11 @@ import (
 type Router struct {
 	store           store.Store
 	azuriteEndpoint string // e.g. "http://azurite:10000" — blob service base URL
+	kvEndpoint      string // e.g. "https://localhost:4566" — Key Vault data-plane base URL
 }
 
-func NewRouter(s store.Store, azuriteEndpoint string) *Router {
-	return &Router{store: s, azuriteEndpoint: azuriteEndpoint}
+func NewRouter(s store.Store, azuriteEndpoint, kvEndpoint string) *Router {
+	return &Router{store: s, azuriteEndpoint: azuriteEndpoint, kvEndpoint: kvEndpoint}
 }
 
 func (a *Router) Routes(r chi.Router) {
@@ -165,6 +166,37 @@ func (a *Router) Routes(r chi.Router) {
 	r.Head("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.storage/storageaccounts/{accountName}/blobservices/default/containers/{containerName}", a.headStorageContainer)
 	r.Delete("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.storage/storageaccounts/{accountName}/blobservices/default/containers/{containerName}", a.deleteStorageContainer)
 	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.storage/storageaccounts/{accountName}/blobservices/default/containers", a.listStorageContainers)
+
+	// CDN Profiles (Microsoft.Cdn/profiles)
+	r.Put("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.cdn/profiles/{profileName}", a.putCDNProfile)
+	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.cdn/profiles/{profileName}", a.getCDNProfile)
+	r.Head("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.cdn/profiles/{profileName}", a.headCDNProfile)
+	r.Delete("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.cdn/profiles/{profileName}", a.deleteCDNProfile)
+	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.cdn/profiles", a.listCDNProfilesByRG)
+	r.Get("/{subscriptionID}/providers/microsoft.cdn/profiles", a.listCDNProfilesBySub)
+
+	// CDN Endpoints (Microsoft.Cdn/profiles/endpoints)
+	r.Put("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.cdn/profiles/{profileName}/endpoints/{endpointName}", a.putCDNEndpoint)
+	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.cdn/profiles/{profileName}/endpoints/{endpointName}", a.getCDNEndpoint)
+	r.Head("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.cdn/profiles/{profileName}/endpoints/{endpointName}", a.headCDNEndpoint)
+	r.Delete("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.cdn/profiles/{profileName}/endpoints/{endpointName}", a.deleteCDNEndpoint)
+	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.cdn/profiles/{profileName}/endpoints", a.listCDNEndpoints)
+}
+
+// KeyVaultDataPlaneRoutes mounts the Key Vault secrets data-plane API.
+// Routes are registered under a "/keyvault" prefix in main.go so the full
+// paths are "/keyvault/{vaultName}/secrets/{secretName}" etc. The azurerm
+// provider discovers these URLs from the vaultUri field returned by the
+// management-plane GET/PUT for azurerm_key_vault.
+// The "versions" literal is registered before "/{version}" so chi's radix
+// trie matches it as a literal segment before the wildcard.
+func (a *Router) KeyVaultDataPlaneRoutes(r chi.Router) {
+	r.Get("/{vaultName}/secrets/{secretName}/versions", a.listKeyVaultSecretVersions)
+	r.Get("/{vaultName}/secrets/{secretName}/{version}", a.getKeyVaultSecretVersion)
+	r.Put("/{vaultName}/secrets/{secretName}", a.putKeyVaultSecret)
+	r.Get("/{vaultName}/secrets/{secretName}", a.getKeyVaultSecret)
+	r.Delete("/{vaultName}/secrets/{secretName}", a.deleteKeyVaultSecret)
+	r.Get("/{vaultName}/secrets", a.listKeyVaultSecrets)
 }
 
 // --- Subscriptions ---
