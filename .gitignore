@@ -59,3 +59,6 @@ state.json
 !.claude/rules/
 !.claude/agents/
 !.claude/skills/
+
+# MkDocs build output
+website/site/
