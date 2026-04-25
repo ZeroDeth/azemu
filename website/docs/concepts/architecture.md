@@ -2,34 +2,27 @@
 
 ## Request flow
 
-```text
-Developer / CI
-    |
-    v
-Terraform CLI -----> HTTPS :4567 -----> Metadata Service (/metadata/endpoints)
-    |                                    Auth Service (OAuth2, OIDC, JWKS)
-    |
-    +---------------> HTTPS :4566 -----> ARM Facade Router
-                                           +-- Subscriptions / Tenants
-                                           +-- Provider Registration
-                                           +-- Resource Groups (CRUD + cascade)
-                                           +-- Networking (VNet, Subnet, NSG,
-                                           |   PublicIP, LB, AppGW, DNS zones+records)
-                                           +-- Storage (storageAccounts, blob containers,
-                                           |   listKeys -> Azurite dev key)
-                                           +-- Key Vault (vaults, management plane)
-                                           +-- [v0.2+: CDN, KV secrets, ...]
-                                         |
-                                         v
-                                      State Store (memory or file)
-                                         |
-                                         v
-                                      State API (/api/state/{export,import,reset})
-
-Azurite sidecar (HTTP :10000-10002)
-    ^
-    |  path-style endpoints returned in primaryEndpoints block
-    +-- ARM Storage handlers (AZEMU_AZURITE_ENDPOINT)
+```mermaid
+flowchart TD
+    dev[Developer / CI] --> tf[Terraform CLI]
+    tf -->|HTTPS :4567| meta[Metadata Service\n/metadata/endpoints]
+    tf -->|HTTPS :4567| auth[Auth Service\nOAuth2 / OIDC / JWKS]
+    tf -->|HTTPS :4566| arm[ARM Facade Router]
+    arm --> subs[Subscriptions / Tenants]
+    arm --> prov[Provider Registration]
+    arm --> rg[Resource Groups\nCRUD + cascade]
+    arm --> net[Networking\nVNet, Subnet, NSG,\nPublicIP, LB, AppGW, DNS]
+    arm --> storage[Storage\nstorageAccounts,\nblob containers, listKeys]
+    arm --> kv[Key Vault\nvaults, management plane]
+    arm --> planned[v0.2+: CDN, KV secrets, ...]
+    storage -->|Azurite dev key\n+ path-style endpoints| azurite[Azurite sidecar\nHTTP :10000-10002]
+    rg --> store[(State Store)]
+    net --> store
+    storage --> store
+    kv --> store
+    store --> persist[File persistence\nAZEMU_PERSIST_PATH]
+    store --> api[State API\n/api/state/export,import,reset]
+    ops[Ops / tests] -->|HTTP :4568| health[Health endpoint\nGET /health]
 ```
 
 Both ports serve HTTPS using the same self-signed ECDSA P-256 certificate.
