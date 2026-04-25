@@ -1,7 +1,4 @@
 ---
-hide:
-  - navigation
-  - toc
 ---
 
 <div class="azemu-hero" markdown>
@@ -10,31 +7,36 @@ hide:
 
 <p class="azemu-tagline">A local Azure emulator for Terraform-first development<span class="azemu-cursor"></span></p>
 
+<div class="azemu-cta-group">
+<a href="getting-started/install/" class="azemu-cta">Get Started</a>
+<a href="https://github.com/zerodeth/azemu" class="azemu-cta azemu-cta--secondary">View on GitHub</a>
+</div>
+
 </div>
 
 <div class="azemu-features" markdown>
 
 <div class="azemu-feature" markdown>
 
-**No subscription**{ .azemu-feature-title }
+[**Getting Started**{ .azemu-feature-title }](getting-started/install.md)
 
-Run `terraform apply` against a local HTTPS server. No Azure login, no cost, no cloud account.
-
-</div>
-
-<div class="azemu-feature" markdown>
-
-**No provider forks**{ .azemu-feature-title }
-
-The official `hashicorp/azurerm` provider connects via its built-in `metadata_host` field. Zero patches, zero forks.
+Install azemu and run your first `terraform apply` in minutes. No Azure account needed.
 
 </div>
 
 <div class="azemu-feature" markdown>
 
-**Terraform-first fidelity**{ .azemu-feature-title }
+[**How It Works**{ .azemu-feature-title }](getting-started/how-it-works.md)
 
-Every resource passes a real `terraform apply` + `terraform destroy` round-trip against unmodified `azurerm` v4.x.
+The metadata-redirect pattern, ARM fidelity, and what gets emulated under the hood.
+
+</div>
+
+<div class="azemu-feature" markdown>
+
+[**Parity Matrix**{ .azemu-feature-title }](concepts/parity-matrix.md)
+
+Which Azure resources are supported and at what depth. Full transparency, no surprises.
 
 </div>
 
@@ -43,39 +45,28 @@ Every resource passes a real `terraform apply` + `terraform destroy` round-trip 
 ## Quick start
 
 ```bash
-# Start azemu
 docker compose up -d --build
-
-# Trust the self-signed cert for this shell session
-export SSL_CERT_FILE=$PWD/.azemu/cert-bundle.pem
-
-# Run Terraform against azemu
-cd examples/terraform
-terraform init
-terraform apply -auto-approve
-terraform destroy -auto-approve
+./scripts/aztf -chdir=examples/terraform apply -auto-approve
 ```
 
-See [Your First Apply](getting-started/first-apply.md) for a full step-by-step walkthrough with expected output.
+!!! info "Prerequisites"
+    Requires Docker, Docker Compose, and Terraform 1.6+.
+    See [Your First Apply](getting-started/first-apply.md) for the full
+    walkthrough with expected output.
 
-## Current status
+## Supported resources
 
-<ul class="azemu-status" markdown>
+**Networking:** Resource Groups, Virtual Networks, Subnets, Public IPs,
+NSGs, Load Balancers, Application Gateways, DNS Zones
 
-- Resource Groups
-- Virtual Networks and Subnets
-- Public IP Addresses
-- Network Security Groups
-- Load Balancers
-- Application Gateways
-- DNS Zones
-- Storage Accounts
-- Key Vault (management plane)
-- CDN Profiles and Endpoints
-- Managed Identities (user-assigned)
-- AKS (management plane)
-- Azure DevOps OIDC and service connections
+**Storage and secrets:** Storage Accounts (data plane via Azurite),
+Key Vault (management plane)
 
-</ul>
+**Compute and identity:** Managed Identities (user-assigned),
+AKS (management plane)
 
-See the [Parity Matrix](concepts/parity-matrix.md) for the full implementation status of each resource type.
+**CI/CD integration:** CDN Profiles and Endpoints, Azure DevOps
+service connections
+
+See the [Parity Matrix](concepts/parity-matrix.md) for the full
+resource support matrix with implementation depth per resource type.
