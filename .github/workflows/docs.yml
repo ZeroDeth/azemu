@@ -1,0 +1,39 @@
+name: Docs
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "website/**"
+      - "docs/PARITY.md"
+      - "docs/TROUBLESHOOTING.md"
+      - "docs/SETUP.md"
+      - "docs/ARCHITECTURE.md"
+      - "docs/adr/**"
+      - "CONTRIBUTING.md"
+      - "ROADMAP.md"
+      - "CODE_OF_CONDUCT.md"
+      - "CHANGELOG.md"
+      - "README.md"
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    name: Deploy docs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install MkDocs
+        run: pip install mkdocs-material
+
+      - name: Build and deploy
+        run: |
+          cd website
+          mkdocs gh-deploy --force

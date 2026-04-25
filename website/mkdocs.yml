@@ -1,0 +1,58 @@
+site_name: azemu
+site_url: https://zerodeth.github.io/azemu
+site_description: A local Azure emulator for Terraform-first development
+repo_url: https://github.com/zerodeth/azemu
+repo_name: zerodeth/azemu
+
+theme:
+  name: material
+  custom_dir: overrides
+  features:
+    - navigation.sections
+    - navigation.expand
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+  palette:
+    - scheme: default
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+nav:
+  - Home: index.md
+  - Getting Started:
+      - Install: getting-started/install.md
+      - Your First Apply: getting-started/first-apply.md
+      - How It Works: getting-started/how-it-works.md
+  - Concepts:
+      - Architecture: concepts/architecture.md
+      - ARM Fidelity: concepts/arm-fidelity.md
+      - Parity Matrix: concepts/parity-matrix.md
+  - Resources:
+      - Troubleshooting: resources/troubleshooting.md
+      - Design Decisions:
+          - resources/design-decisions/0001-delegate-storage-data-plane-to-azurite.md
+  - Community:
+      - Contributing: community/contributing.md
+      - Roadmap: community/roadmap.md
+      - Code of Conduct: community/code-of-conduct.md
+  - Reference:
+      - Setup (Dev Env): reference/setup.md
+      - Changelog: reference/changelog.md
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - toc:
+      permalink: true
