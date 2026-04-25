@@ -319,6 +319,12 @@
   50% { opacity: 0; }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .azemu-cursor::after {
+    animation: none;
+  }
+}
+
 /* Feature cards on home page */
 .azemu-features {
   display: grid;
