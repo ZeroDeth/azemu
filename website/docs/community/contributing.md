@@ -5,7 +5,7 @@ resource, the test bar every change has to clear, and the PR checklist.
 
 If you are new here, start with:
 
-- The [home page](../../index.md) for the project pitch and the Docker quick-start.
+- The [home page](../index.md) for the project pitch and the Docker quick-start.
 - [Setup Guide](../reference/setup.md) for the flox contributor workflow.
 - [Architecture](../concepts/architecture.md) for the request flow and
   package layout.
