@@ -9,8 +9,10 @@ follow the standards described in that document.
 
 ## Reporting
 
-If you experience or witness unacceptable behaviour, contact the project
-maintainer at **<REDACTED>**. Reports are handled confidentially.
+If you experience or witness unacceptable behaviour, open a
+[GitHub issue](https://github.com/ZeroDeth/azemu/issues/new) or use
+[GitHub Security Advisories](https://github.com/ZeroDeth/azemu/security/advisories)
+for sensitive reports. Reports are handled confidentially.
 
 ## Enforcement
 

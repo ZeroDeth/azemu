@@ -15,7 +15,6 @@
 1. **GitHub Security Advisories** (preferred): go to
    [Security > Advisories](https://github.com/ZeroDeth/azemu/security/advisories)
    and click "New draft security advisory".
-2. **Email**: send details to **<REDACTED>**.
 
 Include:
 
