@@ -133,3 +133,4 @@ implementation, test-then-fix, coverage push) live in
 | `.claude/rules/*.md` | Path-scoped rules that load only when matching files are touched |
 | `.flox/env/manifest.toml` | Pinned dev environment (Go, Terraform, pre-commit, ...) |
 | `.pre-commit-config.yaml` | Hygiene + go vet/build + golangci-lint + markdownlint |
+| `website/` | MkDocs source for the gh-pages documentation site |
