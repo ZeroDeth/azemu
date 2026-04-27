@@ -259,6 +259,8 @@ entries in the metadata response.
 | 7.4 | `azurerm_key_vault_secret` | `...vaults/secrets` | DONE | Secrets data plane on `/keyvault/{name}/secrets`. `vaultUri` in vault response rewritten to `AZEMU_KV_ENDPOINT/keyvault/{name}/`. Versioned (each PUT creates new UUID version). Cascade delete when vault is deleted. 14 unit tests. |
 | 7.5 | `azurerm_cdn_profile` + `azurerm_cdn_endpoint` | `Microsoft.Cdn/profiles` + `.../endpoints` | DONE | CDN profile with SKU at top level; endpoint `hostName` computed as `{name}.azureedge.net`; cascade delete; parent-existence check. ~25 unit tests. |
 | 7.6 | Verify `suffixes.*` in metadata response still match go-azure-sdk expectations for Storage/KV/CDN | `internal/metadata/service.go` | DONE | `TestMetadata_CanonicalSuffixNames` pins `storage: "core.windows.net"` and `keyVaultDns: "vault.azure.net"`. CDN uses ARM endpoints directly, no suffix entry needed. |
+| 7.7 | `azurerm_redis_cache` (Standard tier) + `redis` sidecar | `Microsoft.Cache/Redis` | TODO | Triggered by ONA-56232 (deploy expo-open-ota to QA AKS). Management plane in azemu, data plane delegated to `redis:7-alpine` sidecar. Standard tier only; Premium-tier clustering and persistence are follow-ups. See [ADR 0003](../docs/adr/0003-add-azure-cache-for-redis.md). |
+| 7.8 | Confirm `redisCache: "redis.cache.windows.net"` suffix in metadata response | `internal/metadata/service.go` | TODO | Add regression test alongside `TestMetadata_CanonicalSuffixNames`. Required by 7.7. |
 
 ### Phase 8: Identity, AKS, Azure DevOps bridge (v0.3)
 
@@ -269,12 +271,13 @@ azemu with zero cloud cost. See ROADMAP v0.3 and the non-goals section.
 | # | Task | ARM provider / endpoint | Status | Notes |
 |---|---|---|---|---|
 | 8.1 | `azurerm_user_assigned_identity` | `Microsoft.ManagedIdentity/userAssignedIdentities` | DONE | Deterministic `principalId`/`clientId` via `uuid.NewSHA1` for stable Terraform round-trips. 17 unit tests. |
-| 8.2 | `azurerm_federated_identity_credential` | `.../userAssignedIdentities/{name}/federatedIdentityCredentials` | TODO | issuer/subject/audience matching. The machinery workload identity needs. |
+| 8.2 | `azurerm_federated_identity_credential` | `.../userAssignedIdentities/{name}/federatedIdentityCredentials` | TODO | **Promoted: blocker for ONA-56232 (Key Vault CSI driver from AKS pods).** issuer/subject/audience matching. The machinery workload identity needs. Acceptance: a pod's projected service-account token is exchanged for an azemu-issued access token that the Key Vault secrets data plane honours. |
 | 8.3 | IMDS token endpoint | `/metadata/identity/oauth2/token` (mounted before `/metadata` in chi) | DONE | RS256 JWT; `Metadata: true` header enforced; `expires_in` as string per IMDS contract. 7 unit tests. |
 | 8.4 | `azurerm_kubernetes_cluster` + agent pools | `Microsoft.ContainerService/managedClusters` | DONE | Management plane only. Default k8s version 1.29.0; computed fqdn; cascade-delete node pools on cluster delete. ~30 unit tests. |
 | 8.5 | Azure DevOps OIDC issuer endpoint | `SYSTEM_OIDCREQUESTURI` compatible; plain HTTP on `:4569` | DONE | New package `internal/ado/`. Own RSA-2048 key independent of TokenService. `/.well-known/openid-configuration` + `/discovery/keys` + OIDC token endpoint. 10 unit tests. |
 | 8.6 | ADO service connection CRUD | `/{org}/{project}/_apis/serviceendpoint/endpoints` | DONE | In-memory store with `sync.RWMutex`. Auto-assigns UUID. `isReady: true`, `owner: "Library"` on create/update. Name-filter on list. 14 unit tests. |
 | 8.7 | `scenarios/aks-workload/` | — | TODO | RG + VNet + Subnet + AKS + Managed Identity + Key Vault. |
+| 8.7.1 | `scenarios/aks-workload/ota-style/` | — | TODO | OTA-class deployment scenario triggered by ONA-56232. Adds Storage + Blob (Azurite), Federated Identity Credential (8.2), Redis (7.7), and a `kind` cluster running a 3-replica deployment with Key Vault CSI mount. Implements the hybrid pattern from [ADR 0002](../docs/adr/0002-azemu-plus-kind-for-aks-workload-deployments.md). Depends on 8.2 and 7.7. |
 | 8.8 | `scenarios/ado-pipeline/` | — | TODO | ADO service connection + workload identity federation + Key Vault + Storage. |
 
 ### Phase 9: Multi-toolchain CLI (`azemu` subcommands)
