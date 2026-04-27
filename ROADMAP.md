@@ -102,7 +102,10 @@ State these up-front so scope creep has a clear wall to hit.
   [ADR 0001](docs/adr/0001-delegate-storage-data-plane-to-azurite.md).
   Uploading multi-GB blobs is Azurite's job, not ours.
 - **Not a real Kubernetes control plane.** AKS is a management-plane
-  stub. If you need pods, run `kind` or `k3d` alongside azemu.
+  stub. If you need pods, run `kind` or `k3d` alongside azemu. The
+  hybrid pattern (Terraform against azemu, `kubectl` against `kind`) is
+  documented in [ADR 0002](docs/adr/0002-azemu-plus-kind-for-aks-workload-deployments.md)
+  and shipped as a reference scenario in Phase 8.7.1.
 - **Not a LocalStack clone.** No AWS, no Alibaba, no GCP. Azure only.
 - **Not an Azure CLI replacement.** `az login`, `az group list`, and
   friends may happen to work against the ARM endpoints, but they are not
@@ -150,6 +153,7 @@ Priority order inside v0.2 is top-down; ship the first row first.
 | `azurerm_key_vault` | `Microsoft.KeyVault/vaults` | Full | Management plane plus secrets data plane |
 | `azurerm_key_vault_secret` | `...vaults/secrets` | Full | Secrets CRUD |
 | `azurerm_cdn_profile` + endpoint | `Microsoft.Cdn/profiles` + `.../endpoints` | Full | The "CDN" item from the roster |
+| `azurerm_redis_cache` | `Microsoft.Cache/Redis` | Full (Standard tier) | Management plane in azemu, data plane delegated to `redis:7-alpine` sidecar. Premium-tier clustering and persistence are follow-ups. See [ADR 0003](docs/adr/0003-add-azure-cache-for-redis.md). |
 
 ### v0.3 (identity, AKS, Azure DevOps bridge)
 
@@ -221,7 +225,9 @@ Managed Identity. Entire loop runs against azemu with zero cloud cost.
   service connection CRUD, AKS management-plane stub, Managed Identity,
   Federated Identity Credentials.
 - New scenarios in `examples/terraform/scenarios/`:
-  `aks-workload/`, `ado-pipeline/`.
+  `aks-workload/` (with the multi-replica + secrets + shared-cache
+  variant from [ADR 0002](docs/adr/0002-azemu-plus-kind-for-aks-workload-deployments.md)),
+  `ado-pipeline/`.
 
 ## Positioning vs existing projects
 
