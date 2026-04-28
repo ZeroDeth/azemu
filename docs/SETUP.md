@@ -88,6 +88,7 @@ Sourced from `.flox/env/manifest.toml [vars]` and `pkg/config/config.go`:
 | `AZEMU_META_PORT` | No | `4567` | Metadata HTTPS port (informational) |
 | `AZEMU_CERT_PATH` | No | unset | When set, persist the self-signed cert+key as a PEM bundle at this path; trust once and restart freely. When unset, a fresh cert is generated and written to OS temp on every startup. |
 | `AZEMU_AZURITE_ENDPOINT` | No | `http://azurite:10000` | Blob service base URL for the Azurite sidecar. azemu derives queue (port 10001) and table (port 10002) endpoints from this. Set to `http://localhost:10000` when running Azurite directly on the host. |
+| `AZEMU_REDIS_ENDPOINT` | No | `redis://azemu-redis:6379` | Connection URL for the Redis sidecar. azemu derives the `hostName` field on `Microsoft.Cache/Redis` responses from the URL host. Set to `redis://localhost:6379` when running Redis directly on the host. |
 | `AZEMU_SUBSCRIPTION_ID` | No | `00000000-0000-0000-0000-000000000000` | Mock subscription returned by ARM list endpoints |
 | `AZEMU_TENANT_ID` | No | `00000000-0000-0000-0000-000000000001` | Mock tenant returned by token / OIDC endpoints |
 | `AZEMU_METADATA_HOST` | No | `localhost:4567` | Host substituted into URLs in `/metadata/endpoints` |
@@ -134,6 +135,49 @@ Azurite ports:
 | 10000 | Blob |
 | 10001 | Queue |
 | 10002 | Table |
+
+## Redis sidecar (optional)
+
+azemu owns the ARM management plane for `Microsoft.Cache/Redis`. The Redis
+data plane (RESP protocol on port 6379) is delegated to the upstream
+[redis](https://hub.docker.com/_/redis) container. Per ADR 0003, this
+mirrors the Azurite delegation pattern, azemu serves the management surface
+and the canonical implementation handles the data plane.
+
+The sidecar is opt-in via a docker compose profile so default users do not
+pay the startup cost when they are not exercising Redis:
+
+```bash
+docker compose --profile redis up -d --build
+```
+
+The Redis service binds to host port 6379, runs `redis-server` with
+`--requirepass azemu-dev-primary-key`, and exposes a `redis-cli ping`
+healthcheck. The password value matches what azemu's `listKeys` endpoint
+returns for `azurerm_redis_cache.example`, so an SDK client that reads its
+connection key from the ARM response authenticates against the sidecar
+without any further configuration:
+
+```bash
+redis-cli -h localhost -a azemu-dev-primary-key ping   # PONG
+```
+
+When running azemu directly on the host (outside Docker), start Redis
+yourself and point azemu at it:
+
+```bash
+docker run -d -p 6379:6379 --name azemu-redis \
+  redis:7-alpine redis-server --requirepass azemu-dev-primary-key
+
+export AZEMU_REDIS_ENDPOINT=redis://localhost:6379
+./bin/azemu
+```
+
+The deterministic `listKeys` contract is documented in
+[ADR 0003](adr/0003-add-azure-cache-for-redis.md). Premium-tier features
+(clustering, persistence, geo-replication, `regenerateKey`) are out of
+scope for the initial implementation, see
+[PARITY.md](PARITY.md) for the follow-up list.
 
 ## TLS certificate trust
 

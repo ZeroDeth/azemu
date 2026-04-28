@@ -15,7 +15,7 @@ Format follows a light variant of [MADR](https://adr.github.io/madr/).
 |----|-------|--------|
 | 0001 | [Delegate Storage data plane to Azurite](0001-delegate-storage-data-plane-to-azurite.md) | Implemented |
 | 0002 | [azemu + kind hybrid for AKS workload deployments](0002-azemu-plus-kind-for-aks-workload-deployments.md) | Proposed |
-| 0003 | [Add Azure Cache for Redis](0003-add-azure-cache-for-redis.md) | Proposed |
+| 0003 | [Add Azure Cache for Redis](0003-add-azure-cache-for-redis.md) | Implemented |
 
 ## When to write an ADR
 

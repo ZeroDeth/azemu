@@ -49,6 +49,28 @@ The bundle file is written with mode 0600 because it contains the private key.
 
 ## Known Gaps
 
+- **Website mirror missing for ADR 0002 and ADR 0003.** PR #35 added
+  `docs/adr/0002-azemu-plus-kind-for-aks-workload-deployments.md` and
+  `docs/adr/0003-add-azure-cache-for-redis.md` but did not create the
+  corresponding pages under `website/docs/resources/design-decisions/`
+  or register them in `website/mkdocs.yml` nav. Required by
+  `.claude/rules/docs-website.md`. Tracked as TASKS Phase 7.9 (ADR 0003
+  mirror) and Phase 8.9 (ADR 0002 mirror); both should land alongside
+  the implementation PR for the resource/scenario they describe so
+  status, dates, and prose stay aligned. Precedent:
+  `website/docs/resources/design-decisions/0001-delegate-storage-data-plane-to-azurite.md`.
+- ADR 0002 implementation prose ("Optional Redis cache (per ADR 0003)")
+  understates the dependency relative to TASKS Phase 8.7.1
+  (`Depends on 8.2 and 7.7`). Reword to "Redis cache (per ADR 0003) is
+  required by the multi-replica variant" when the ADR is updated next,
+  or capture the variant split (ARM-only vs multi-replica) explicitly.
+- ADR 0002 references the workload as both `expo-open-ota` (canonical
+  GitHub repo name) and "Expo Updates server example". Pick one on the
+  next edit; canonical is `expo-open-ota`.
+- ADR 0002 open question on `:4566`/`:4567` reuse (line 183) cites port
+  numbers without verifying against `docs/SETUP.md` (`:4566` ARM HTTP,
+  `:4567` ARM HTTPS, `:4568` health, `:4569` ADO OIDC HTTP). Confirm
+  port numbers in the ADR before Phase 8.7 build-out.
 - Token endpoint does not return `ext_expires_in` or `expires_on` fields
 - OIDC discovery does not include all fields that Azure Entra returns
 - No async operation polling (DELETE returns 202 but operation URL is not implemented)

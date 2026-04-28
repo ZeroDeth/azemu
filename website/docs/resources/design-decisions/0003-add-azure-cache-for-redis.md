@@ -1,4 +1,4 @@
-# ADR 0003: Add Azure Cache for Redis
+# Design Decision 0003: Add Azure Cache for Redis
 
 - Status: Implemented
 - Date: 2026-04-28

@@ -19,6 +19,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (Phase 7.7: Azure Cache for Redis)
+
+- `Microsoft.Cache/Redis` CRUD + HEAD + list-by-RG + list-by-sub.
+  SKU validated inside `properties.sku` (Basic, Standard, Premium with
+  family C/P and capacity ranges); Premium-only properties (shardCount,
+  subnetId, RDB/AOF persistence keys) rejected on Basic/Standard.
+  (`azurerm_redis_cache`)
+- `POST .../Microsoft.Cache/Redis/{name}/listKeys`: returns deterministic
+  dev keys (`azemu-dev-primary-key`, `azemu-dev-secondary-key`). The
+  primary value matches the Redis sidecar's `--requirepass` so SDK clients
+  authenticated via the ARM response succeed against the data plane.
+- `AZEMU_REDIS_ENDPOINT` env var (default `redis://azemu-redis:6379`).
+  azemu derives the `hostName` field on Redis ARM responses from the URL
+  host so callers connect to the configured sidecar instead of
+  `redis.cache.windows.net`.
+- `docker-compose.yml`: optional `redis` service (`redis:7-alpine`) on the
+  `redis` profile so default users see no extra container; healthcheck via
+  `redis-cli ping` with the dev password.
+- `redisCache: "redis.cache.windows.net"` suffix in `/metadata/endpoints`,
+  pinned by `TestMetadata_CanonicalSuffixNames`.
+- `examples/terraform/redis_cache.tf` plus `redis_cache_id` /
+  `redis_cache_hostname` outputs and a `terraform test` assertion.
+- `docs/adr/0003-add-azure-cache-for-redis.md` promoted from Proposed to
+  Implemented (Implemented date: 2026-04-28).
+- `website/docs/resources/design-decisions/0002-...md` and `0003-...md`
+  mirrors plus mkdocs nav entries (closes the website-mirror gap from
+  TODO.md for ADRs 0002 and 0003).
+- `docs/SETUP.md` and `website/docs/reference/setup.md`: new
+  `AZEMU_REDIS_ENDPOINT` env-var row and a "Redis sidecar (optional)"
+  section explaining the compose profile, `--requirepass` contract, and
+  host-mode setup.
+
+### Fixed
+
+- `test/integration/` build resurrected. `arm.NewRouter` had grown a
+  second parameter in Phase 7 (KeyVaultEndpoint) without updating the
+  integration harness; this PR adds the missing endpoints (Azurite, Key
+  Vault, Redis) to both `buildFullServer` and `buildProductionLikeServer`
+  and corrects two pre-existing assertions that compared against
+  real-Azure hostnames (`integrationacct.blob.core.windows.net`,
+  `mytestvault.vault.azure.net`) instead of the configured test
+  endpoints.
+
 ### Added (Phase 7: Storage, Key Vault)
 
 - `Microsoft.Storage/storageAccounts` CRUD + HEAD + list-by-RG + list-by-sub.
@@ -78,13 +121,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added (Phase 1-4)
 
-- `.claude/agents/*.md` -- five frontmatter-driven subagent definitions
+- `.claude/agents/*.md` — five frontmatter-driven subagent definitions
   (`arm-resource-implementer`, `test-writer`, `code-reviewer`,
   `terraform-compatibility-debugger`, `docs-writer`). Claude Code auto-delegates
   when a task description matches; previously these roles lived as prose recipes
   in `docs/SUBAGENTS.md` and had to be hand-copied into Task tool invocations.
   Per <https://code.claude.com/docs/en/sub-agents>.
-- `.claude/skills/*/SKILL.md` -- four slash-invokable playbooks
+- `.claude/skills/*/SKILL.md` — four slash-invokable playbooks
   (`/add-resource`, `/modify-store`, `/validate-terraform`, `/before-commit`).
   `before-commit` carries `disable-model-invocation: true` so Claude never
   auto-runs the full validation sequence. Per
@@ -232,7 +275,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `docs/ARCHITECTURE.md`, `docs/CONVENTIONS.md`, `docs/CHECKLISTS.md`, and
   `docs/SUBAGENTS.md` extracted from the previous monolithic `CLAUDE.md`.
 - `.claude/rules/arm-handlers.md`, `.claude/rules/go-style.md`,
-  `.claude/rules/tests.md`, and `.claude/rules/docs.md` -- path-scoped rule
+  `.claude/rules/tests.md`, and `.claude/rules/docs.md` — path-scoped rule
   files that load only when Claude Code is editing matching files, per the
   mechanism documented at <https://code.claude.com/docs/en/memory>.
 

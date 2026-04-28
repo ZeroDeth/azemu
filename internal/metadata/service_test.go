@@ -120,6 +120,7 @@ func TestMetadata_CanonicalSuffixNames(t *testing.T) {
 		"mhsmDns":                             "managedhsm.azure.net",
 		"mysqlServerEndpoint":                 "mysql.database.azure.com",
 		"postgresqlServerEndpoint":            "postgres.database.azure.com",
+		"redisCache":                          "redis.cache.windows.net",
 		"sqlServerHostname":                   "database.windows.net",
 		"storage":                             "core.windows.net",
 		"storageSyncEndpointSuffix":           "afs.azure.net",

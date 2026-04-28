@@ -12,3 +12,13 @@ output "subnet_id" {
   description = "Subnet ARM ID"
   value       = azurerm_subnet.example.id
 }
+
+output "redis_cache_id" {
+  description = "Redis cache ARM ID"
+  value       = azurerm_redis_cache.example.id
+}
+
+output "redis_cache_hostname" {
+  description = "Redis cache hostname (derived from AZEMU_REDIS_ENDPOINT)"
+  value       = azurerm_redis_cache.example.hostname
+}
