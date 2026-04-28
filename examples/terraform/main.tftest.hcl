@@ -23,4 +23,9 @@ run "full_lifecycle" {
     condition     = output.subnet_id != ""
     error_message = "subnet_id must not be empty"
   }
+
+  assert {
+    condition     = output.redis_cache_id != ""
+    error_message = "redis_cache_id must not be empty"
+  }
 }

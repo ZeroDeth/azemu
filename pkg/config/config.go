@@ -45,6 +45,12 @@ type Config struct {
 	// In Docker compose, set to https://azemu:4566. Source: AZEMU_KV_ENDPOINT
 	// env var. Default: https://localhost:4566.
 	KeyVaultEndpoint string
+	// RedisEndpoint is the connection URL for the Redis sidecar that backs the
+	// Microsoft.Cache/Redis data plane. ARM responses derive hostName from this
+	// value so SDK clients connect to the sidecar (under docker compose) or the
+	// host instance (when running azemu directly). Source: AZEMU_REDIS_ENDPOINT
+	// env var. Default: redis://azemu-redis:6379.
+	RedisEndpoint string
 	// ADOPort is the HTTP port for the Azure DevOps OIDC and service-endpoint
 	// emulation surface. Plain HTTP (no TLS) because SYSTEM_OIDCREQUESTURI in
 	// a real ADO agent is served over plain HTTP on the local pipeline worker.
@@ -65,6 +71,7 @@ func Load() *Config {
 	cfg.PersistPath = envOr("AZEMU_PERSIST_PATH", "")
 	cfg.AzuriteEndpoint = envOr("AZEMU_AZURITE_ENDPOINT", "http://azurite:10000")
 	cfg.KeyVaultEndpoint = envOr("AZEMU_KV_ENDPOINT", "https://localhost:4566")
+	cfg.RedisEndpoint = envOr("AZEMU_REDIS_ENDPOINT", "redis://azemu-redis:6379")
 	cfg.ADOPort = envIntOr("AZEMU_ADO_PORT", 4569)
 	return cfg
 }

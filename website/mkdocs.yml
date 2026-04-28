@@ -51,6 +51,8 @@ nav:
       - Troubleshooting: resources/troubleshooting.md
       - Design Decisions:
           - resources/design-decisions/0001-delegate-storage-data-plane-to-azurite.md
+          - resources/design-decisions/0002-azemu-plus-kind-for-aks-workload-deployments.md
+          - resources/design-decisions/0003-add-azure-cache-for-redis.md
   - Community:
       - Contributing: community/contributing.md
       - Roadmap: community/roadmap.md

@@ -45,11 +45,14 @@ func buildProductionLikeServer(t *testing.T) *httptest.Server {
 	t.Helper()
 
 	cfg := &config.Config{
-		HTTPPort:       4566,
-		HTTPSPort:      4567,
-		SubscriptionID: "00000000-0000-0000-0000-000000000000",
-		TenantID:       testTenantID,
-		MetadataHost:   "localhost:4567",
+		HTTPPort:         4566,
+		HTTPSPort:        4567,
+		SubscriptionID:   "00000000-0000-0000-0000-000000000000",
+		TenantID:         testTenantID,
+		MetadataHost:     "localhost:4567",
+		AzuriteEndpoint:  "http://azurite-test:10000",
+		KeyVaultEndpoint: "https://kv-test",
+		RedisEndpoint:    "redis://redis-test:6379",
 	}
 
 	s := store.NewMemoryStore()
@@ -58,7 +61,7 @@ func buildProductionLikeServer(t *testing.T) *httptest.Server {
 		t.Fatalf("NewTokenService: %v", err)
 	}
 	metaSvc := metadata.NewService(cfg)
-	armRouter := arm.NewRouter(s)
+	armRouter := arm.NewRouter(s, cfg.AzuriteEndpoint, cfg.KeyVaultEndpoint, cfg.RedisEndpoint)
 
 	r := chi.NewRouter()
 	// Mirror the production middleware order from cmd/azemu/main.go.

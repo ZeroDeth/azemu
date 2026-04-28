@@ -15,12 +15,18 @@ import (
 
 type Router struct {
 	store           store.Store
-	azuriteEndpoint string // e.g. "http://azurite:10000" — blob service base URL
-	kvEndpoint      string // e.g. "https://localhost:4566" — Key Vault data-plane base URL
+	azuriteEndpoint string // e.g. "http://azurite:10000", blob service base URL
+	kvEndpoint      string // e.g. "https://localhost:4566", Key Vault data-plane base URL
+	redisEndpoint   string // e.g. "redis://azemu-redis:6379", Redis sidecar URL
 }
 
-func NewRouter(s store.Store, azuriteEndpoint, kvEndpoint string) *Router {
-	return &Router{store: s, azuriteEndpoint: azuriteEndpoint, kvEndpoint: kvEndpoint}
+func NewRouter(s store.Store, azuriteEndpoint, kvEndpoint, redisEndpoint string) *Router {
+	return &Router{
+		store:           s,
+		azuriteEndpoint: azuriteEndpoint,
+		kvEndpoint:      kvEndpoint,
+		redisEndpoint:   redisEndpoint,
+	}
 }
 
 func (a *Router) Routes(r chi.Router) {
@@ -151,6 +157,18 @@ func (a *Router) Routes(r chi.Router) {
 	// the Azurite sidecar without extra configuration.
 	r.Post("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.storage/storageaccounts/{accountName}/listkeys", a.listStorageAccountKeys)
 
+	// Azure Cache for Redis (Microsoft.Cache/Redis)
+	r.Put("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.cache/redis/{cacheName}", a.putRedisCache)
+	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.cache/redis/{cacheName}", a.getRedisCache)
+	r.Head("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.cache/redis/{cacheName}", a.headRedisCache)
+	r.Delete("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.cache/redis/{cacheName}", a.deleteRedisCache)
+	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.cache/redis", a.listRedisCachesByRG)
+	r.Get("/{subscriptionID}/providers/microsoft.cache/redis", a.listRedisCachesBySub)
+	// listKeys returns deterministic dev keys whose primary value matches the
+	// Redis sidecar's --requirepass so SDK clients authenticate against the
+	// real Redis data plane without further configuration.
+	r.Post("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.cache/redis/{cacheName}/listkeys", a.listRedisCacheKeys)
+
 	// Key Vaults (Microsoft.KeyVault/vaults)
 	r.Put("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.keyvault/vaults/{vaultName}", a.putKeyVault)
 	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.keyvault/vaults/{vaultName}", a.getKeyVault)
@@ -256,6 +274,7 @@ var defaultProviders = []string{
 	"Microsoft.Compute", "Microsoft.KeyVault", "Microsoft.Web",
 	"Microsoft.ContainerRegistry", "Microsoft.Dns",
 	"Microsoft.ManagedIdentity", "Microsoft.ContainerService",
+	"Microsoft.Cache",
 }
 
 func (a *Router) listProviders(w http.ResponseWriter, r *http.Request) {
