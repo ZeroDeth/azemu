@@ -1,0 +1,1980 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="A local Azure emulator for Terraform-first development">
+      
+      
+      
+        <link rel="canonical" href="https://zerodeth.github.io/azemu/reference/changelog/">
+      
+      
+        <link rel="prev" href="../setup/">
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Changelog - azemu</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="custom" data-md-color-accent="custom">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#changelog" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="azemu" class="md-header__button md-logo" aria-label="azemu" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            azemu
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Changelog
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/zerodeth/azemu" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    zerodeth/azemu
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="azemu" class="md-nav__button md-logo" aria-label="azemu" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    azemu
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/zerodeth/azemu" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    zerodeth/azemu
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/install/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Install
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/first-apply/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Your First Apply
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/how-it-works/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How It Works
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Concepts
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Concepts
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/arm-fidelity/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ARM Fidelity
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/parity-matrix/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Parity Matrix
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Resources
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Resources
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../resources/troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_2" id="__nav_4_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design Decisions
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Design Decisions
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../resources/design-decisions/0001-delegate-storage-data-plane-to-azurite/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design Decision 0001: Delegate Storage data plane to Azurite
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../resources/design-decisions/0002-azemu-plus-kind-for-aks-workload-deployments/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design Decision 0002: azemu + kind hybrid for AKS workload deployments
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../resources/design-decisions/0003-add-azure-cache-for-redis/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design Decision 0003: Add Azure Cache for Redis
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Community
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Community
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../community/contributing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../community/roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Roadmap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../community/code-of-conduct/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Code of Conduct
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Setup (Dev Env)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changelog
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#unreleased" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        [Unreleased]
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="[Unreleased]">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#added-phase-77-azure-cache-for-redis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added (Phase 7.7: Azure Cache for Redis)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fixed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fixed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#added-phase-7-storage-key-vault" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added (Phase 7: Storage, Key Vault)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#v010-2026-04-21" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        [v0.1.0] - 2026-04-21
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="[v0.1.0] - 2026-04-21">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#added-phase-5-governance-and-ci" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added (Phase 5: governance and CI)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#added-phase-1-4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added (Phase 1-4)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#changed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fixed_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fixed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#added" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#changed_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fixed_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fixed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#added_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#changed_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fixed_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fixed
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#001-2026-04-09" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        [0.0.1] - 2026-04-09
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="[0.0.1] - 2026-04-09">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#added_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#unreleased" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        [Unreleased]
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="[Unreleased]">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#added-phase-77-azure-cache-for-redis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added (Phase 7.7: Azure Cache for Redis)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fixed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fixed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#added-phase-7-storage-key-vault" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added (Phase 7: Storage, Key Vault)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#v010-2026-04-21" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        [v0.1.0] - 2026-04-21
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="[v0.1.0] - 2026-04-21">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#added-phase-5-governance-and-ci" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added (Phase 5: governance and CI)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#added-phase-1-4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added (Phase 1-4)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#changed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fixed_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fixed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#added" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#changed_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fixed_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fixed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#added_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#changed_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fixed_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fixed
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#001-2026-04-09" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        [0.0.1] - 2026-04-09
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="[0.0.1] - 2026-04-09">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#added_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<!-- markdownlint-disable MD024 -->
+<!--
+  MD024 (no-duplicate-heading) is disabled for this file because the
+  Keep a Changelog format reuses the same section names ("Added",
+  "Changed", "Fixed", ...) under each release. The duplication is
+  intentional and the markdownlint-cli command-line flags do not
+  support a siblings_only override; an inline directive is the
+  conventional fix recommended by the markdownlint maintainers for
+  changelog files. See:
+  https://github.com/DavidAnson/markdownlint/blob/main/doc/md024.md
+-->
+
+<h1 id="changelog">Changelog<a class="headerlink" href="#changelog" title="Permanent link">&para;</a></h1>
+<p>All notable changes to azemu will be documented in this file.</p>
+<p>The format is based on <a href="https://keepachangelog.com/en/1.1.0/">Keep a Changelog</a>,
+and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semantic Versioning</a>.</p>
+<h2 id="unreleased">[Unreleased]<a class="headerlink" href="#unreleased" title="Permanent link">&para;</a></h2>
+<h3 id="added-phase-77-azure-cache-for-redis">Added (Phase 7.7: Azure Cache for Redis)<a class="headerlink" href="#added-phase-77-azure-cache-for-redis" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>Microsoft.Cache/Redis</code> CRUD + HEAD + list-by-RG + list-by-sub.
+  SKU validated inside <code>properties.sku</code> (Basic, Standard, Premium with
+  family C/P and capacity ranges); Premium-only properties (shardCount,
+  subnetId, RDB/AOF persistence keys) rejected on Basic/Standard.
+  (<code>azurerm_redis_cache</code>)</li>
+<li><code>POST .../Microsoft.Cache/Redis/{name}/listKeys</code>: returns deterministic
+  dev keys (<code>azemu-dev-primary-key</code>, <code>azemu-dev-secondary-key</code>). The
+  primary value matches the Redis sidecar's <code>--requirepass</code> so SDK clients
+  authenticated via the ARM response succeed against the data plane.</li>
+<li><code>AZEMU_REDIS_ENDPOINT</code> env var (default <code>redis://azemu-redis:6379</code>).
+  azemu derives the <code>hostName</code> field on Redis ARM responses from the URL
+  host so callers connect to the configured sidecar instead of
+  <code>redis.cache.windows.net</code>.</li>
+<li><code>docker-compose.yml</code>: optional <code>redis</code> service (<code>redis:7-alpine</code>) on the
+  <code>redis</code> profile so default users see no extra container; healthcheck via
+  <code>redis-cli ping</code> with the dev password.</li>
+<li><code>redisCache: "redis.cache.windows.net"</code> suffix in <code>/metadata/endpoints</code>,
+  pinned by <code>TestMetadata_CanonicalSuffixNames</code>.</li>
+<li><code>examples/terraform/redis_cache.tf</code> plus <code>redis_cache_id</code> /
+  <code>redis_cache_hostname</code> outputs and a <code>terraform test</code> assertion.</li>
+<li><code>docs/adr/0003-add-azure-cache-for-redis.md</code> promoted from Proposed to
+  Implemented (Implemented date: 2026-04-28).</li>
+<li><code>website/docs/resources/design-decisions/0002-...md</code> and <code>0003-...md</code>
+  mirrors plus mkdocs nav entries (closes the website-mirror gap from
+  TODO.md for ADRs 0002 and 0003).</li>
+<li><code>docs/SETUP.md</code> and <code>website/docs/reference/setup.md</code>: new
+  <code>AZEMU_REDIS_ENDPOINT</code> env-var row and a "Redis sidecar (optional)"
+  section explaining the compose profile, <code>--requirepass</code> contract, and
+  host-mode setup.</li>
+</ul>
+<h3 id="fixed">Fixed<a class="headerlink" href="#fixed" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>test/integration/</code> build resurrected. <code>arm.NewRouter</code> had grown a
+  second parameter in Phase 7 (KeyVaultEndpoint) without updating the
+  integration harness; this PR adds the missing endpoints (Azurite, Key
+  Vault, Redis) to both <code>buildFullServer</code> and <code>buildProductionLikeServer</code>
+  and corrects two pre-existing assertions that compared against
+  real-Azure hostnames (<code>integrationacct.blob.core.windows.net</code>,
+  <code>mytestvault.vault.azure.net</code>) instead of the configured test
+  endpoints.</li>
+</ul>
+<h3 id="added-phase-7-storage-key-vault">Added (Phase 7: Storage, Key Vault)<a class="headerlink" href="#added-phase-7-storage-key-vault" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>Microsoft.Storage/storageAccounts</code> CRUD + HEAD + list-by-RG + list-by-sub.
+  Name uniqueness check across subscription. SKU/kind at top level; soft-delete
+  and access-tier defaults. (<code>azurerm_storage_account</code>)</li>
+<li><code>Microsoft.Storage/storageAccounts/blobServices/containers</code> CRUD + HEAD + list.
+  Parent-existence check; cascade delete when account is deleted.
+  (<code>azurerm_storage_container</code>)</li>
+<li><code>POST .../storageAccounts/{name}/listKeys</code>: returns Azurite's well-known
+  development account key so SDK clients authenticate against the Azurite
+  sidecar without extra configuration.</li>
+<li><code>primaryEndpoints</code> block in storage account responses now returns path-style
+  Azurite endpoint URLs (blob <code>:10000</code>, queue <code>:10001</code>, table <code>:10002</code>) derived
+  from <code>AZEMU_AZURITE_ENDPOINT</code>.</li>
+<li><code>AZEMU_AZURITE_ENDPOINT</code> env var (default <code>http://azurite:10000</code>). azemu
+  derives queue and table base URLs from this single knob.</li>
+<li><code>docker-compose.yml</code>: <code>azurite</code> service (<code>mcr.microsoft.com/azure-storage/azurite</code>)
+  with ports 10000-10002, named volume, healthcheck, and <code>depends_on</code>
+  (condition: <code>service_healthy</code>) so azemu starts only after Azurite is ready.</li>
+<li><code>Microsoft.KeyVault/vaults</code> CRUD + HEAD + list-by-RG + list-by-sub.
+  <code>vaultUri</code> computed as <code>https://{name}.vault.azure.net/</code>; SKU defaults to
+  <code>standard</code>; soft-delete defaults to 90 days. (<code>azurerm_key_vault</code>)</li>
+<li><code>docs/adr/0001-delegate-storage-data-plane-to-azurite.md</code>: Architecture
+  Decision Record capturing the Azurite delegation decision and its
+  rationale, alternatives, and consequences. Status: Implemented.</li>
+<li><code>docs/SETUP.md</code>: Storage and Azurite section; <code>AZEMU_AZURITE_ENDPOINT</code> in
+  the env-var table; Azurite port table.</li>
+</ul>
+<h2 id="v010-2026-04-21">[v0.1.0] - 2026-04-21<a class="headerlink" href="#v010-2026-04-21" title="Permanent link">&para;</a></h2>
+<h3 id="added-phase-5-governance-and-ci">Added (Phase 5: governance and CI)<a class="headerlink" href="#added-phase-5-governance-and-ci" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>CONTRIBUTING.md</code> with ground rules, dev environment, add-resource
+  walkthrough, test requirements, and PR checklist.</li>
+<li><code>CODE_OF_CONDUCT.md</code> referencing Contributor Covenant v2.1.</li>
+<li><code>SECURITY.md</code> with supported versions, private reporting channels
+  (GitHub Security Advisories, email), and 48h acknowledgement SLA.</li>
+<li><code>RELEASING.md</code> with the full release checklist (pre-release, changelog,
+  tag, goreleaser, post-release verification).</li>
+<li><code>.github/CODEOWNERS</code> with @ZeroDeth as default owner.</li>
+<li><code>.github/ISSUE_TEMPLATE/bug_report.md</code> asking for azemu/azurerm/terraform
+  versions, full error output, and <code>/api/unhandled</code> output.</li>
+<li><code>.github/ISSUE_TEMPLATE/feature_request.md</code>.</li>
+<li><code>.github/PULL_REQUEST_TEMPLATE.md</code> with pre-filled checklist.</li>
+<li><code>.github/workflows/ci.yml</code> with lint (golangci-lint, markdownlint), test
+  (<code>go test -race -coverprofile</code>), and build jobs. Triggers on push/PR to main.</li>
+<li><code>.github/workflows/release.yml</code> triggering goreleaser on tag push.</li>
+<li><code>.github/dependabot.yml</code> for gomod (weekly), github-actions (weekly),
+  and docker (monthly).</li>
+<li><code>.goreleaser.yml</code> building macOS/Linux/Windows (amd64+arm64) binaries and
+  Docker image to <code>ghcr.io/zerodeth/azemu</code>.</li>
+<li><code>.golangci.yml</code> excluding <code>fmt.Fprint*</code> and <code>(io.ReadCloser).Close</code> from
+  errcheck.</li>
+<li><code>.markdownlint-cli2.jsonc</code> disabling MD013, MD033, MD041.</li>
+<li><code>docs/PARITY.md</code> Proof column linking every Full row to its test file.</li>
+<li><code>docs/ARCHITECTURE.md</code> mermaid request-flow diagram.</li>
+</ul>
+<h3 id="added-phase-1-4">Added (Phase 1-4)<a class="headerlink" href="#added-phase-1-4" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>.claude/agents/*.md</code> — five frontmatter-driven subagent definitions
+  (<code>arm-resource-implementer</code>, <code>test-writer</code>, <code>code-reviewer</code>,
+  <code>terraform-compatibility-debugger</code>, <code>docs-writer</code>). Claude Code auto-delegates
+  when a task description matches; previously these roles lived as prose recipes
+  in <code>docs/SUBAGENTS.md</code> and had to be hand-copied into Task tool invocations.
+  Per <a href="https://code.claude.com/docs/en/sub-agents">https://code.claude.com/docs/en/sub-agents</a>.</li>
+<li><code>.claude/skills/*/SKILL.md</code> — four slash-invokable playbooks
+  (<code>/add-resource</code>, <code>/modify-store</code>, <code>/validate-terraform</code>, <code>/before-commit</code>).
+  <code>before-commit</code> carries <code>disable-model-invocation: true</code> so Claude never
+  auto-runs the full validation sequence. Per
+  <a href="https://code.claude.com/docs/en/skills">https://code.claude.com/docs/en/skills</a>.</li>
+<li><code>.gitignore</code> negations for <code>.claude/agents/</code> and <code>.claude/skills/</code> so the
+  new directories are version-controlled alongside the existing
+  <code>.claude/rules/</code> exception.</li>
+</ul>
+<h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>docs/SUBAGENTS.md</code> renamed to <code>docs/ORCHESTRATION.md</code> and trimmed to the
+  three multi-agent composition patterns (parallel resource implementation,
+  test-then-fix, coverage push). The five role definitions moved to
+  <code>.claude/agents/*.md</code>.</li>
+<li><code>docs/CHECKLISTS.md</code> replaced with an 18-line redirect table pointing at
+  the new skills. Existing content moved verbatim into the four skill files.</li>
+<li><code>AGENTS.md</code> "Subagents and orchestration" section rewritten to document the
+  new <code>.claude/agents/</code> and <code>.claude/skills/</code> directories and the
+  <code>/before-commit</code> / <code>/validate-terraform</code> / <code>/add-resource</code> / <code>/modify-store</code>
+  slash invocations. Project-files table updated to match.</li>
+<li><code>.claude/rules/arm-handlers.md</code>, <code>.claude/rules/tests.md</code>,
+  <code>.claude/rules/docs.md</code>, and <code>docs/CONVENTIONS.md</code> updated to reference the
+  new skill paths instead of the old <code>docs/CHECKLISTS.md</code> and
+  <code>docs/SUBAGENTS.md</code> locations.</li>
+</ul>
+<h3 id="fixed_1">Fixed<a class="headerlink" href="#fixed_1" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>CLAUDE.md</code> referenced a machine-local auto-memory file that only
+  existed on the maintainer's machine. Anthropic's own memory docs state auto
+  memory is machine-local and not shared across machines, so any contributor
+  cloning the repo on a fresh machine would hit a dangling reference. The
+  Anthropic source quotes and refactor history now live inline in the
+  <code>CLAUDE.md</code> HTML maintainer comment, which is stripped before context
+  injection (zero session-token cost) and travels with the repo.
+  Per <a href="https://code.claude.com/docs/en/memory">https://code.claude.com/docs/en/memory</a>.</li>
+</ul>
+<h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>Dockerfile</code> with a multi-stage Go build, alpine runtime, <code>wget</code> for
+  healthchecks, <code>VOLUME /azemu</code>, env defaults for <code>AZEMU_CERT_PATH</code> and
+  <code>AZEMU_METADATA_HOST</code>, and <code>EXPOSE 4566 4567 4568</code>.</li>
+<li><code>docker-compose.yml</code> for single-node local use: exposes <code>4566</code>/<code>4567</code>/<code>4568</code>,
+  bind-mounts <code>./.azemu:/azemu</code>, healthcheck via
+  <code>wget http://localhost:4568/health</code>.</li>
+<li><code>GET /health</code> plain-HTTP endpoint on a configurable <code>HealthPort</code> (default
+  <code>4568</code>). Returns <code>{"status":"ok","version":"...","uptime_seconds":N}</code>.
+  No TLS and no middleware so container probes stay boring.</li>
+<li>Startup banner to stderr with version, ports, and cert path. Linker-
+  overridable <code>var Version = "dev"</code> via <code>-ldflags "-X main.Version=$(VERSION)"</code>.</li>
+<li><code>--help</code> and <code>--version</code> stdlib-<code>flag</code> handling in <code>cmd/azemu/main.go</code>
+  with an env-var table and port layout.</li>
+<li><code>scripts/aztf</code> wrapper that detects a running azemu via
+  <code>docker compose ps</code>, starts it if absent, exports <code>SSL_CERT_FILE</code> and the
+  <code>ARM_*</code> variables, and execs <code>terraform "$@"</code>. Shellcheck-clean.</li>
+<li><code>scripts/trust-cert.sh</code> helper (macOS <code>security add-trusted-cert</code>, Linux
+  <code>update-ca-certificates</code>). Optional; the default path uses
+  <code>SSL_CERT_FILE</code> instead.</li>
+<li><code>examples/terraform/</code> bootstrap config (RG + VNet + Subnet across
+  <code>provider.tf</code> / <code>variables.tf</code> / <code>outputs.tf</code>) plus
+  <code>examples/terraform/main.tftest.hcl</code> native Terraform 1.6+ test with one
+  <code>run "full_lifecycle"</code> block.</li>
+<li><code>flake.nix</code> for Nix users outside flox: <code>buildGoModule</code> for <code>cmd/azemu</code>
+  and <code>devShells.default</code> with go + terraform.</li>
+<li>Makefile targets: <code>tf-test</code>, <code>coverage</code>, <code>docker-compose</code>,
+  <code>docker-compose-down</code>, plus <code>-ldflags "-X main.Version=..."</code> on <code>build</code>.</li>
+<li><code>docs/SETUP.md</code> Docker quick-start section and an expanded make-targets
+  table.</li>
+<li>File-backed state store (<code>internal/store/file.go</code>). <code>FileStore</code> wraps
+  <code>MemoryStore</code> with write-through persistence via atomic <code>tmp + rename</code>.</li>
+<li><code>--persist</code> CLI flag (also <code>AZEMU_PERSIST_PATH</code> env var) that activates
+  <code>FileStore</code>. <code>--import</code> loads state at startup; <code>--export</code> dumps current
+  state to a file and exits <code>0</code>.</li>
+<li><code>GET /api/state/export</code> returns full state as JSON.</li>
+<li><code>POST /api/state/import</code> replaces current state from the request body.</li>
+<li><code>POST /api/state/reset</code> clears all resources. <code>Store.Reset()</code> added to
+  the interface so memory + file stores both implement it.</li>
+<li>10 <code>internal/store/file_test.go</code> tests covering write-through, reload,
+  timestamps, delete, reset, tmp cleanup, missing file, corrupt file,
+  import, and concurrent access.</li>
+</ul>
+<h3 id="changed_1">Changed<a class="headerlink" href="#changed_1" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Cert bundle file mode in <code>internal/auth/tls.go</code> relaxed from <code>0600</code> to
+  <code>0644</code> so Docker bind-mounts are readable by the host user when the
+  container writes the file.</li>
+<li><code>pkg/config/config.go</code> grew a <code>HealthPort</code> field (default <code>4568</code>) next
+  to <code>HTTPPort</code>/<code>HTTPSPort</code>.</li>
+<li><code>.gitignore</code> now covers <code>coverage.html</code>.</li>
+<li>Pre-Phase-4 hardening (7 critical + 9 high issues from Go review):
+  all <code>store.Put</code> call sites (RG, VNet, Subnet) now surface errors and
+  return <code>500</code> with Azure error format on failure; store copy semantics
+  fixed so callers cannot mutate stored resources; <code>writeJSON</code> switched
+  to buffer-first so a failed encode no longer produces a half-written
+  body; auth errors propagate instead of being swallowed; middleware
+  singletons removed.</li>
+</ul>
+<h3 id="fixed_2">Fixed<a class="headerlink" href="#fixed_2" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>azureTimestamp</code> dead code in <code>internal/arm/router.go</code> (0% coverage,
+  never called) deleted during the Phase 2 closeout batch.</li>
+<li><code>putResourceGroup</code> now rejects empty or whitespace-only <code>location</code>
+  with <code>400 InvalidRequestContent</code>, matching the vnet/subnet pattern.
+  Pinned by <code>TestRG_PUT_MissingLocation_Returns400</code> and
+  <code>TestRG_PUT_WhitespaceOnlyLocation_Returns400</code>.</li>
+<li><code>headSubnet</code>/<code>deleteSubnet</code>/<code>writeVNetList</code> coverage gaps backfilled
+  to 100% via <code>TestSubnet_HEAD_NotFound_Returns404_EmptyBody</code>,
+  <code>TestSubnet_DELETE_NotFound_Returns404</code>, and
+  <code>TestVNet_LIST_ByRG_FiltersOutSubnets</code>. <code>internal/arm</code> package
+  coverage climbed from 90.7% to 92.6%.</li>
+</ul>
+<h3 id="added_1">Added<a class="headerlink" href="#added_1" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Virtual Networks (<code>Microsoft.Network/virtualNetworks</code>) ARM CRUD + HEAD with
+  cascade-delete and child-subnet embedding on GET.</li>
+<li>Subnets (<code>Microsoft.Network/virtualNetworks/subnets</code>) ARM CRUD + HEAD with
+  parent-vnet existence check (returns <code>404 ParentResourceNotFound</code>).</li>
+<li><code>internal/middleware/pathcase.go</code> <code>NormalizePath</code> middleware that lowercases
+  known ARM literal segments (case-insensitive) and collapses double slashes.
+  Wired into the router before <code>RequireAPIVersion</code> so real azurerm camelCase
+  paths reach lowercase chi routes.</li>
+<li><code>listResourceGroupResources</code> handler (<code>GET /subscriptions/.../resourceGroups/{rg}/resources</code>)
+  returning <code>{"value": []}</code> so <code>terraform destroy</code> can poll an empty RG without
+  hitting <code>/api/unhandled</code> and surfacing a misleading "internal-error".</li>
+<li><code>AZEMU_CERT_PATH</code> config option and <code>auth.LoadOrGenerateSelfSignedTLS</code>: when
+  set, azemu loads or generates a persistent PEM bundle (cert + EC private key,
+  mode <code>0600</code>) so contributors trust the self-signed cert in their keychain
+  once and can restart the binary freely.</li>
+<li><code>internal/arm/testutil_test.go</code> shared test helpers (<code>newTestServer</code>,
+  <code>withAPIVersion</code>, <code>httpPut</code>/<code>httpGet</code>/<code>httpHead</code>/<code>httpDelete</code>, <code>decodeJSON</code>).</li>
+<li>4 metadata regression tests pinning canonical field/suffix names, the
+  <code>IsAzureStack</code> classifier conditions, and the all-HTTPS data plane invariant.</li>
+<li>8 path-normalization regression tests covering the exact azurerm camelCase
+  path strings, OAuth path passthrough, and double-slash collapse.</li>
+<li>4 RG <code>resources</code> listing tests (empty, populated, RG self-exclusion, OData).</li>
+<li><code>.flox/env/manifest.toml</code> pinning Go, Terraform <code>^1.14</code>, just, jq, shellcheck,
+  tflint, pre-commit. Profile defines <code>azemu-start</code>/<code>azemu-stop</code>/<code>azemu-status</code>
+  and <code>tf-init</code>/<code>tf-plan</code>/<code>tf-apply</code>/<code>tf-destroy</code> aliases. Activation hook
+  installs the project pre-commit hook on first run.</li>
+<li><code>.pre-commit-config.yaml</code> with trailing-whitespace, end-of-file-fixer,
+  check-yaml/json, mixed-line-ending, no-commit-to-branch=main,
+  tekwizely/pre-commit-golang <code>go-fmt</code>/<code>go-vet-repo-mod</code>/<code>go-build-repo-mod</code>,
+  <code>golangci-lint</code> v1.62.2 and <code>markdownlint-cli</code> v0.42.0.</li>
+<li><code>docs/SETUP.md</code> and <code>docs/TROUBLESHOOTING.md</code> covering provider redirection,
+  cert trust on macOS/Linux, and the IPv6/<code>localhost</code> resolution gotcha.</li>
+<li><code>docs/ARCHITECTURE.md</code>, <code>docs/CONVENTIONS.md</code>, <code>docs/CHECKLISTS.md</code>, and
+  <code>docs/SUBAGENTS.md</code> extracted from the previous monolithic <code>CLAUDE.md</code>.</li>
+<li><code>.claude/rules/arm-handlers.md</code>, <code>.claude/rules/go-style.md</code>,
+  <code>.claude/rules/tests.md</code>, and <code>.claude/rules/docs.md</code> — path-scoped rule
+  files that load only when Claude Code is editing matching files, per the
+  mechanism documented at <a href="https://code.claude.com/docs/en/memory">https://code.claude.com/docs/en/memory</a>.</li>
+</ul>
+<h3 id="changed_2">Changed<a class="headerlink" href="#changed_2" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong><code>CLAUDE.md</code> refactored from 643 lines to 43 lines</strong> to match Anthropic's
+  published guidance ("target under 200 lines per CLAUDE.md file"). The file
+  is now a thin wrapper that imports <code>AGENTS.md</code> via the <code>@</code> directive and
+  adds a handful of Claude-Code-specific overrides. Code blocks, ARM contract
+  tables, auth fidelity rules, per-package coverage targets, and workflow
+  checklists moved to <code>docs/CONVENTIONS.md</code>, <code>docs/CHECKLISTS.md</code>, and the
+  <code>.claude/rules/*.md</code> path-scoped files.</li>
+<li><strong><code>AGENTS.md</code> refactored from 215 lines to 116 lines</strong> and promoted to the
+  primary "README for agents" (<a href="https://agents.md">https://agents.md</a> cross-vendor spec).
+  Subagent role definitions and orchestration patterns moved to
+  <code>docs/SUBAGENTS.md</code>. <code>AGENTS.md</code> now contains project identity, build/test
+  commands, convention pointers, branch discipline, and safety rules.</li>
+<li>
+<p>Per-session steering context reduced from ~643 lines (just <code>CLAUDE.md</code>) to
+  159 lines (<code>CLAUDE.md</code> + imported <code>AGENTS.md</code>), a 75% reduction in the
+  context tokens consumed at session start.</p>
+</li>
+<li>
+<p><code>internal/metadata/service.go</code> rewritten against the canonical Azure schema
+  from <code>https://management.azure.com/metadata/endpoints?api-version=2022-09-01</code>.
+  Field names now match real Azure verbatim (<code>portal</code>, <code>graph</code>,
+  <code>appInsightsResourceId</code>, <code>attestationResourceId</code>, <code>synapseAnalyticsResourceId</code>,
+  <code>logAnalyticsResourceId</code>, <code>ossrDbmsResourceId</code>, <code>suffixes.storage</code>,
+  <code>suffixes.keyVaultDns</code>, <code>suffixes.storageSyncEndpointSuffix</code>, ...) so
+  <code>go-azure-sdk</code> can build per-service authorizers without falling through to
+  the Azure Stack rejection path.</p>
+</li>
+<li>ARM port <code>:4566</code> now serves HTTPS (was HTTP) so the <code>azurerm</code> provider does
+  not classify the environment as Azure Stack via the <code>resourceManager</code> URL
+  scheme check. Both ports share the same self-signed certificate.</li>
+<li><code>cmd/azemu/main.go</code> now starts both servers with a shared TLS config and
+  wires <code>NormalizePath</code> before <code>RequireAPIVersion</code>. Cert lifecycle messages
+  distinguish "generated and persisted" vs "loaded from existing bundle".</li>
+</ul>
+<h3 id="fixed_3">Fixed<a class="headerlink" href="#fixed_3" title="Permanent link">&para;</a></h3>
+<ul>
+<li>M1: Azure Stack rejection caused by <code>dataPlane</code> URLs declared as <code>http://</code>.
+  Switched to <code>https://</code> and pinned by <code>TestMetadata_DataPlaneFieldsAreHTTPS</code>.</li>
+<li>M2: Azure Stack rejection caused by <code>authentication.tenant</code> being a UUID;
+  the <code>IsAzureStack</code> classifier requires the literal string <code>"common"</code>.</li>
+<li>M3: Storage authorizer build failure caused by hand-rolled metadata field
+  names that did not match Azure's canonical schema.</li>
+<li>M4: chi v5 case-sensitivity mismatch where azurerm sent camelCase
+  <code>resourceGroups</code> and azemu's routes were registered as lowercase
+  <code>resourcegroups</code>. Resolved structurally by <code>NormalizePath</code>.</li>
+<li>M5: <code>terraform destroy</code> polling loop misreported a 501 from the missing
+  RG resources list endpoint as a generic internal-error.</li>
+<li><code>.gitignore</code> <code>azemu</code> pattern was matching <code>cmd/azemu/</code> as a directory
+  wildcard, so <code>cmd/azemu/main.go</code> had never been tracked. Removed the bare
+  pattern; the file is now in version control.</li>
+</ul>
+<h2 id="001-2026-04-09">[0.0.1] - 2026-04-09<a class="headerlink" href="#001-2026-04-09" title="Permanent link">&para;</a></h2>
+<h3 id="added_2">Added<a class="headerlink" href="#added_2" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Project scaffold: dual HTTP/HTTPS server, chi routing, zerolog logging</li>
+<li>Metadata service (<code>/metadata/endpoints</code>) for azurerm provider redirection</li>
+<li>Mock OAuth2 token endpoint with RS256 JWT signing</li>
+<li>OIDC discovery and JWKS endpoints</li>
+<li>ARM facade: subscriptions, provider registration, resource group CRUD</li>
+<li>Azure-compatible middleware: response headers, api-version enforcement</li>
+<li>In-memory state store with export/import</li>
+<li>Self-signed TLS certificate generation (ECDSA P-256)</li>
+<li>Dockerfile (multi-stage Go build)</li>
+<li>Makefile with build, run, test, docker, smoke targets</li>
+<li>Example Terraform config (<code>test/terraform/main.tf</code>)</li>
+<li>CLAUDE.md, AGENTS.md, TASKS.md for AI agent orchestration</li>
+<li>docs/PARITY.md resource compatibility matrix</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.sections", "navigation.expand", "navigation.top", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
