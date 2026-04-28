@@ -34,7 +34,7 @@ import (
 func buildFullServer(t *testing.T) *httptest.Server {
 	t.Helper()
 	s := store.NewMemoryStore()
-	ar := arm.NewRouter(s, "http://azurite-test:10000")
+	ar := arm.NewRouter(s, "http://azurite-test:10000", "https://kv-test", "redis://redis-test:6379")
 	r := chi.NewRouter()
 	r.Use(mw.NormalizePath)
 	r.Use(mw.AzureHeaders)
@@ -680,7 +680,10 @@ func TestARM_StorageAccountFullFlow(t *testing.T) {
 	if !ok {
 		t.Fatalf("primaryEndpoints missing")
 	}
-	wantBlob := "https://integrationacct.blob.core.windows.net/"
+	// buildFullServer wires AZEMU_AZURITE_ENDPOINT="http://azurite-test:10000",
+	// so blob endpoints are path-style under that host, NOT real-Azure
+	// {acct}.blob.core.windows.net.
+	wantBlob := "http://azurite-test:10000/integrationacct/"
 	if endpoints["blob"] != wantBlob {
 		t.Errorf("primaryEndpoints.blob = %v, want %s", endpoints["blob"], wantBlob)
 	}
@@ -773,6 +776,95 @@ func TestARM_StorageAccountFullFlow(t *testing.T) {
 	resp.Body.Close()
 }
 
+// TestARM_RedisCacheFullFlow exercises the Microsoft.Cache/Redis lifecycle:
+// create with redisConfiguration, verify hostName/port/sslPort/sku and
+// verbatim config pass-through, idempotent PUT, listKeys returns the two
+// deterministic dev keys, list-by-RG returns 1 item, async DELETE 202 with
+// Location header, post-delete GET returns 404.
+func TestARM_RedisCacheFullFlow(t *testing.T) {
+	srv := buildFullServer(t)
+	base := srv.URL
+
+	cacheURL := base + "/subscriptions/sub1/resourcegroups/rg1/providers/microsoft.cache/redis/integ-redis" + apiVersionQ
+	listURL := base + "/subscriptions/sub1/resourcegroups/rg1/providers/microsoft.cache/redis" + apiVersionQ
+	keysURL := base + "/subscriptions/sub1/resourcegroups/rg1/providers/microsoft.cache/redis/integ-redis/listkeys" + apiVersionQ
+
+	cacheBody := `{
+		"location": "uksouth",
+		"properties": {
+			"sku": {"name": "Standard", "family": "C", "capacity": 1},
+			"redisConfiguration": {"maxmemory-policy": "allkeys-lru"}
+		}
+	}`
+
+	// 1. Create.
+	resp := doJSON(t, http.MethodPut, cacheURL, cacheBody)
+	mustStatus(t, resp, http.StatusCreated)
+	body := decode(t, resp)
+	props := body["properties"].(map[string]interface{})
+	if props["hostName"] != "redis-test" {
+		t.Errorf("hostName = %v, want redis-test", props["hostName"])
+	}
+	if props["port"].(float64) != 6379 {
+		t.Errorf("port = %v, want 6379", props["port"])
+	}
+	if props["sslPort"].(float64) != 6380 {
+		t.Errorf("sslPort = %v, want 6380", props["sslPort"])
+	}
+	sku, ok := props["sku"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("sku missing: %v", props)
+	}
+	if sku["name"] != "Standard" {
+		t.Errorf("sku.name = %v, want Standard", sku["name"])
+	}
+	rc, ok := props["redisConfiguration"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("redisConfiguration missing: %v", props)
+	}
+	if rc["maxmemory-policy"] != "allkeys-lru" {
+		t.Errorf("redisConfiguration.maxmemory-policy = %v, want allkeys-lru (verbatim pass-through)", rc["maxmemory-policy"])
+	}
+
+	// 2. Idempotent PUT returns 200.
+	resp = doJSON(t, http.MethodPut, cacheURL, cacheBody)
+	mustStatus(t, resp, http.StatusOK)
+	resp.Body.Close()
+
+	// 3. listKeys returns both deterministic dev keys.
+	resp = doJSON(t, http.MethodPost, keysURL, "{}")
+	mustStatus(t, resp, http.StatusOK)
+	keys := decode(t, resp)
+	if keys["primaryKey"] != "azemu-dev-primary-key" {
+		t.Errorf("primaryKey = %v, want azemu-dev-primary-key", keys["primaryKey"])
+	}
+	if keys["secondaryKey"] != "azemu-dev-secondary-key" {
+		t.Errorf("secondaryKey = %v, want azemu-dev-secondary-key", keys["secondaryKey"])
+	}
+
+	// 4. List by RG returns 1 item.
+	resp = doJSON(t, http.MethodGet, listURL, "")
+	mustStatus(t, resp, http.StatusOK)
+	list := decode(t, resp)
+	items, ok := list["value"].([]interface{})
+	if !ok || len(items) != 1 {
+		t.Fatalf("list value = %v, want 1 item", list["value"])
+	}
+
+	// 5. DELETE is async (202 Accepted) with Location header.
+	resp = doJSON(t, http.MethodDelete, cacheURL, "")
+	mustStatus(t, resp, http.StatusAccepted)
+	if resp.Header.Get("Location") == "" {
+		t.Error("Location header missing on DELETE")
+	}
+	resp.Body.Close()
+
+	// 6. Post-delete GET returns 404.
+	resp = doJSON(t, http.MethodGet, cacheURL, "")
+	mustStatus(t, resp, http.StatusNotFound)
+	resp.Body.Close()
+}
+
 // TestARM_KeyVaultFullFlow exercises the Key Vault management plane lifecycle:
 // create, read, idempotent update, list, delete, confirm 404.
 func TestARM_KeyVaultFullFlow(t *testing.T) {
@@ -805,8 +897,11 @@ func TestARM_KeyVaultFullFlow(t *testing.T) {
 	if !ok {
 		t.Fatalf("properties missing")
 	}
-	if props["vaultUri"] != "https://mytestvault.vault.azure.net/" {
-		t.Errorf("vaultUri = %v, want https://mytestvault.vault.azure.net/", props["vaultUri"])
+	// buildFullServer wires AZEMU_KV_ENDPOINT="https://kv-test", so vaultUri
+	// points at azemu's own data-plane mount under that host, NOT real-Azure
+	// {name}.vault.azure.net.
+	if props["vaultUri"] != "https://kv-test/keyvault/mytestvault/" {
+		t.Errorf("vaultUri = %v, want https://kv-test/keyvault/mytestvault/", props["vaultUri"])
 	}
 	if props["provisioningState"] != "Succeeded" {
 		t.Errorf("provisioningState = %v, want Succeeded", props["provisioningState"])

@@ -15,6 +15,20 @@ services:
       retries: 10
       start_period: 5s
 
+  redis:
+    image: redis:7-alpine
+    container_name: azemu-redis
+    command: ["redis-server", "--requirepass", "azemu-dev-primary-key"]
+    ports:
+      - "6379:6379"
+    profiles: ["redis"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "azemu-dev-primary-key", "ping"]
+      interval: 5s
+      timeout: 2s
+      retries: 10
+      start_period: 3s
+
   azemu:
     build: .
     image: azemu:dev
@@ -26,6 +40,7 @@ services:
       AZEMU_CERT_PATH: /azemu/cert-bundle.pem
       AZEMU_METADATA_HOST: 127.0.0.1:4567
       AZEMU_AZURITE_ENDPOINT: http://azurite:10000
+      AZEMU_REDIS_ENDPOINT: redis://azemu-redis:6379
     volumes:
       - ./.azemu:/azemu
     depends_on:
