@@ -145,6 +145,14 @@ func (t *TokenService) matchFederatedIdentityCredential(clientID, assertion stri
 		return federatedIdentityMatch{}, nil, false
 	}
 
+	// The client assertion is an OIDC token minted by an external issuer
+	// (e.g. a Kubernetes service-account token, a GitHub Actions OIDC
+	// token). azemu deliberately does not verify the signature: there is
+	// no JWKS fetch against the issuer because azemu is a local dev
+	// emulator with no network egress, and the federated trust is
+	// expressed by the FIC issuer/subject/audiences match below. We do,
+	// however, enforce temporal claims so an expired or not-yet-valid
+	// token cannot be replayed indefinitely.
 	parser := jwt.NewParser()
 	token, _, err := parser.ParseUnverified(assertion, jwt.MapClaims{})
 	if err != nil {
@@ -153,6 +161,9 @@ func (t *TokenService) matchFederatedIdentityCredential(clientID, assertion stri
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
 		return federatedIdentityMatch{}, nil, false
+	}
+	if !assertionTemporallyValid(claims) {
+		return federatedIdentityMatch{}, claims, false
 	}
 
 	issuer, _ := claims["iss"].(string)
@@ -186,6 +197,38 @@ func (t *TokenService) matchFederatedIdentityCredential(clientID, assertion stri
 		}
 	}
 	return federatedIdentityMatch{}, claims, false
+}
+
+// assertionTemporallyValid rejects assertions whose `exp` is in the past or
+// whose `nbf` is in the future. Both claims are treated as optional: an
+// assertion that omits them is accepted (signature verification is
+// intentionally not performed; see matchFederatedIdentityCredential).
+func assertionTemporallyValid(claims jwt.MapClaims) bool {
+	now := time.Now().Unix()
+	if exp, ok := claimUnixSeconds(claims["exp"]); ok && now > exp {
+		return false
+	}
+	if nbf, ok := claimUnixSeconds(claims["nbf"]); ok && now < nbf {
+		return false
+	}
+	return true
+}
+
+func claimUnixSeconds(v interface{}) (int64, bool) {
+	switch n := v.(type) {
+	case float64:
+		return int64(n), true
+	case int64:
+		return n, true
+	case json.Number:
+		i, err := n.Int64()
+		if err != nil {
+			return 0, false
+		}
+		return i, true
+	default:
+		return 0, false
+	}
 }
 
 func credentialMatchesAssertion(props map[string]interface{}, issuer, subject string, audiences []string) bool {

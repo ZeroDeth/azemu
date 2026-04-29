@@ -13,6 +13,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/golang-jwt/jwt/v5"
@@ -81,11 +82,16 @@ func postTokenForm(t *testing.T, srv *httptest.Server, form url.Values) (*http.R
 
 func unsignedAssertion(t *testing.T, issuer, subject string, audiences interface{}) string {
 	t.Helper()
-	token := jwt.NewWithClaims(jwt.SigningMethodNone, jwt.MapClaims{
+	return unsignedAssertionWithClaims(t, jwt.MapClaims{
 		"iss": issuer,
 		"sub": subject,
 		"aud": audiences,
 	})
+}
+
+func unsignedAssertionWithClaims(t *testing.T, claims jwt.MapClaims) string {
+	t.Helper()
+	token := jwt.NewWithClaims(jwt.SigningMethodNone, claims)
 	signed, err := token.SignedString(jwt.UnsafeAllowNoneSignatureType)
 	if err != nil {
 		t.Fatalf("sign unsigned assertion: %v", err)
@@ -351,6 +357,51 @@ func TestToken_WorkloadIdentityAssertion_MismatchReturns400(t *testing.T) {
 				t.Errorf("error = %v, want invalid_grant", body["error"])
 			}
 		})
+	}
+}
+
+func TestToken_WorkloadIdentityAssertion_ExpiredAssertionRejected(t *testing.T) {
+	const issuer = "https://issuer.test/"
+	const subject = "system:serviceaccount:default:app"
+	const audience = "api://AzureADTokenExchange"
+	srv, _, clientID := newFederatedTokenServer(t, issuer, subject, audience)
+
+	expired := unsignedAssertionWithClaims(t, jwt.MapClaims{
+		"iss": issuer,
+		"sub": subject,
+		"aud": audience,
+		"exp": time.Now().Add(-1 * time.Minute).Unix(),
+	})
+	form := url.Values{}
+	form.Set("client_id", clientID)
+	form.Set("client_assertion", expired)
+	resp, body := postTokenForm(t, srv, form)
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("status = %d, want 400. body=%v", resp.StatusCode, body)
+	}
+	if body["error"] != "invalid_grant" {
+		t.Errorf("error = %v, want invalid_grant", body["error"])
+	}
+}
+
+func TestToken_WorkloadIdentityAssertion_NotYetValidRejected(t *testing.T) {
+	const issuer = "https://issuer.test/"
+	const subject = "system:serviceaccount:default:app"
+	const audience = "api://AzureADTokenExchange"
+	srv, _, clientID := newFederatedTokenServer(t, issuer, subject, audience)
+
+	future := unsignedAssertionWithClaims(t, jwt.MapClaims{
+		"iss": issuer,
+		"sub": subject,
+		"aud": audience,
+		"nbf": time.Now().Add(5 * time.Minute).Unix(),
+	})
+	form := url.Values{}
+	form.Set("client_id", clientID)
+	form.Set("client_assertion", future)
+	resp, body := postTokenForm(t, srv, form)
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("status = %d, want 400. body=%v", resp.StatusCode, body)
 	}
 }
 
