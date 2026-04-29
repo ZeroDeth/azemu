@@ -117,13 +117,16 @@ func TestFIC_LIST_ReturnsChildren(t *testing.T) {
 	}
 }
 
-func TestFIC_DELETE_Returns200Then204(t *testing.T) {
+func TestFIC_DELETE_Returns202ThenNotFound(t *testing.T) {
 	srv := newTestServer(t)
 	createTestIdentity(t, srv.URL, "my-identity")
 	httpPut(t, ficURL(srv.URL, "my-identity", "fic-one"), ficBody)
 
 	resp := httpDelete(t, ficURL(srv.URL, "my-identity", "fic-one"))
-	assertStatus(t, resp, http.StatusOK)
+	assertStatus(t, resp, http.StatusAccepted)
+	if loc := resp.Header.Get("Location"); loc == "" {
+		t.Errorf("DELETE 202 missing Location header")
+	}
 	resp = httpDelete(t, ficURL(srv.URL, "my-identity", "fic-one"))
-	assertStatus(t, resp, http.StatusNoContent)
+	assertStatus(t, resp, http.StatusNotFound)
 }

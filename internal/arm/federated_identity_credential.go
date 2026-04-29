@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 
 	"github.com/zerodeth/azemu/internal/store"
@@ -138,12 +139,15 @@ func (a *Router) deleteFederatedIdentityCredential(w http.ResponseWriter, r *htt
 	id := federatedIdentityCredentialID(subID, rgName, identityName, credentialName)
 
 	if !a.store.Delete(id) {
-		w.WriteHeader(http.StatusNoContent)
+		writeAzureError(w, http.StatusNotFound, "ResourceNotFound",
+			fmt.Sprintf("The federated identity credential '%s' under user assigned identity '%s' could not be found.", credentialName, identityName))
 		return
 	}
 
 	log.Info().Str("resource_id", id).Msg("federated identity credential deleted")
-	w.WriteHeader(http.StatusOK)
+	w.Header().Set("Location",
+		fmt.Sprintf("/subscriptions/%s/operationresults/%s", subID, uuid.New().String()))
+	w.WriteHeader(http.StatusAccepted)
 }
 
 func (a *Router) listFederatedIdentityCredentials(w http.ResponseWriter, r *http.Request) {
