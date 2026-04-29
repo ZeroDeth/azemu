@@ -13,6 +13,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/golang-jwt/jwt/v5"
@@ -60,6 +61,40 @@ func postToken(t *testing.T, srv *httptest.Server, clientID string) string {
 		t.Fatalf("access_token missing or empty in response: %v", result)
 	}
 	return token
+}
+
+func postTokenForm(t *testing.T, srv *httptest.Server, form url.Values) (*http.Response, map[string]interface{}) {
+	t.Helper()
+	resp, err := http.Post(srv.URL+"/token", "application/x-www-form-urlencoded", strings.NewReader(form.Encode()))
+	if err != nil {
+		t.Fatalf("POST /token: %v", err)
+	}
+	var result map[string]interface{}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		resp.Body.Close()
+		t.Fatalf("decode token response: %v", err)
+	}
+	resp.Body.Close()
+	return resp, result
+}
+
+func unsignedAssertion(t *testing.T, issuer, subject string, audiences interface{}) string {
+	t.Helper()
+	return unsignedAssertionWithClaims(t, jwt.MapClaims{
+		"iss": issuer,
+		"sub": subject,
+		"aud": audiences,
+	})
+}
+
+func unsignedAssertionWithClaims(t *testing.T, claims jwt.MapClaims) string {
+	t.Helper()
+	token := jwt.NewWithClaims(jwt.SigningMethodNone, claims)
+	signed, err := token.SignedString(jwt.UnsafeAllowNoneSignatureType)
+	if err != nil {
+		t.Fatalf("sign unsigned assertion: %v", err)
+	}
+	return signed
 }
 
 // parseUnchecked parses a JWT without signature verification and returns the
@@ -216,6 +251,184 @@ func TestToken_SignatureVerifiesWithJWKS(t *testing.T) {
 	}, jwt.WithValidMethods([]string{"RS256"}))
 	if err != nil {
 		t.Errorf("signature verification failed: %v", err)
+	}
+}
+
+// stubFICResolver matches a single hard-coded federated identity credential.
+// It exists so internal/auth tests can exercise the workload-identity flow
+// without importing internal/store; the production resolver lives in
+// cmd/azemu and walks the store directly.
+type stubFICResolver struct {
+	clientID    string
+	issuer      string
+	subject     string
+	audiences   []string
+	principalID string
+	identityID  string
+}
+
+func (s *stubFICResolver) ResolveFederatedIdentity(clientID, issuer, subject string, audiences []string) (FICMatch, bool) {
+	if clientID != s.clientID || issuer != s.issuer || subject != s.subject {
+		return FICMatch{}, false
+	}
+	for _, want := range s.audiences {
+		for _, got := range audiences {
+			if want == got {
+				return FICMatch{
+					ClientID:    s.clientID,
+					PrincipalID: s.principalID,
+					IdentityID:  s.identityID,
+				}, true
+			}
+		}
+	}
+	return FICMatch{}, false
+}
+
+func newFederatedTokenServer(t *testing.T, issuer, subject, audience string) (*httptest.Server, *TokenService, string) {
+	t.Helper()
+	const clientID = "11111111-1111-1111-1111-111111111111"
+	const identityID = "/subscriptions/sub1/resourceGroups/rg1/providers/Microsoft.ManagedIdentity/userAssignedIdentities/my-identity"
+	resolver := &stubFICResolver{
+		clientID:    clientID,
+		issuer:      issuer,
+		subject:     subject,
+		audiences:   []string{audience},
+		principalID: "22222222-2222-2222-2222-222222222222",
+		identityID:  identityID,
+	}
+
+	svc, err := NewTokenService("test-tenant-id", resolver)
+	if err != nil {
+		t.Fatalf("NewTokenService: %v", err)
+	}
+	r := chi.NewRouter()
+	svc.Routes(r)
+	srv := httptest.NewServer(r)
+	t.Cleanup(srv.Close)
+	return srv, svc, clientID
+}
+
+func TestToken_WorkloadIdentityAssertion_ReturnsAccessToken(t *testing.T) {
+	const issuer = "https://issuer.test/"
+	const subject = "system:serviceaccount:default:app"
+	const audience = "api://AzureADTokenExchange"
+	srv, _, clientID := newFederatedTokenServer(t, issuer, subject, audience)
+
+	form := url.Values{}
+	form.Set("client_id", clientID)
+	form.Set("client_assertion", unsignedAssertion(t, issuer, subject, audience))
+	form.Set("grant_type", "client_credentials")
+	form.Set("scope", "https://vault.azure.net/.default")
+
+	resp, body := postTokenForm(t, srv, form)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d, want 200. body=%v", resp.StatusCode, body)
+	}
+	raw, _ := body["access_token"].(string)
+	tok := parseUnchecked(t, raw)
+	claims := tok.Claims.(jwt.MapClaims)
+	if claims["aud"] != "https://vault.azure.net" {
+		t.Errorf("aud = %v, want https://vault.azure.net", claims["aud"])
+	}
+	if claims["appid"] != clientID {
+		t.Errorf("appid = %v, want %s", claims["appid"], clientID)
+	}
+	if claims["xms_mirid"] == nil {
+		t.Error("xms_mirid missing")
+	}
+}
+
+func TestToken_WorkloadIdentityAssertion_MismatchReturns400(t *testing.T) {
+	const issuer = "https://issuer.test/"
+	const subject = "system:serviceaccount:default:app"
+	const audience = "api://AzureADTokenExchange"
+	srv, _, clientID := newFederatedTokenServer(t, issuer, subject, audience)
+
+	tests := []struct {
+		name      string
+		issuer    string
+		subject   string
+		audiences interface{}
+	}{
+		{name: "issuer", issuer: "https://other-issuer.test/", subject: subject, audiences: audience},
+		{name: "subject", issuer: issuer, subject: "system:serviceaccount:default:other", audiences: audience},
+		{name: "audience", issuer: issuer, subject: subject, audiences: "api://OtherAudience"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			form := url.Values{}
+			form.Set("client_id", clientID)
+			form.Set("client_assertion", unsignedAssertion(t, tt.issuer, tt.subject, tt.audiences))
+			resp, body := postTokenForm(t, srv, form)
+			if resp.StatusCode != http.StatusBadRequest {
+				t.Fatalf("status = %d, want 400. body=%v", resp.StatusCode, body)
+			}
+			if body["error"] != "invalid_grant" {
+				t.Errorf("error = %v, want invalid_grant", body["error"])
+			}
+		})
+	}
+}
+
+func TestToken_WorkloadIdentityAssertion_ExpiredAssertionRejected(t *testing.T) {
+	const issuer = "https://issuer.test/"
+	const subject = "system:serviceaccount:default:app"
+	const audience = "api://AzureADTokenExchange"
+	srv, _, clientID := newFederatedTokenServer(t, issuer, subject, audience)
+
+	expired := unsignedAssertionWithClaims(t, jwt.MapClaims{
+		"iss": issuer,
+		"sub": subject,
+		"aud": audience,
+		"exp": time.Now().Add(-1 * time.Minute).Unix(),
+	})
+	form := url.Values{}
+	form.Set("client_id", clientID)
+	form.Set("client_assertion", expired)
+	resp, body := postTokenForm(t, srv, form)
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("status = %d, want 400. body=%v", resp.StatusCode, body)
+	}
+	if body["error"] != "invalid_grant" {
+		t.Errorf("error = %v, want invalid_grant", body["error"])
+	}
+}
+
+func TestToken_WorkloadIdentityAssertion_NotYetValidRejected(t *testing.T) {
+	const issuer = "https://issuer.test/"
+	const subject = "system:serviceaccount:default:app"
+	const audience = "api://AzureADTokenExchange"
+	srv, _, clientID := newFederatedTokenServer(t, issuer, subject, audience)
+
+	future := unsignedAssertionWithClaims(t, jwt.MapClaims{
+		"iss": issuer,
+		"sub": subject,
+		"aud": audience,
+		"nbf": time.Now().Add(5 * time.Minute).Unix(),
+	})
+	form := url.Values{}
+	form.Set("client_id", clientID)
+	form.Set("client_assertion", future)
+	resp, body := postTokenForm(t, srv, form)
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("status = %d, want 400. body=%v", resp.StatusCode, body)
+	}
+}
+
+func TestToken_WorkloadIdentityAssertion_ArrayAudienceMatches(t *testing.T) {
+	const issuer = "https://issuer.test/"
+	const subject = "system:serviceaccount:default:app"
+	const audience = "api://AzureADTokenExchange"
+	srv, _, clientID := newFederatedTokenServer(t, issuer, subject, audience)
+
+	form := url.Values{}
+	form.Set("client_id", clientID)
+	form.Set("client_assertion", unsignedAssertion(t, issuer, subject, []string{"api://Other", audience}))
+	resp, body := postTokenForm(t, srv, form)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d, want 200. body=%v", resp.StatusCode, body)
 	}
 }
 

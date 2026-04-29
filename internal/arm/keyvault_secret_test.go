@@ -3,8 +3,13 @@ package arm
 import (
 	"fmt"
 	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/go-chi/chi/v5"
+	mw "github.com/zerodeth/azemu/internal/middleware"
+	"github.com/zerodeth/azemu/internal/store"
 )
 
 // kvSecretURL builds a Key Vault data-plane URL for a named secret.
@@ -28,6 +33,43 @@ func kvSecretVersionsURL(srvURL, vaultName, secretName string) string {
 const secretBody = `{"value":"super-secret","contentType":"text/plain"}`
 const secretBodyUpdated = `{"value":"super-secret-v2","contentType":"text/plain"}`
 
+type testTokenValidator struct {
+	valid string
+}
+
+func (v testTokenValidator) ValidateBearerToken(raw string) bool {
+	return raw == v.valid
+}
+
+func newProtectedKVTestServer(t *testing.T, validToken string) *httptest.Server {
+	t.Helper()
+	s := store.NewMemoryStore()
+	ar := NewRouter(s, "http://azurite-test:10000", "https://kv-test", "redis://redis-test:6379", testTokenValidator{valid: validToken})
+	r := chi.NewRouter()
+	r.Use(mw.NormalizePath)
+	r.Use(mw.AzureHeaders)
+	r.Use(mw.RequireAPIVersion)
+	r.Route("/keyvault", ar.KeyVaultDataPlaneRoutes)
+	srv := httptest.NewServer(r)
+	t.Cleanup(srv.Close)
+	return srv
+}
+
+func httpPutWithBearer(t *testing.T, url, body, token string) *http.Response {
+	t.Helper()
+	req, err := http.NewRequest(http.MethodPut, withAPIVersion(url), strings.NewReader(body))
+	if err != nil {
+		t.Fatalf("new request: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("do PUT %s: %v", url, err)
+	}
+	return resp
+}
+
 func TestKVSecret_PUT_Creates_Returns201(t *testing.T) {
 	srv := newTestServer(t)
 	resp := httpPut(t, kvSecretURL(srv.URL, "myvault", "mysecret"), secretBody)
@@ -42,6 +84,19 @@ func TestKVSecret_PUT_Creates_Returns201(t *testing.T) {
 	if !strings.Contains(id, "myvault") || !strings.Contains(id, "mysecret") {
 		t.Errorf("id = %v, want to contain vault/secret name", id)
 	}
+}
+
+func TestKVSecret_PUT_ProtectedRouteRequiresValidBearerToken(t *testing.T) {
+	srv := newProtectedKVTestServer(t, "valid-token")
+
+	resp := httpPut(t, kvSecretURL(srv.URL, "myvault", "mysecret"), secretBody)
+	assertStatus(t, resp, http.StatusUnauthorized)
+
+	resp = httpPutWithBearer(t, kvSecretURL(srv.URL, "myvault", "mysecret"), secretBody, "invalid-token")
+	assertStatus(t, resp, http.StatusUnauthorized)
+
+	resp = httpPutWithBearer(t, kvSecretURL(srv.URL, "myvault", "mysecret"), secretBody, "valid-token")
+	assertStatus(t, resp, http.StatusCreated)
 }
 
 func TestKVSecret_PUT_Idempotent_Returns200(t *testing.T) {
