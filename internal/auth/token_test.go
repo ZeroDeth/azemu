@@ -17,8 +17,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/golang-jwt/jwt/v5"
-
-	"github.com/zerodeth/azemu/internal/store"
 )
 
 // newAuthTestServer creates an httptest.Server with the full token, OIDC, and
@@ -256,37 +254,51 @@ func TestToken_SignatureVerifiesWithJWKS(t *testing.T) {
 	}
 }
 
+// stubFICResolver matches a single hard-coded federated identity credential.
+// It exists so internal/auth tests can exercise the workload-identity flow
+// without importing internal/store; the production resolver lives in
+// cmd/azemu and walks the store directly.
+type stubFICResolver struct {
+	clientID    string
+	issuer      string
+	subject     string
+	audiences   []string
+	principalID string
+	identityID  string
+}
+
+func (s *stubFICResolver) ResolveFederatedIdentity(clientID, issuer, subject string, audiences []string) (FICMatch, bool) {
+	if clientID != s.clientID || issuer != s.issuer || subject != s.subject {
+		return FICMatch{}, false
+	}
+	for _, want := range s.audiences {
+		for _, got := range audiences {
+			if want == got {
+				return FICMatch{
+					ClientID:    s.clientID,
+					PrincipalID: s.principalID,
+					IdentityID:  s.identityID,
+				}, true
+			}
+		}
+	}
+	return FICMatch{}, false
+}
+
 func newFederatedTokenServer(t *testing.T, issuer, subject, audience string) (*httptest.Server, *TokenService, string) {
 	t.Helper()
-	s := store.NewMemoryStore()
-	identityID := "/subscriptions/sub1/resourceGroups/rg1/providers/Microsoft.ManagedIdentity/userAssignedIdentities/my-identity"
-	clientID := "11111111-1111-1111-1111-111111111111"
-	if err := s.Put(identityID, &store.Resource{
-		ID:   identityID,
-		Name: "my-identity",
-		Type: "Microsoft.ManagedIdentity/userAssignedIdentities",
-		Properties: map[string]interface{}{
-			"clientId":    clientID,
-			"principalId": "22222222-2222-2222-2222-222222222222",
-			"tenantId":    "test-tenant-id",
-		},
-	}); err != nil {
-		t.Fatalf("put identity: %v", err)
-	}
-	if err := s.Put(identityID+"/federatedIdentityCredentials/fic-one", &store.Resource{
-		ID:   identityID + "/federatedIdentityCredentials/fic-one",
-		Name: "fic-one",
-		Type: "Microsoft.ManagedIdentity/userAssignedIdentities/federatedIdentityCredentials",
-		Properties: map[string]interface{}{
-			"issuer":    issuer,
-			"subject":   subject,
-			"audiences": []string{audience},
-		},
-	}); err != nil {
-		t.Fatalf("put federated identity credential: %v", err)
+	const clientID = "11111111-1111-1111-1111-111111111111"
+	const identityID = "/subscriptions/sub1/resourceGroups/rg1/providers/Microsoft.ManagedIdentity/userAssignedIdentities/my-identity"
+	resolver := &stubFICResolver{
+		clientID:    clientID,
+		issuer:      issuer,
+		subject:     subject,
+		audiences:   []string{audience},
+		principalID: "22222222-2222-2222-2222-222222222222",
+		identityID:  identityID,
 	}
 
-	svc, err := NewTokenService("test-tenant-id", s)
+	svc, err := NewTokenService("test-tenant-id", resolver)
 	if err != nil {
 		t.Fatalf("NewTokenService: %v", err)
 	}

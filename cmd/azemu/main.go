@@ -96,7 +96,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	tokenSvc, err := auth.NewTokenService(cfg.TenantID, state)
+	tokenSvc, err := auth.NewTokenService(cfg.TenantID, newFederatedIdentityResolver(state))
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to create token service")
 	}

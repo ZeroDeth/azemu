@@ -14,31 +14,46 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/rs/zerolog/log"
-
-	"github.com/zerodeth/azemu/internal/store"
 )
+
+// FICMatch describes the user-assigned identity that a workload-identity
+// client assertion successfully resolved to.
+type FICMatch struct {
+	ClientID    string
+	PrincipalID string
+	IdentityID  string
+}
+
+// FICResolver looks up a stored federated identity credential whose trust
+// configuration (issuer, subject, audiences) matches an incoming client
+// assertion for the given clientID. The interface is defined here so that
+// internal/auth has no dependency on internal/store; callers in cmd/azemu
+// supply the concrete implementation that walks the store.
+type FICResolver interface {
+	ResolveFederatedIdentity(clientID, issuer, subject string, audiences []string) (FICMatch, bool)
+}
 
 type TokenService struct {
 	tenantID   string
 	signingKey *rsa.PrivateKey
 	keyID      string
-	store      store.Store
+	resolver   FICResolver
 }
 
-func NewTokenService(tenantID string, stores ...store.Store) (*TokenService, error) {
+func NewTokenService(tenantID string, resolvers ...FICResolver) (*TokenService, error) {
 	key, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		return nil, fmt.Errorf("generate RSA signing key: %w", err)
 	}
-	var s store.Store
-	if len(stores) > 0 {
-		s = stores[0]
+	var r FICResolver
+	if len(resolvers) > 0 {
+		r = resolvers[0]
 	}
 	return &TokenService{
 		tenantID:   tenantID,
 		signingKey: key,
 		keyID:      "azemu-signing-key-1",
-		store:      s,
+		resolver:   r,
 	}, nil
 }
 
@@ -113,10 +128,10 @@ func (t *TokenService) workloadIdentityToken(w http.ResponseWriter, r *http.Requ
 		"nbf":       now.Unix(),
 		"exp":       now.Add(1 * time.Hour).Unix(),
 		"tid":       t.tenantID,
-		"oid":       match.principalID,
-		"appid":     match.clientID,
+		"oid":       match.PrincipalID,
+		"appid":     match.ClientID,
 		"sub":       subject,
-		"xms_mirid": match.identityID,
+		"xms_mirid": match.IdentityID,
 	})
 	if err != nil {
 		http.Error(w, `{"error":"token_signing_failed"}`, http.StatusInternalServerError)
@@ -134,15 +149,9 @@ func (t *TokenService) workloadIdentityToken(w http.ResponseWriter, r *http.Requ
 	}
 }
 
-type federatedIdentityMatch struct {
-	clientID    string
-	principalID string
-	identityID  string
-}
-
-func (t *TokenService) matchFederatedIdentityCredential(clientID, assertion string) (federatedIdentityMatch, jwt.MapClaims, bool) {
-	if t.store == nil || clientID == "" {
-		return federatedIdentityMatch{}, nil, false
+func (t *TokenService) matchFederatedIdentityCredential(clientID, assertion string) (FICMatch, jwt.MapClaims, bool) {
+	if t.resolver == nil || clientID == "" {
+		return FICMatch{}, nil, false
 	}
 
 	// The client assertion is an OIDC token minted by an external issuer
@@ -156,47 +165,28 @@ func (t *TokenService) matchFederatedIdentityCredential(clientID, assertion stri
 	parser := jwt.NewParser()
 	token, _, err := parser.ParseUnverified(assertion, jwt.MapClaims{})
 	if err != nil {
-		return federatedIdentityMatch{}, nil, false
+		return FICMatch{}, nil, false
 	}
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
-		return federatedIdentityMatch{}, nil, false
+		return FICMatch{}, nil, false
 	}
 	if !assertionTemporallyValid(claims) {
-		return federatedIdentityMatch{}, claims, false
+		return FICMatch{}, claims, false
 	}
 
 	issuer, _ := claims["iss"].(string)
 	subject, _ := claims["sub"].(string)
 	audiences := claimAudiences(claims["aud"])
 	if issuer == "" || subject == "" || len(audiences) == 0 {
-		return federatedIdentityMatch{}, claims, false
+		return FICMatch{}, claims, false
 	}
 
-	for _, identity := range t.store.List("/subscriptions/") {
-		if identity.Type != "Microsoft.ManagedIdentity/userAssignedIdentities" {
-			continue
-		}
-		props := identity.Properties
-		if props == nil || props["clientId"] != clientID {
-			continue
-		}
-		prefix := identity.ID + "/federatedIdentityCredentials/"
-		for _, cred := range t.store.List(prefix) {
-			if cred.Type != "Microsoft.ManagedIdentity/userAssignedIdentities/federatedIdentityCredentials" {
-				continue
-			}
-			if credentialMatchesAssertion(cred.Properties, issuer, subject, audiences) {
-				principalID, _ := props["principalId"].(string)
-				return federatedIdentityMatch{
-					clientID:    clientID,
-					principalID: principalID,
-					identityID:  identity.ID,
-				}, claims, true
-			}
-		}
+	match, ok := t.resolver.ResolveFederatedIdentity(clientID, issuer, subject, audiences)
+	if !ok {
+		return FICMatch{}, claims, false
 	}
-	return federatedIdentityMatch{}, claims, false
+	return match, claims, true
 }
 
 // assertionTemporallyValid rejects assertions whose `exp` is in the past or
@@ -231,42 +221,10 @@ func claimUnixSeconds(v interface{}) (int64, bool) {
 	}
 }
 
-func credentialMatchesAssertion(props map[string]interface{}, issuer, subject string, audiences []string) bool {
-	if props["issuer"] != issuer || props["subject"] != subject {
-		return false
-	}
-	allowed := stringSlice(props["audiences"])
-	for _, want := range allowed {
-		for _, got := range audiences {
-			if want == got {
-				return true
-			}
-		}
-	}
-	return false
-}
-
 func claimAudiences(value interface{}) []string {
 	switch v := value.(type) {
 	case string:
 		return []string{v}
-	case []string:
-		return v
-	case []interface{}:
-		var out []string
-		for _, item := range v {
-			if s, ok := item.(string); ok {
-				out = append(out, s)
-			}
-		}
-		return out
-	default:
-		return nil
-	}
-}
-
-func stringSlice(value interface{}) []string {
-	switch v := value.(type) {
 	case []string:
 		return v
 	case []interface{}:
