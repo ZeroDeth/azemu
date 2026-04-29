@@ -56,12 +56,12 @@ func buildProductionLikeServer(t *testing.T) *httptest.Server {
 	}
 
 	s := store.NewMemoryStore()
-	tokenSvc, err := auth.NewTokenService(cfg.TenantID)
+	tokenSvc, err := auth.NewTokenService(cfg.TenantID, s)
 	if err != nil {
 		t.Fatalf("NewTokenService: %v", err)
 	}
 	metaSvc := metadata.NewService(cfg)
-	armRouter := arm.NewRouter(s, cfg.AzuriteEndpoint, cfg.KeyVaultEndpoint, cfg.RedisEndpoint)
+	armRouter := arm.NewRouter(s, cfg.AzuriteEndpoint, cfg.KeyVaultEndpoint, cfg.RedisEndpoint, tokenSvc)
 
 	r := chi.NewRouter()
 	// Mirror the production middleware order from cmd/azemu/main.go.
@@ -72,6 +72,7 @@ func buildProductionLikeServer(t *testing.T) *httptest.Server {
 	r.Route("/metadata", metaSvc.Routes)
 	r.Route("/{tenantID}", tokenSvc.TenantRoutes)
 	r.Route("/subscriptions", armRouter.Routes)
+	r.Route("/keyvault", armRouter.KeyVaultDataPlaneRoutes)
 
 	srv := httptest.NewTLSServer(r)
 	t.Cleanup(srv.Close)

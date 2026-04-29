@@ -8,28 +8,37 @@ import (
 	"fmt"
 	"math/big"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/rs/zerolog/log"
+
+	"github.com/zerodeth/azemu/internal/store"
 )
 
 type TokenService struct {
 	tenantID   string
 	signingKey *rsa.PrivateKey
 	keyID      string
+	store      store.Store
 }
 
-func NewTokenService(tenantID string) (*TokenService, error) {
+func NewTokenService(tenantID string, stores ...store.Store) (*TokenService, error) {
 	key, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		return nil, fmt.Errorf("generate RSA signing key: %w", err)
+	}
+	var s store.Store
+	if len(stores) > 0 {
+		s = stores[0]
 	}
 	return &TokenService{
 		tenantID:   tenantID,
 		signingKey: key,
 		keyID:      "azemu-signing-key-1",
+		store:      s,
 	}, nil
 }
 
@@ -52,21 +61,25 @@ func (t *TokenService) RoutesV2(r chi.Router) {
 
 // token mints a mock access token. Accepts any credentials.
 func (t *TokenService) token(w http.ResponseWriter, r *http.Request) {
+	if assertion := r.FormValue("client_assertion"); assertion != "" {
+		t.workloadIdentityToken(w, r, assertion)
+		return
+	}
+
+	clientID := r.FormValue("client_id")
+	audience := tokenAudience(r)
 	now := time.Now()
-	claims := jwt.MapClaims{
-		"aud":   "https://management.azure.com/",
+	signed, err := t.signAccessToken(jwt.MapClaims{
+		"aud":   audience,
 		"iss":   "https://sts.windows.net/" + t.tenantID + "/",
 		"iat":   now.Unix(),
 		"nbf":   now.Unix(),
 		"exp":   now.Add(1 * time.Hour).Unix(),
 		"tid":   t.tenantID,
 		"oid":   "00000000-0000-0000-0000-000000000002",
-		"appid": r.FormValue("client_id"),
+		"appid": clientID,
 		"sub":   "azemu-mock-subject",
-	}
-	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
-	token.Header["kid"] = t.keyID
-	signed, err := token.SignedString(t.signingKey)
+	})
 	if err != nil {
 		http.Error(w, `{"error":"token_signing_failed"}`, http.StatusInternalServerError)
 		return
@@ -77,9 +90,191 @@ func (t *TokenService) token(w http.ResponseWriter, r *http.Request) {
 		"access_token": signed,
 		"token_type":   "Bearer",
 		"expires_in":   3600,
-		"resource":     "https://management.azure.com/",
+		"resource":     audience,
 	}); err != nil {
 		log.Error().Err(err).Msg("failed to write token response")
+	}
+}
+
+func (t *TokenService) workloadIdentityToken(w http.ResponseWriter, r *http.Request, assertion string) {
+	match, assertionClaims, ok := t.matchFederatedIdentityCredential(r.FormValue("client_id"), assertion)
+	if !ok {
+		writeTokenError(w, http.StatusBadRequest, "invalid_grant", "client assertion does not match a federated identity credential")
+		return
+	}
+
+	audience := tokenAudience(r)
+	now := time.Now()
+	subject, _ := assertionClaims["sub"].(string)
+	signed, err := t.signAccessToken(jwt.MapClaims{
+		"aud":       audience,
+		"iss":       "https://sts.windows.net/" + t.tenantID + "/",
+		"iat":       now.Unix(),
+		"nbf":       now.Unix(),
+		"exp":       now.Add(1 * time.Hour).Unix(),
+		"tid":       t.tenantID,
+		"oid":       match.principalID,
+		"appid":     match.clientID,
+		"sub":       subject,
+		"xms_mirid": match.identityID,
+	})
+	if err != nil {
+		http.Error(w, `{"error":"token_signing_failed"}`, http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(map[string]interface{}{
+		"access_token": signed,
+		"token_type":   "Bearer",
+		"expires_in":   3600,
+		"resource":     audience,
+	}); err != nil {
+		log.Error().Err(err).Msg("failed to write workload identity token response")
+	}
+}
+
+type federatedIdentityMatch struct {
+	clientID    string
+	principalID string
+	identityID  string
+}
+
+func (t *TokenService) matchFederatedIdentityCredential(clientID, assertion string) (federatedIdentityMatch, jwt.MapClaims, bool) {
+	if t.store == nil || clientID == "" {
+		return federatedIdentityMatch{}, nil, false
+	}
+
+	parser := jwt.NewParser()
+	token, _, err := parser.ParseUnverified(assertion, jwt.MapClaims{})
+	if err != nil {
+		return federatedIdentityMatch{}, nil, false
+	}
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return federatedIdentityMatch{}, nil, false
+	}
+
+	issuer, _ := claims["iss"].(string)
+	subject, _ := claims["sub"].(string)
+	audiences := claimAudiences(claims["aud"])
+	if issuer == "" || subject == "" || len(audiences) == 0 {
+		return federatedIdentityMatch{}, claims, false
+	}
+
+	for _, identity := range t.store.List("/subscriptions/") {
+		if identity.Type != "Microsoft.ManagedIdentity/userAssignedIdentities" {
+			continue
+		}
+		props := identity.Properties
+		if props == nil || props["clientId"] != clientID {
+			continue
+		}
+		prefix := identity.ID + "/federatedIdentityCredentials/"
+		for _, cred := range t.store.List(prefix) {
+			if cred.Type != "Microsoft.ManagedIdentity/userAssignedIdentities/federatedIdentityCredentials" {
+				continue
+			}
+			if credentialMatchesAssertion(cred.Properties, issuer, subject, audiences) {
+				principalID, _ := props["principalId"].(string)
+				return federatedIdentityMatch{
+					clientID:    clientID,
+					principalID: principalID,
+					identityID:  identity.ID,
+				}, claims, true
+			}
+		}
+	}
+	return federatedIdentityMatch{}, claims, false
+}
+
+func credentialMatchesAssertion(props map[string]interface{}, issuer, subject string, audiences []string) bool {
+	if props["issuer"] != issuer || props["subject"] != subject {
+		return false
+	}
+	allowed := stringSlice(props["audiences"])
+	for _, want := range allowed {
+		for _, got := range audiences {
+			if want == got {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func claimAudiences(value interface{}) []string {
+	switch v := value.(type) {
+	case string:
+		return []string{v}
+	case []string:
+		return v
+	case []interface{}:
+		var out []string
+		for _, item := range v {
+			if s, ok := item.(string); ok {
+				out = append(out, s)
+			}
+		}
+		return out
+	default:
+		return nil
+	}
+}
+
+func stringSlice(value interface{}) []string {
+	switch v := value.(type) {
+	case []string:
+		return v
+	case []interface{}:
+		var out []string
+		for _, item := range v {
+			if s, ok := item.(string); ok {
+				out = append(out, s)
+			}
+		}
+		return out
+	default:
+		return nil
+	}
+}
+
+func tokenAudience(r *http.Request) string {
+	if resource := r.FormValue("resource"); resource != "" {
+		return resource
+	}
+	if scope := r.FormValue("scope"); scope != "" {
+		fields := strings.Fields(scope)
+		if len(fields) > 0 {
+			return strings.TrimSuffix(fields[0], "/.default")
+		}
+	}
+	return "https://management.azure.com/"
+}
+
+func (t *TokenService) signAccessToken(claims jwt.MapClaims) (string, error) {
+	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
+	token.Header["kid"] = t.keyID
+	return token.SignedString(t.signingKey)
+}
+
+// ValidateBearerToken verifies that a data-plane bearer token was minted by
+// this TokenService.
+func (t *TokenService) ValidateBearerToken(raw string) bool {
+	_, err := jwt.Parse(raw, func(token *jwt.Token) (interface{}, error) {
+		return &t.signingKey.PublicKey, nil
+	}, jwt.WithValidMethods([]string{"RS256"}))
+	return err == nil
+}
+
+func writeTokenError(w http.ResponseWriter, status int, code, description string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	if err := json.NewEncoder(w).Encode(map[string]interface{}{
+		"error":             code,
+		"error_description": description,
+	}); err != nil {
+		log.Error().Err(err).Msg("failed to write token error")
 	}
 }
 

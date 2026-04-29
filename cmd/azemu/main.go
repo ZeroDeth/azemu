@@ -96,12 +96,12 @@ func main() {
 		os.Exit(0)
 	}
 
-	tokenSvc, err := auth.NewTokenService(cfg.TenantID)
+	tokenSvc, err := auth.NewTokenService(cfg.TenantID, state)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to create token service")
 	}
 	metaSvc := metadata.NewService(cfg)
-	armRouter := arm.NewRouter(state, cfg.AzuriteEndpoint, cfg.KeyVaultEndpoint, cfg.RedisEndpoint)
+	armRouter := arm.NewRouter(state, cfg.AzuriteEndpoint, cfg.KeyVaultEndpoint, cfg.RedisEndpoint, tokenSvc)
 	imdsSvc := auth.NewIMDSService(tokenSvc)
 	adoOIDC, err := ado.NewOIDCService()
 	if err != nil {
