@@ -9,7 +9,7 @@ COPY . .
 RUN CGO_ENABLED=0 go build -ldflags "-X main.Version=docker" -o /azemu ./cmd/azemu
 
 # --- Runtime stage ---
-FROM alpine:3.20
+FROM alpine:3.23
 RUN apk add --no-cache ca-certificates wget
 
 # Cert bundle directory; bind-mounted from host via docker-compose.
