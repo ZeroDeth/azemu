@@ -243,7 +243,7 @@ A scenario that does not run green in CI is deleted.
 |---|---|---|---|---|
 | 6.5.1 | `scenarios/three-tier/` | Web + app + data tier with LB, App Gateway, VNet + 3 Subnets, NSG, Public IP | TODO | 6.2 through 6.5 |
 | 6.5.2 | `scenarios/static-site/` | Storage account hosting a static site behind a CDN profile with a DNS zone | TODO | Phase 7 (Storage, CDN) and 6.6 (DNS) |
-| 6.5.3 | `scenarios/dns-with-records/` | DNS zone plus A/AAAA/CNAME/TXT/MX record sets | TODO | 6.6 |
+| 6.5.3 | `scenarios/dns-with-records/` | DNS zone plus A/AAAA/CNAME/TXT/MX record sets | DONE | 6.6 |
 
 ### Phase 7: Storage, Key Vault, CDN (v0.2)
 
@@ -261,7 +261,7 @@ entries in the metadata response.
 | 7.6 | Verify `suffixes.*` in metadata response still match go-azure-sdk expectations for Storage/KV/CDN | `internal/metadata/service.go` | DONE | `TestMetadata_CanonicalSuffixNames` pins `storage: "core.windows.net"` and `keyVaultDns: "vault.azure.net"`. CDN uses ARM endpoints directly, no suffix entry needed. |
 | 7.7 | `azurerm_redis_cache` (Standard tier) + `redis` sidecar | `Microsoft.Cache/Redis` | DONE | CRUD + HEAD + LIST + listKeys; SKU validation inside `properties.sku` (Basic/Standard/Premium, families C/P, capacity ranges); Premium-only fields rejected on Basic/Standard; deterministic dev keys whose primary matches the sidecar `--requirepass`; `hostName` derived from `AZEMU_REDIS_ENDPOINT`. ADR 0003 promoted to Implemented. Out of scope: Premium clustering/persistence/geo-replication, `regenerateKey`, TLS-wrapped 6380. |
 | 7.8 | Confirm `redisCache: "redis.cache.windows.net"` suffix in metadata response | `internal/metadata/service.go` | DONE | Added to `internal/metadata/service.go` suffixes block; regression assertion in `TestMetadata_CanonicalSuffixNames`. |
-| 7.9 | Mirror ADR 0003 to `website/docs/resources/design-decisions/0003-add-azure-cache-for-redis.md` and add nav entry to `website/mkdocs.yml` | `website/docs/resources/design-decisions/`, `website/mkdocs.yml` | TODO | Per `.claude/rules/docs-website.md`. Keep `Status: Proposed` until 7.7 lands; flip to `Implemented` with an `Implemented:` date when the resource ships. Precedent: `0001-delegate-storage-data-plane-to-azurite.md`. |
+| 7.9 | Mirror ADR 0003 to `website/docs/resources/design-decisions/0003-add-azure-cache-for-redis.md` and add nav entry to `website/mkdocs.yml` | `website/docs/resources/design-decisions/`, `website/mkdocs.yml` | DONE | File matches `docs/adr/0003-add-azure-cache-for-redis.md` verbatim; nav entry in `website/mkdocs.yml`; `Status: Implemented` with `Implemented: 2026-04-28`. |
 
 ### Phase 8: Identity, AKS, Azure DevOps bridge (v0.3)
 
