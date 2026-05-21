@@ -67,7 +67,7 @@ func (a *Router) requireKeyVaultBearerToken(w http.ResponseWriter, r *http.Reque
 		writeAzureError(w, http.StatusUnauthorized, "Unauthorized", "missing bearer token")
 		return false
 	}
-	if !a.tokenValidator.ValidateBearerToken(strings.TrimSpace(strings.TrimPrefix(authz, "Bearer "))) {
+	if !a.tokenValidator.ValidateBearerToken(strings.TrimSpace(strings.TrimPrefix(authz, "Bearer ")), "https://vault.azure.net") {
 		writeAzureError(w, http.StatusUnauthorized, "Unauthorized", "invalid bearer token")
 		return false
 	}

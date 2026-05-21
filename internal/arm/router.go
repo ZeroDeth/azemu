@@ -24,7 +24,7 @@ type Router struct {
 // TokenValidator is satisfied by auth.TokenService. Keeping the interface in
 // arm avoids coupling ARM handlers directly to the auth package.
 type TokenValidator interface {
-	ValidateBearerToken(raw string) bool
+	ValidateBearerToken(raw, expectedAud string) bool
 }
 
 func NewRouter(s store.Store, azuriteEndpoint, kvEndpoint, redisEndpoint string, validators ...TokenValidator) *Router {

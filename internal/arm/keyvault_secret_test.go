@@ -37,8 +37,8 @@ type testTokenValidator struct {
 	valid string
 }
 
-func (v testTokenValidator) ValidateBearerToken(raw string) bool {
-	return raw == v.valid
+func (v testTokenValidator) ValidateBearerToken(raw, expectedAud string) bool {
+	return raw == v.valid && expectedAud == "https://vault.azure.net"
 }
 
 func newProtectedKVTestServer(t *testing.T, validToken string) *httptest.Server {

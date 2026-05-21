@@ -260,11 +260,11 @@ func (t *TokenService) signAccessToken(claims jwt.MapClaims) (string, error) {
 }
 
 // ValidateBearerToken verifies that a data-plane bearer token was minted by
-// this TokenService.
-func (t *TokenService) ValidateBearerToken(raw string) bool {
+// this TokenService and carries the expected audience.
+func (t *TokenService) ValidateBearerToken(raw, expectedAud string) bool {
 	_, err := jwt.Parse(raw, func(token *jwt.Token) (interface{}, error) {
 		return &t.signingKey.PublicKey, nil
-	}, jwt.WithValidMethods([]string{"RS256"}))
+	}, jwt.WithValidMethods([]string{"RS256"}), jwt.WithAudience(expectedAud))
 	return err == nil
 }
 
