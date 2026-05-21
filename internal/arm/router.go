@@ -18,14 +18,26 @@ type Router struct {
 	azuriteEndpoint string // e.g. "http://azurite:10000", blob service base URL
 	kvEndpoint      string // e.g. "https://localhost:4566", Key Vault data-plane base URL
 	redisEndpoint   string // e.g. "redis://azemu-redis:6379", Redis sidecar URL
+	tokenValidator  TokenValidator
 }
 
-func NewRouter(s store.Store, azuriteEndpoint, kvEndpoint, redisEndpoint string) *Router {
+// TokenValidator is satisfied by auth.TokenService. Keeping the interface in
+// arm avoids coupling ARM handlers directly to the auth package.
+type TokenValidator interface {
+	ValidateBearerToken(raw, expectedAud string) bool
+}
+
+func NewRouter(s store.Store, azuriteEndpoint, kvEndpoint, redisEndpoint string, validators ...TokenValidator) *Router {
+	var tokenValidator TokenValidator
+	if len(validators) > 0 {
+		tokenValidator = validators[0]
+	}
 	return &Router{
 		store:           s,
 		azuriteEndpoint: azuriteEndpoint,
 		kvEndpoint:      kvEndpoint,
 		redisEndpoint:   redisEndpoint,
+		tokenValidator:  tokenValidator,
 	}
 }
 
@@ -201,6 +213,11 @@ func (a *Router) Routes(r chi.Router) {
 	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.cdn/profiles/{profileName}/endpoints", a.listCDNEndpoints)
 
 	// User Assigned Identities (Microsoft.ManagedIdentity/userAssignedIdentities)
+	r.Put("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.managedidentity/userassignedidentities/{identityName}/federatedidentitycredentials/{credentialName}", a.putFederatedIdentityCredential)
+	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.managedidentity/userassignedidentities/{identityName}/federatedidentitycredentials/{credentialName}", a.getFederatedIdentityCredential)
+	r.Head("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.managedidentity/userassignedidentities/{identityName}/federatedidentitycredentials/{credentialName}", a.headFederatedIdentityCredential)
+	r.Delete("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.managedidentity/userassignedidentities/{identityName}/federatedidentitycredentials/{credentialName}", a.deleteFederatedIdentityCredential)
+	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.managedidentity/userassignedidentities/{identityName}/federatedidentitycredentials", a.listFederatedIdentityCredentials)
 	r.Put("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.managedidentity/userassignedidentities/{identityName}", a.putUserAssignedIdentity)
 	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.managedidentity/userassignedidentities/{identityName}", a.getUserAssignedIdentity)
 	r.Head("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.managedidentity/userassignedidentities/{identityName}", a.headUserAssignedIdentity)

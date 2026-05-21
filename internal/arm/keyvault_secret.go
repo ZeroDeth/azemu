@@ -58,7 +58,26 @@ func kvSecretResponse(props map[string]interface{}) map[string]interface{} {
 	}
 }
 
+func (a *Router) requireKeyVaultBearerToken(w http.ResponseWriter, r *http.Request) bool {
+	if a.tokenValidator == nil {
+		return true
+	}
+	authz := r.Header.Get("Authorization")
+	if !strings.HasPrefix(authz, "Bearer ") {
+		writeAzureError(w, http.StatusUnauthorized, "Unauthorized", "missing bearer token")
+		return false
+	}
+	if !a.tokenValidator.ValidateBearerToken(strings.TrimSpace(strings.TrimPrefix(authz, "Bearer ")), "https://vault.azure.net") {
+		writeAzureError(w, http.StatusUnauthorized, "Unauthorized", "invalid bearer token")
+		return false
+	}
+	return true
+}
+
 func (a *Router) putKeyVaultSecret(w http.ResponseWriter, r *http.Request) {
+	if !a.requireKeyVaultBearerToken(w, r) {
+		return
+	}
 	vaultName := chi.URLParam(r, "vaultName")
 	secretName := chi.URLParam(r, "secretName")
 
@@ -131,6 +150,9 @@ func (a *Router) putKeyVaultSecret(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *Router) getKeyVaultSecret(w http.ResponseWriter, r *http.Request) {
+	if !a.requireKeyVaultBearerToken(w, r) {
+		return
+	}
 	vaultName := chi.URLParam(r, "vaultName")
 	secretName := chi.URLParam(r, "secretName")
 
@@ -154,6 +176,9 @@ func (a *Router) getKeyVaultSecret(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *Router) getKeyVaultSecretVersion(w http.ResponseWriter, r *http.Request) {
+	if !a.requireKeyVaultBearerToken(w, r) {
+		return
+	}
 	vaultName := chi.URLParam(r, "vaultName")
 	secretName := chi.URLParam(r, "secretName")
 	version := chi.URLParam(r, "version")
@@ -169,6 +194,9 @@ func (a *Router) getKeyVaultSecretVersion(w http.ResponseWriter, r *http.Request
 }
 
 func (a *Router) deleteKeyVaultSecret(w http.ResponseWriter, r *http.Request) {
+	if !a.requireKeyVaultBearerToken(w, r) {
+		return
+	}
 	vaultName := chi.URLParam(r, "vaultName")
 	secretName := chi.URLParam(r, "secretName")
 
@@ -204,6 +232,9 @@ func (a *Router) deleteKeyVaultSecret(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *Router) listKeyVaultSecrets(w http.ResponseWriter, r *http.Request) {
+	if !a.requireKeyVaultBearerToken(w, r) {
+		return
+	}
 	vaultName := chi.URLParam(r, "vaultName")
 	prefix := secretListPrefix(vaultName)
 
@@ -227,6 +258,9 @@ func (a *Router) listKeyVaultSecrets(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *Router) listKeyVaultSecretVersions(w http.ResponseWriter, r *http.Request) {
+	if !a.requireKeyVaultBearerToken(w, r) {
+		return
+	}
 	vaultName := chi.URLParam(r, "vaultName")
 	secretName := chi.URLParam(r, "secretName")
 
