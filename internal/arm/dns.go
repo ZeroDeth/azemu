@@ -390,9 +390,9 @@ func (a *Router) deleteDNSRecordSet(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Info().Str("resource_id", id).Msg("dns record set deleted")
-	w.Header().Set("Location",
-		fmt.Sprintf("/subscriptions/%s/operationresults/%s", subID, uuid.New().String()))
-	w.WriteHeader(http.StatusAccepted)
+	// DNS record set deletes are synchronous; return 204 No Content.
+	// Zone deletes (deleteDNSZone) remain async (202) to match Azure behaviour.
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // listDNSRecordSetsByType handles GET .../dnszones/{zone}/{recordType}
