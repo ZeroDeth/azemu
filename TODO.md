@@ -49,16 +49,10 @@ The bundle file is written with mode 0600 because it contains the private key.
 
 ## Known Gaps
 
-- **Website mirror missing for ADR 0002 and ADR 0003.** PR #35 added
-  `docs/adr/0002-azemu-plus-kind-for-aks-workload-deployments.md` and
-  `docs/adr/0003-add-azure-cache-for-redis.md` but did not create the
-  corresponding pages under `website/docs/resources/design-decisions/`
-  or register them in `website/mkdocs.yml` nav. Required by
-  `.claude/rules/docs-website.md`. Tracked as TASKS Phase 7.9 (ADR 0003
-  mirror) and Phase 8.9 (ADR 0002 mirror); both should land alongside
-  the implementation PR for the resource/scenario they describe so
-  status, dates, and prose stay aligned. Precedent:
-  `website/docs/resources/design-decisions/0001-delegate-storage-data-plane-to-azurite.md`.
+- ~~**Website mirror missing for ADR 0002 and ADR 0003.**~~
+  **RESOLVED 2026-05-23.** Both mirrors landed in PR #42 and are registered
+  in `website/mkdocs.yml` nav. ADR 0002 status stays `Proposed` until
+  scenario 8.7.1 ships; ADR 0003 already `Implemented`.
 - ADR 0002 implementation prose ("Optional Redis cache (per ADR 0003)")
   understates the dependency relative to TASKS Phase 8.7.1
   (`Depends on 8.2 and 7.7`). Reword to "Redis cache (per ADR 0003) is
