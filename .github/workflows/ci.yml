@@ -94,15 +94,14 @@ jobs:
             sleep 2
           done
 
-      - name: Wait for TLS cert
+      - name: Trust azemu TLS cert
         run: |
           for i in $(seq 1 15); do
-            test -f .azemu/cert-bundle.pem && echo "cert ready" && break || sleep 1
+            test -f .azemu/cert-bundle.pem && break || sleep 1
           done
+          ./scripts/trust-cert.sh .azemu/cert-bundle.pem
 
       - name: Run terraform tests
-        env:
-          SSL_CERT_FILE: ${{ github.workspace }}/.azemu/cert-bundle.pem
         run: make tf-test
 
       - name: Stop azemu
