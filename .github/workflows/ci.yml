@@ -101,8 +101,8 @@ jobs:
           done
           ./scripts/trust-cert.sh .azemu/cert-bundle.pem
 
-      - name: Run terraform tests
-        run: make tf-test
+      - name: Run terraform scenario tests
+        run: make tf-test-scenarios
 
       - name: Stop azemu
         if: always()
