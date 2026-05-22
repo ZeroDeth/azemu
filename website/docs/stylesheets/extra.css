@@ -459,3 +459,118 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* =========================================================
+   ADR (Design Decision) pages
+   ========================================================= */
+
+/* Status badge */
+.adr-status {
+  display: inline-block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 0.2rem 0.8rem;
+  border-radius: 20px;
+}
+
+.adr-status--implemented {
+  background: rgba(0, 255, 65, 0.1);
+  color: var(--azemu-green);
+  border: 1px solid var(--azemu-green-dim);
+}
+
+[data-md-color-scheme="default"] .adr-status--implemented {
+  background: rgba(26, 127, 55, 0.1);
+  color: var(--azemu-green);
+  border: 1px solid var(--azemu-green-dim);
+}
+
+.adr-status--proposed {
+  background: rgba(210, 153, 34, 0.12);
+  color: var(--azemu-amber);
+  border: 1px solid var(--azemu-amber);
+}
+
+.adr-status--deprecated {
+  background: rgba(248, 81, 73, 0.1);
+  color: #f85149;
+  border: 1px solid rgba(248, 81, 73, 0.4);
+}
+
+/* Meta strip */
+.adr-meta {
+  display: flex;
+  gap: 0.6rem 1.6rem;
+  flex-wrap: wrap;
+  align-items: center;
+  padding: 0.8rem 1.2rem;
+  background: var(--azemu-surface);
+  border: 1px solid var(--azemu-border);
+  border-radius: 6px;
+  margin: 0.5rem 0 1.8rem;
+  font-size: 0.82rem;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.adr-meta-item {
+  color: var(--md-default-fg-color--light);
+  white-space: nowrap;
+}
+
+.adr-meta-item strong {
+  color: var(--md-default-fg-color);
+  margin-right: 0.3rem;
+}
+
+.adr-github-link {
+  margin-left: auto;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  padding: 0.2rem 0.7rem;
+  border: 1px solid var(--azemu-border);
+  border-radius: 4px;
+  text-decoration: none !important;
+  border-bottom: none !important;
+  color: var(--md-default-fg-color--light) !important;
+  transition: border-color 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+
+.adr-github-link:hover {
+  border-color: var(--azemu-green);
+  color: var(--azemu-green) !important;
+}
+
+/* Decision callout */
+.adr-decision {
+  border-left: 3px solid var(--azemu-green);
+  padding: 1rem 1.5rem;
+  margin: 1.5rem 0;
+  border-radius: 0 6px 6px 0;
+}
+
+[data-md-color-scheme="slate"] .adr-decision {
+  background: rgba(0, 255, 65, 0.04);
+}
+
+[data-md-color-scheme="default"] .adr-decision {
+  background: rgba(26, 127, 55, 0.05);
+}
+
+.adr-decision-label {
+  display: block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--azemu-green);
+  margin-bottom: 0.6rem;
+}
+
+/* Suppress permalink on ADR section headings (reduce visual noise) */
+.adr-meta ~ * .headerlink {
+  opacity: 0.4;
+}
