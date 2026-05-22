@@ -31,7 +31,10 @@ docker-compose-down:
 	docker compose down -v
 
 tf-test:
-	cd examples/terraform && terraform test
+	@for dir in examples/terraform examples/terraform/scenarios/*/; do \
+		echo "--- terraform test: $$dir ---"; \
+		(cd "$$dir" && terraform init -upgrade -input=false && terraform test) || exit 1; \
+	done
 
 clean:
 	rm -rf bin/ coverage.out coverage.html
