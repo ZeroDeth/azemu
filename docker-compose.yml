@@ -9,11 +9,11 @@ services:
     volumes:
       - azurite-data:/data
     healthcheck:
-      test: ["CMD", "nc", "-z", "localhost", "10000"]
+      test: ["CMD", "node", "-e", "require('net').createConnection(10000,'localhost').on('connect',()=>process.exit(0)).on('error',()=>process.exit(1))"]
       interval: 5s
-      timeout: 2s
-      retries: 10
-      start_period: 5s
+      timeout: 5s
+      retries: 15
+      start_period: 10s
 
   redis:
     image: redis:7-alpine

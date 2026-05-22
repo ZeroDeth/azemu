@@ -1,4 +1,4 @@
-.PHONY: build run test docker docker-run docker-compose docker-compose-down clean smoke tf-test coverage
+.PHONY: build run test docker docker-run docker-compose docker-compose-down clean smoke tf-test tf-test-scenarios coverage
 
 BINARY  := azemu
 MODULE  := github.com/zerodeth/azemu
@@ -31,7 +31,15 @@ docker-compose-down:
 	docker compose down -v
 
 tf-test:
-	cd examples/terraform && terraform test
+	cd examples/terraform && terraform init -upgrade -input=false && terraform test
+
+# Runs only the focused scenarios under examples/terraform/scenarios/.
+# Used by CI; each scenario is designed for end-to-end azurerm round-trips.
+tf-test-scenarios:
+	@for dir in examples/terraform/scenarios/*/; do \
+		echo "--- terraform test: $$dir ---"; \
+		(cd "$$dir" && terraform init -upgrade -input=false && terraform test) || exit 1; \
+	done
 
 clean:
 	rm -rf bin/ coverage.out coverage.html

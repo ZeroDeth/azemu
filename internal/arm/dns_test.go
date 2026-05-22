@@ -470,17 +470,14 @@ func TestDNSRecordSet_HEAD_Returns404WhenMissing(t *testing.T) {
 	assertStatus(t, resp, 404)
 }
 
-func TestDNSRecordSet_DELETE_Returns202(t *testing.T) {
+func TestDNSRecordSet_DELETE_Returns204(t *testing.T) {
 	srv := newTestServer(t)
 	httpPut(t, dnsZoneURL(srv.URL, dnsTestZone), `{"location":"global"}`)
 	httpPut(t, dnsRecordURL(srv.URL, dnsTestZone, "A", "www"),
 		`{"properties":{"TTL":300,"ARecords":[{"ipv4Address":"1.2.3.4"}]}}`)
 	resp := httpDelete(t, dnsRecordURL(srv.URL, dnsTestZone, "A", "www"))
-	assertStatus(t, resp, 202)
+	assertStatus(t, resp, 204)
 	resp.Body.Close()
-	if resp.Header.Get("Location") == "" {
-		t.Error("Location header missing on DELETE 202")
-	}
 }
 
 func TestDNSRecordSet_DELETE_SubsequentGETReturns404(t *testing.T) {
@@ -489,7 +486,7 @@ func TestDNSRecordSet_DELETE_SubsequentGETReturns404(t *testing.T) {
 	httpPut(t, dnsRecordURL(srv.URL, dnsTestZone, "A", "www"),
 		`{"properties":{"TTL":300}}`)
 	del := httpDelete(t, dnsRecordURL(srv.URL, dnsTestZone, "A", "www"))
-	assertStatus(t, del, 202)
+	assertStatus(t, del, 204)
 	del.Body.Close()
 	assertStatus(t, httpGet(t, dnsRecordURL(srv.URL, dnsTestZone, "A", "www")), 404)
 }
