@@ -43,7 +43,7 @@ terraform destroy -auto-approve
 After `terraform apply`, create the ADO service connection via curl:
 
 ```bash
-curl -s -X POST http://localhost:4569/azemu-org/azemu-project/_apis/serviceendpoint/endpoints \
+curl -s -X POST http://127.0.0.1:4569/azemu-org/azemu-project/_apis/serviceendpoint/endpoints \
   -H "Content-Type: application/json" \
   -d '{
     "name": "azemu-service-connection",
@@ -62,5 +62,5 @@ Override variables on the command line:
 ```bash
 terraform apply -auto-approve \
   -var="prefix=myado" \
-  -var="ado_org_url=http://localhost:4569"
+  -var="ado_org_url=http://127.0.0.1:4569"
 ```

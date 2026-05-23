@@ -40,6 +40,11 @@ run "ado_pipeline_lifecycle" {
   }
 
   assert {
+    condition     = output.secret_id != ""
+    error_message = "secret_id must not be empty"
+  }
+
+  assert {
     condition     = output.storage_account_id != ""
     error_message = "storage_account_id must not be empty"
   }
@@ -47,5 +52,10 @@ run "ado_pipeline_lifecycle" {
   assert {
     condition     = output.storage_primary_blob_endpoint != ""
     error_message = "storage_primary_blob_endpoint must not be empty"
+  }
+
+  assert {
+    condition     = output.blob_container_name != ""
+    error_message = "blob_container_name must not be empty"
   }
 }

@@ -33,7 +33,17 @@ output "storage_account_id" {
   value       = azurerm_storage_account.artifacts.id
 }
 
+output "secret_id" {
+  description = "Key Vault secret ARM ID"
+  value       = azurerm_key_vault_secret.deploy_token.id
+}
+
 output "storage_primary_blob_endpoint" {
   description = "Primary blob endpoint URL"
   value       = azurerm_storage_account.artifacts.primary_blob_endpoint
+}
+
+output "blob_container_name" {
+  description = "Blob container name for pipeline artifacts"
+  value       = azurerm_storage_container.artifacts.name
 }

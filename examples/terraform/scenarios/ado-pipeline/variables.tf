@@ -13,5 +13,5 @@ variable "prefix" {
 variable "ado_org_url" {
   description = "Azure DevOps organisation URL (used as the OIDC issuer for federation)"
   type        = string
-  default     = "http://localhost:4569"
+  default     = "http://127.0.0.1:4569"
 }
