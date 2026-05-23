@@ -3,7 +3,7 @@
 Version: 0.1
 Last updated: 2026-05-23
 Status: Phase 1 through Phase 8 COMPLETE (minus scenario 8.7.1). v0.1.0 tagged 2026-04-21.
-Current focus: Phase 9 planning.
+Current focus: Phase 9 implementation.
 
 > **Strategy, non-goals, and the per-release resource roster live in
 > `ROADMAP.md`.** `TASKS.md` is the execution ledger and `ROADMAP.md` is
@@ -176,7 +176,7 @@ Goal: file-based persistence, state export/import via CLI and HTTP API.
 | 4.6 | Add `POST /api/state/import` HTTP endpoint | `cmd/azemu/main.go` | DONE | Replaces current state from request body. |
 | 4.7 | Add `POST /api/state/reset` HTTP endpoint | `cmd/azemu/main.go` | DONE | Calls `state.Reset()`. Added `Reset()` to Store interface. |
 | 4.8 | File store tests: write-through, reload, concurrent access | `internal/store/file_test.go` | DONE | 10 tests: write-through, reload, timestamps, delete, reset, tmp cleanup, missing file, corrupt file, import, concurrent. |
-| 4.9 | Integration test: persist, restart, verify state survives | `test/integration/persist_test.go` | TODO | Deferred to follow-up; reload is covered by `TestFileStore_Reload` in unit tests. |
+| 4.9 | Integration test: persist, restart, verify state survives | `test/integration/persist_test.go` | DONE | Shipped in PR #44. |
 
 Acceptance: azemu can persist state across restarts. `curl /api/state/export` returns valid JSON.
 `curl -X POST /api/state/reset` clears all resources.
@@ -290,7 +290,7 @@ env vars and config, and execs the underlying tool. Replaces `scripts/aztf`.
 
 | # | Task | Status | Notes |
 |---|------|--------|-------|
-| 9.1 | `azemu serve` subcommand (current bare-start behaviour) | TODO | Default when no subcommand given, for backwards compat |
+| 9.1 | `azemu serve` subcommand (current bare-start behaviour) | DONE | Refactored `cmd/azemu/` into subcommand dispatch. `main.go` is thin dispatcher; `serve.go` holds all server logic. No-arg and legacy flag syntax both default to serve. |
 | 9.2 | `azemu tf <args>` (Terraform adapter) | TODO | Auto-start, cert trust, `ARM_*` + `SSL_CERT_FILE` injection, exec `terraform <args>` |
 | 9.3 | `azemu pulumi <args>` (Pulumi adapter) | TODO | `ARM_*` env vars, Pulumi Azure Native config injection |
 | 9.4 | `azemu kubectl <args>` (Kubernetes adapter) | TODO | Kubeconfig pointing at azemu's AKS stub (requires Phase 8.4) |
