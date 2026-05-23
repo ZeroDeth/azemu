@@ -34,6 +34,18 @@ func main() {
 		if err := runTF(args[1:]); err != nil {
 			log.Fatal().Err(err).Msg("tf failed")
 		}
+	case "pulumi":
+		if err := runPulumi(args[1:]); err != nil {
+			log.Fatal().Err(err).Msg("pulumi failed")
+		}
+	case "kubectl":
+		if err := runKubectl(args[1:]); err != nil {
+			log.Fatal().Err(err).Msg("kubectl failed")
+		}
+	case "python":
+		if err := runPython(args[1:]); err != nil {
+			log.Fatal().Err(err).Msg("python failed")
+		}
 	case "parity":
 		if err := runParity(args[1:]); err != nil {
 			log.Fatal().Err(err).Msg("parity failed")
@@ -69,6 +81,9 @@ func printUsage(w *os.File) {
 	fmt.Fprintf(w, "Commands:\n")
 	fmt.Fprintf(w, "  serve       Start the emulator server (default)\n")
 	fmt.Fprintf(w, "  tf          Run terraform with azemu env vars injected\n")
+	fmt.Fprintf(w, "  pulumi      Run pulumi with azemu env vars injected\n")
+	fmt.Fprintf(w, "  kubectl     Run kubectl with azemu env vars injected\n")
+	fmt.Fprintf(w, "  python      Run python with Azure SDK env vars injected\n")
 	fmt.Fprintf(w, "  parity      Show supported Azure resources\n")
 	fmt.Fprintf(w, "  snapshot    Save, load, list, or reset state snapshots\n")
 	fmt.Fprintf(w, "  status      Check if azemu is running\n")
