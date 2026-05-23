@@ -41,15 +41,15 @@ docker compose down
 | Virtual Network | `azemu-example-vnet` | Address space: `10.0.0.0/16` |
 | Subnet | `azemu-example-subnet` | Address prefix: `10.0.1.0/24` |
 
-## Using the aztf wrapper
+## Using azemu tf
 
-The `scripts/aztf` wrapper automates the `SSL_CERT_FILE` export and starts
-azemu via docker-compose if it is not already running:
+`azemu tf` auto-starts the emulator, injects `SSL_CERT_FILE` and `ARM_*`
+env vars, and execs terraform:
 
 ```bash
-./scripts/aztf -chdir=examples/terraform init
-./scripts/aztf -chdir=examples/terraform apply -auto-approve
-./scripts/aztf -chdir=examples/terraform destroy -auto-approve
+azemu tf -chdir=examples/terraform init
+azemu tf -chdir=examples/terraform apply -auto-approve
+azemu tf -chdir=examples/terraform destroy -auto-approve
 ```
 
 ## Running Terraform tests

@@ -36,12 +36,12 @@ cd examples/terraform
 terraform init && terraform apply -auto-approve
 ```
 
-Or use the `scripts/aztf` wrapper which handles the env-var exports and
-starts azemu automatically:
+Or use `azemu tf` which auto-starts the emulator, injects all env vars,
+and execs terraform:
 
 ```bash
-./scripts/aztf -chdir=examples/terraform init
-./scripts/aztf -chdir=examples/terraform apply -auto-approve
+azemu tf -chdir=examples/terraform init
+azemu tf -chdir=examples/terraform apply -auto-approve
 ```
 
 To stop:
