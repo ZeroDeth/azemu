@@ -2,7 +2,7 @@
 
 Version: 0.1
 Last updated: 2026-05-23
-Status: Phase 1 through Phase 8 COMPLETE (minus scenarios 6.5.1, 6.5.2, 8.7, 8.7.1, 8.8 and task 4.9). v0.1.0 tagged 2026-04-21.
+Status: Phase 1 through Phase 8 COMPLETE (minus scenarios 6.5.2, 8.7, 8.7.1, 8.8). v0.1.0 tagged 2026-04-21.
 Current focus: Remaining scenarios + Phase 9 planning.
 
 > **Strategy, non-goals, and the per-release resource roster live in

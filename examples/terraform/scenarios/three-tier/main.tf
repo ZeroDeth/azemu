@@ -38,6 +38,8 @@ resource "azurerm_subnet" "data" {
 }
 
 # --- Network Security Groups (one per tier) ---
+# NOTE: azurerm_subnet_network_security_group_association is not yet
+# supported by azemu (see TASKS.md 6.3). NSGs are created standalone.
 
 resource "azurerm_network_security_group" "web" {
   name                = "${var.prefix}-web-nsg"
