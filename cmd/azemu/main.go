@@ -30,6 +30,10 @@ func main() {
 		if err := runServe(args[1:]); err != nil {
 			log.Fatal().Err(err).Msg("serve failed")
 		}
+	case "tf":
+		if err := runTF(args[1:]); err != nil {
+			log.Fatal().Err(err).Msg("tf failed")
+		}
 	case "--version", "-version", "version":
 		fmt.Fprintf(os.Stdout, "azemu %s\n", Version)
 	case "--help", "-help", "-h", "help":
@@ -52,6 +56,7 @@ func printUsage(w *os.File) {
 	fmt.Fprintf(w, "Usage: azemu <command> [flags]\n\n")
 	fmt.Fprintf(w, "Commands:\n")
 	fmt.Fprintf(w, "  serve       Start the emulator server (default)\n")
+	fmt.Fprintf(w, "  tf          Run terraform with azemu env vars injected\n")
 	fmt.Fprintf(w, "  version     Print version and exit\n")
 	fmt.Fprintf(w, "  help        Print this help and exit\n\n")
 	fmt.Fprintf(w, "Run 'azemu <command> -help' for command-specific flags.\n\n")

@@ -291,7 +291,7 @@ env vars and config, and execs the underlying tool. Replaces `scripts/aztf`.
 | # | Task | Status | Notes |
 |---|------|--------|-------|
 | 9.1 | `azemu serve` subcommand (current bare-start behaviour) | DONE | Refactored `cmd/azemu/` into subcommand dispatch. `main.go` is thin dispatcher; `serve.go` holds all server logic. No-arg and legacy flag syntax both default to serve. |
-| 9.2 | `azemu tf <args>` (Terraform adapter) | TODO | Auto-start, cert trust, `ARM_*` + `SSL_CERT_FILE` injection, exec `terraform <args>` |
+| 9.2 | `azemu tf <args>` (Terraform adapter) | DONE | Auto-start via background `azemu serve`, health-poll up to 30 s, cert resolution (AZEMU_CERT_PATH / .azemu/ / /tmp/), `ARM_*` + `SSL_CERT_FILE` env injection, `syscall.Exec` to terraform. |
 | 9.3 | `azemu pulumi <args>` (Pulumi adapter) | TODO | `ARM_*` env vars, Pulumi Azure Native config injection |
 | 9.4 | `azemu kubectl <args>` (Kubernetes adapter) | TODO | Kubeconfig pointing at azemu's AKS stub (requires Phase 8.4) |
 | 9.5 | `azemu python <args>` (Python Azure SDK adapter) | TODO | `AZURE_*` env vars for `azure-identity` DefaultAzureCredential |
