@@ -1,9 +1,9 @@
 # TASKS.md -- azemu Implementation Plan
 
 Version: 0.1
-Last updated: 2026-04-21
-Status: Phase 1 through Phase 8 COMPLETE (minus 8.2 federated creds and 8.7/8.8 scenarios). v0.1.0 tagged 2026-04-21.
-Current focus: Phase 8 closeout + Phase 9 planning.
+Last updated: 2026-05-23
+Status: Phase 1 through Phase 8 COMPLETE (minus scenarios 6.5.1, 6.5.2, 8.7, 8.7.1, 8.8 and task 4.9). v0.1.0 tagged 2026-04-21.
+Current focus: Remaining scenarios + Phase 9 planning.
 
 > **Strategy, non-goals, and the per-release resource roster live in
 > `ROADMAP.md`.** `TASKS.md` is the execution ledger and `ROADMAP.md` is
@@ -279,7 +279,7 @@ azemu with zero cloud cost. See ROADMAP v0.3 and the non-goals section.
 | 8.6 | ADO service connection CRUD | `/{org}/{project}/_apis/serviceendpoint/endpoints` | DONE | In-memory store with `sync.RWMutex`. Auto-assigns UUID. `isReady: true`, `owner: "Library"` on create/update. Name-filter on list. 14 unit tests. |
 | 8.7 | `scenarios/aks-workload/` | — | TODO | RG + VNet + Subnet + AKS + Managed Identity + Key Vault. |
 | 8.7.1 | `scenarios/aks-workload/` multi-replica with secrets and shared cache | — | TODO | Reference deployment scenario implementing the hybrid pattern from [ADR 0002](../docs/adr/0002-azemu-plus-kind-for-aks-workload-deployments.md). Adds Storage + Blob (Azurite), Federated Identity Credential (8.2), Redis (7.7), and a `kind` cluster running a 3-replica deployment with Key Vault CSI mount. Public reference workload: self-hosted [expo-open-ota](https://github.com/expo/expo-open-ota). Depends on 8.2 and 7.7. |
-| 8.9 | Mirror ADR 0002 to `website/docs/resources/design-decisions/0002-azemu-plus-kind-for-aks-workload-deployments.md` and add nav entry to `website/mkdocs.yml` | `website/docs/resources/design-decisions/`, `website/mkdocs.yml` | TODO | Per `.claude/rules/docs-website.md`. Keep `Status: Proposed` until 8.7.1 lands; flip to `Implemented` with an `Implemented:` date when the scenario ships. Precedent: `0001-delegate-storage-data-plane-to-azurite.md`. |
+| 8.9 | Mirror ADR 0002 to `website/docs/resources/design-decisions/0002-azemu-plus-kind-for-aks-workload-deployments.md` and add nav entry to `website/mkdocs.yml` | `website/docs/resources/design-decisions/`, `website/mkdocs.yml` | DONE | Landed in PR #42 alongside website mermaid fixes. Status kept as `Proposed` until 8.7.1 ships. |
 | 8.8 | `scenarios/ado-pipeline/` | — | TODO | ADO service connection + workload identity federation + Key Vault + Storage. |
 
 ### Phase 9: Multi-toolchain CLI (`azemu` subcommands)
