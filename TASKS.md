@@ -3,7 +3,7 @@
 Version: 0.1
 Last updated: 2026-05-23
 Status: Phase 1 through Phase 8 COMPLETE (minus scenario 8.7.1). v0.1.0 tagged 2026-04-21.
-Current focus: Phase 9 planning.
+Current focus: Phase 9 in progress (9.1 done).
 
 > **Strategy, non-goals, and the per-release resource roster live in
 > `ROADMAP.md`.** `TASKS.md` is the execution ledger and `ROADMAP.md` is
@@ -290,7 +290,7 @@ env vars and config, and execs the underlying tool. Replaces `scripts/aztf`.
 
 | # | Task | Status | Notes |
 |---|------|--------|-------|
-| 9.1 | `azemu serve` subcommand (current bare-start behaviour) | TODO | Default when no subcommand given, for backwards compat |
+| 9.1 | `azemu serve` subcommand (current bare-start behaviour) | DONE | Extracted serve logic to `cmd/azemu/serve.go`; `main.go` is now a thin subcommand dispatcher. `azemu` with no args defaults to serve for backwards compat. |
 | 9.2 | `azemu tf <args>` (Terraform adapter) | TODO | Auto-start, cert trust, `ARM_*` + `SSL_CERT_FILE` injection, exec `terraform <args>` |
 | 9.3 | `azemu pulumi <args>` (Pulumi adapter) | TODO | `ARM_*` env vars, Pulumi Azure Native config injection |
 | 9.4 | `azemu kubectl <args>` (Kubernetes adapter) | TODO | Kubeconfig pointing at azemu's AKS stub (requires Phase 8.4) |
