@@ -2,8 +2,8 @@
 
 Version: 0.1
 Last updated: 2026-05-23
-Status: Phase 1 through Phase 8 COMPLETE (minus scenarios 8.7.1, 8.8). v0.1.0 tagged 2026-04-21.
-Current focus: Remaining scenarios + Phase 9 planning.
+Status: Phase 1 through Phase 8 COMPLETE (minus scenario 8.7.1). v0.1.0 tagged 2026-04-21.
+Current focus: Phase 9 planning.
 
 > **Strategy, non-goals, and the per-release resource roster live in
 > `ROADMAP.md`.** `TASKS.md` is the execution ledger and `ROADMAP.md` is
@@ -280,7 +280,7 @@ azemu with zero cloud cost. See ROADMAP v0.3 and the non-goals section.
 | 8.7 | `scenarios/aks-workload/` | — | DONE | RG + VNet + Subnet + AKS (3-node) + User-Assigned Identity + Key Vault + Secret. |
 | 8.7.1 | `scenarios/aks-workload/` multi-replica with secrets and shared cache | — | TODO | Reference deployment scenario implementing the hybrid pattern from [ADR 0002](../docs/adr/0002-azemu-plus-kind-for-aks-workload-deployments.md). Adds Storage + Blob (Azurite), Federated Identity Credential (8.2), Redis (7.7), and a `kind` cluster running a 3-replica deployment with Key Vault CSI mount. Public reference workload: self-hosted [expo-open-ota](https://github.com/expo/expo-open-ota). Depends on 8.2 and 7.7. |
 | 8.9 | Mirror ADR 0002 to `website/docs/resources/design-decisions/0002-azemu-plus-kind-for-aks-workload-deployments.md` and add nav entry to `website/mkdocs.yml` | `website/docs/resources/design-decisions/`, `website/mkdocs.yml` | DONE | Landed in PR #42 alongside website mermaid fixes. Status kept as `Proposed` until 8.7.1 ships. |
-| 8.8 | `scenarios/ado-pipeline/` | — | TODO | ADO service connection + workload identity federation + Key Vault + Storage. |
+| 8.8 | `scenarios/ado-pipeline/` | — | DONE | ARM resources for ADO pipeline: managed identity + federated credential + Key Vault + secret + Storage + blob container. ADO service connection example via curl in README. |
 
 ### Phase 9: Multi-toolchain CLI (`azemu` subcommands)
 
