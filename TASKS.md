@@ -2,7 +2,7 @@
 
 Version: 0.1
 Last updated: 2026-05-23
-Status: Phase 1 through Phase 8 COMPLETE (minus scenarios 6.5.2, 8.7, 8.7.1, 8.8). v0.1.0 tagged 2026-04-21.
+Status: Phase 1 through Phase 8 COMPLETE (minus scenarios 8.7, 8.7.1, 8.8). v0.1.0 tagged 2026-04-21.
 Current focus: Remaining scenarios + Phase 9 planning.
 
 > **Strategy, non-goals, and the per-release resource roster live in
@@ -242,7 +242,7 @@ A scenario that does not run green in CI is deleted.
 | # | Task | Scenario | Status | Requires |
 |---|---|---|---|---|
 | 6.5.1 | `scenarios/three-tier/` | Web + app + data tier with LB, App Gateway, VNet + 3 Subnets, NSG, Public IP | DONE | 6.2 through 6.5 |
-| 6.5.2 | `scenarios/static-site/` | Storage account hosting a static site behind a CDN profile with a DNS zone | TODO | Phase 7 (Storage, CDN) and 6.6 (DNS) |
+| 6.5.2 | `scenarios/static-site/` | Storage account hosting a static site behind a CDN profile with a DNS zone | DONE | Phase 7 (Storage, CDN) and 6.6 (DNS) |
 | 6.5.3 | `scenarios/dns-with-records/` | DNS zone plus A/AAAA/CNAME/TXT/MX record sets | DONE | 6.6 |
 
 ### Phase 7: Storage, Key Vault, CDN (v0.2)
