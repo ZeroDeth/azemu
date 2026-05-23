@@ -295,7 +295,7 @@ env vars and config, and execs the underlying tool. Replaces `scripts/aztf`.
 | 9.3 | `azemu pulumi <args>` (Pulumi adapter) | TODO | `ARM_*` env vars, Pulumi Azure Native config injection |
 | 9.4 | `azemu kubectl <args>` (Kubernetes adapter) | TODO | Kubeconfig pointing at azemu's AKS stub (requires Phase 8.4) |
 | 9.5 | `azemu python <args>` (Python Azure SDK adapter) | TODO | `AZURE_*` env vars for `azure-identity` DefaultAzureCredential |
-| 9.6 | `azemu parity` (show supported resources) | TODO | Reads from embedded parity data or live server |
+| 9.6 | `azemu parity` (show supported resources) | DONE | Embedded parity matrix; tabwriter table output; `--json` flag for machine-readable output. |
 | 9.7 | `azemu snapshot save\|load\|list` (state management) | TODO | Wraps Phase 4 export/import HTTP API |
 | 9.8 | `azemu status` (health and version check) | TODO | Replaces `azemu-status` flox helper |
 | 9.9 | Remove `scripts/aztf` shell wrapper | TODO | Superseded by `azemu tf` |
