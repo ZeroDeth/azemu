@@ -32,7 +32,7 @@ func buildServerWithStore(t *testing.T, s store.Store) *httptest.Server {
 	return srv
 }
 
-// TestPersist_StatesSurvivesRestart verifies that resources written through
+// TestPersist_StateSurvivesRestart verifies that resources written through
 // the ARM API are persisted to disk and survive a full server restart.
 //
 // Flow:
@@ -98,6 +98,14 @@ func TestPersist_StateSurvivesRestart(t *testing.T) {
 	body = decode(t, resp)
 	if body["location"] != "uksouth" {
 		t.Errorf("reloaded VNet location = %v, want uksouth", body["location"])
+	}
+	props, ok := body["properties"].(map[string]interface{})
+	if !ok || props == nil {
+		t.Fatal("reloaded VNet properties missing after restart")
+	}
+	as, ok := props["addressSpace"].(map[string]interface{})
+	if !ok || as == nil {
+		t.Fatal("reloaded VNet addressSpace missing after restart")
 	}
 }
 
