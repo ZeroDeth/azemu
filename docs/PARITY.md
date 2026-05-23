@@ -57,7 +57,7 @@ and should read Scaffold or Planned instead.
 |-----------|--------|-------|-------|
 | Docker image | Full | [Dockerfile](../Dockerfile), [docker-compose.yml](../docker-compose.yml) | Multi-stage Go build, alpine runtime, `VOLUME /azemu`, healthcheck on `:4568` |
 | Docker Compose | Full | [examples/terraform/README.md](../examples/terraform/README.md) | `docker compose up -d --build` is the default quick-start path |
-| Wrapper script (`aztf`) | Full | [scripts/aztf](../scripts/aztf) | Starts azemu if absent, exports `SSL_CERT_FILE` + `ARM_*`, execs terraform |
+| CLI `azemu tf` | Full | [tf.go](../cmd/azemu/tf.go) | Auto-starts azemu, injects `SSL_CERT_FILE` + `ARM_*`, execs terraform. Replaces `scripts/aztf`. |
 | State export/import | Full | [file_test.go](../internal/store/file_test.go) | `GET /api/state/export`, `POST /api/state/import`, `POST /api/state/reset`; file-backed via `--persist` |
 | `terraform test` example | Full | [main.tftest.hcl](../examples/terraform/main.tftest.hcl) | Native Terraform 1.6+ test; one `run "full_lifecycle"` block |
 | Nix flake | Full | [flake.nix](../flake.nix) | `buildGoModule` for `cmd/azemu`; `devShells.default` with go + terraform |

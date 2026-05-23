@@ -36,13 +36,13 @@ cd ../..
 docker compose down
 ```
 
-The `scripts/aztf` wrapper automates the env-var exports and starts azemu
-if it is not already running:
+Or use `azemu tf` which auto-starts the emulator, injects all env vars,
+and execs terraform:
 
 ```bash
-./scripts/aztf -chdir=examples/terraform init
-./scripts/aztf -chdir=examples/terraform apply -auto-approve
-./scripts/aztf -chdir=examples/terraform destroy -auto-approve
+azemu tf -chdir=examples/terraform init
+azemu tf -chdir=examples/terraform apply -auto-approve
+azemu tf -chdir=examples/terraform destroy -auto-approve
 ```
 
 See [examples/terraform/README.md](examples/terraform/README.md) for details.
@@ -115,7 +115,6 @@ Makefile                -- build, test, smoke, docker, coverage targets
 Dockerfile              -- multi-stage Go build
 docker-compose.yml      -- one-command local setup with healthcheck
 flake.nix               -- Nix flake for upstream Nix users
-scripts/aztf            -- shell wrapper: start azemu + export env + terraform
 scripts/trust-cert.sh   -- optional: add cert to system keychain (macOS/Linux)
 cmd/azemu/              -- binary entrypoint
 internal/               -- core packages (metadata, auth, arm, store, middleware)
