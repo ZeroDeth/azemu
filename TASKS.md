@@ -296,7 +296,7 @@ env vars and config, and execs the underlying tool. Replaces `scripts/aztf`.
 | 9.4 | `azemu kubectl <args>` (Kubernetes adapter) | TODO | Kubeconfig pointing at azemu's AKS stub (requires Phase 8.4) |
 | 9.5 | `azemu python <args>` (Python Azure SDK adapter) | TODO | `AZURE_*` env vars for `azure-identity` DefaultAzureCredential |
 | 9.6 | `azemu parity` (show supported resources) | DONE | Embedded parity matrix; tabwriter table output; `--json` flag for machine-readable output. |
-| 9.7 | `azemu snapshot save\|load\|list` (state management) | TODO | Wraps Phase 4 export/import HTTP API |
+| 9.7 | `azemu snapshot save\|load\|list` (state management) | DONE | save/load/list/reset subcommands; snapshots stored in `~/.azemu/snapshots/`; wraps `/api/state/export`, `/api/state/import`, `/api/state/reset`. |
 | 9.8 | `azemu status` (health and version check) | DONE | Probes health endpoint; shows version, status, uptime; exits 0/1 for scripting. |
 | 9.9 | Remove `scripts/aztf` shell wrapper | TODO | Superseded by `azemu tf` |
 
