@@ -292,9 +292,9 @@ env vars and config, and execs the underlying tool. Replaces `scripts/aztf`.
 |---|------|--------|-------|
 | 9.1 | `azemu serve` subcommand (current bare-start behaviour) | DONE | Refactored `cmd/azemu/` into subcommand dispatch. `main.go` is thin dispatcher; `serve.go` holds all server logic. No-arg and legacy flag syntax both default to serve. |
 | 9.2 | `azemu tf <args>` (Terraform adapter) | DONE | Auto-start via background `azemu serve`, health-poll up to 30 s, cert resolution (AZEMU_CERT_PATH / .azemu/ / /tmp/), `ARM_*` + `SSL_CERT_FILE` env injection, `syscall.Exec` to terraform. |
-| 9.3 | `azemu pulumi <args>` (Pulumi adapter) | TODO | `ARM_*` env vars, Pulumi Azure Native config injection |
-| 9.4 | `azemu kubectl <args>` (Kubernetes adapter) | TODO | Kubeconfig pointing at azemu's AKS stub (requires Phase 8.4) |
-| 9.5 | `azemu python <args>` (Python Azure SDK adapter) | TODO | `AZURE_*` env vars for `azure-identity` DefaultAzureCredential |
+| 9.3 | `azemu pulumi <args>` (Pulumi adapter) | DONE | `ARM_*` + `ARM_ENDPOINT` env injection, auto-start, exec pulumi. |
+| 9.4 | `azemu kubectl <args>` (Kubernetes adapter) | DONE | `AZURE_*` env injection for azure-identity, auto-start, exec kubectl. |
+| 9.5 | `azemu python <args>` (Python Azure SDK adapter) | DONE | `AZURE_*` + `AZURE_AUTHORITY_HOST` + `AZURE_ARM_URL` + `REQUESTS_CA_BUNDLE` env injection, auto-start, exec python. |
 | 9.6 | `azemu parity` (show supported resources) | DONE | Embedded parity matrix; tabwriter table output; `--json` flag for machine-readable output. |
 | 9.7 | `azemu snapshot save\|load\|list` (state management) | DONE | save/load/list/reset subcommands; snapshots stored in `~/.azemu/snapshots/`; wraps `/api/state/export`, `/api/state/import`, `/api/state/reset`. |
 | 9.8 | `azemu status` (health and version check) | DONE | Probes health endpoint; shows version, status, uptime; exits 0/1 for scripting. |
