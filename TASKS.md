@@ -176,7 +176,7 @@ Goal: file-based persistence, state export/import via CLI and HTTP API.
 | 4.6 | Add `POST /api/state/import` HTTP endpoint | `cmd/azemu/main.go` | DONE | Replaces current state from request body. |
 | 4.7 | Add `POST /api/state/reset` HTTP endpoint | `cmd/azemu/main.go` | DONE | Calls `state.Reset()`. Added `Reset()` to Store interface. |
 | 4.8 | File store tests: write-through, reload, concurrent access | `internal/store/file_test.go` | DONE | 10 tests: write-through, reload, timestamps, delete, reset, tmp cleanup, missing file, corrupt file, import, concurrent. |
-| 4.9 | Integration test: persist, restart, verify state survives | `test/integration/persist_test.go` | TODO | Deferred to follow-up; reload is covered by `TestFileStore_Reload` in unit tests. |
+| 4.9 | Integration test: persist, restart, verify state survives | `test/integration/persist_test.go` | DONE | 3 tests: `StateSurvivesRestart` (RG+VNet round-trip), `DeleteSurvivesRestart`, `ResetClearsPersistedState`. Uses `FileStore`-backed server with full middleware stack. |
 
 Acceptance: azemu can persist state across restarts. `curl /api/state/export` returns valid JSON.
 `curl -X POST /api/state/reset` clears all resources.
