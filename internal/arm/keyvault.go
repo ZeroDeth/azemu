@@ -178,6 +178,17 @@ func (a *Router) writeKeyVaultList(w http.ResponseWriter, prefix string) {
 	writeJSON(w, http.StatusOK, map[string]interface{}{"value": items})
 }
 
+// getDeletedKeyVault stubs the soft-delete check that azurerm v4 performs before
+// creating any Key Vault. azemu does not implement soft-delete, so this endpoint
+// always returns 404 (no soft-deleted vault found), which allows the provider to
+// proceed with the create.
+func (a *Router) getDeletedKeyVault(w http.ResponseWriter, r *http.Request) {
+	name := chi.URLParam(r, "vaultName")
+	location := chi.URLParam(r, "location")
+	writeAzureError(w, http.StatusNotFound, "ResourceNotFound",
+		fmt.Sprintf("The deleted vault '%s' in location '%s' was not found.", name, location))
+}
+
 // keyVaultResponse builds the canonical ARM response for a key vault.
 // provisioningState is always "Succeeded" regardless of what was stored.
 func keyVaultResponse(v *store.Resource) map[string]interface{} {

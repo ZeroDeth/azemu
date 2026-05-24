@@ -348,9 +348,9 @@ func TestRedisCache_LIST_BySub_FiltersOnType(t *testing.T) {
 
 	// Create a sibling storage account in the same subscription. The Redis
 	// list-by-sub MUST filter to Microsoft.Cache/Redis only and not include
-	// the storage account.
+	// the storage account. Storage account PUT returns 200 (not 201).
 	resp := httpPut(t, storageAccountURL(srv.URL, "sub1", "rg1", "sibstoreact"), storageAccountBodyLRS)
-	assertStatus(t, resp, http.StatusCreated)
+	assertStatus(t, resp, http.StatusOK)
 	resp.Body.Close()
 
 	resp = httpPut(t, redisCacheURL(srv.URL, "sub1", "rg1", "subscope-cache"), redisCacheBodyStandardC1)

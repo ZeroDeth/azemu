@@ -6,7 +6,6 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 
 	"github.com/zerodeth/azemu/internal/store"
@@ -145,9 +144,9 @@ func (a *Router) deleteFederatedIdentityCredential(w http.ResponseWriter, r *htt
 	}
 
 	log.Info().Str("resource_id", id).Msg("federated identity credential deleted")
-	w.Header().Set("Location",
-		fmt.Sprintf("/subscriptions/%s/operationresults/%s", subID, uuid.New().String()))
-	w.WriteHeader(http.StatusAccepted)
+	// azurerm's FederatedIdentityCredentials client accepts 200 or 204 only.
+	// FIC is a child resource; synchronous 200 OK is the correct response.
+	w.WriteHeader(http.StatusOK)
 }
 
 func (a *Router) listFederatedIdentityCredentials(w http.ResponseWriter, r *http.Request) {

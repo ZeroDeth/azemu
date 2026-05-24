@@ -161,12 +161,10 @@ func (a *Router) putStorageAccount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	status := http.StatusCreated
-	if exists {
-		status = http.StatusOK
-	}
+	// azurerm's storageaccounts.Create accepts 200 or 202 only — not 201.
+	// Return 200 OK for both create and update (storage accounts are idempotent).
 	log.Info().Str("resource_id", id).Bool("existed", exists).Msg("storage account upsert")
-	writeJSON(w, status, storageAccountResponse(res))
+	writeJSON(w, http.StatusOK, storageAccountResponse(res))
 }
 
 func (a *Router) getStorageAccount(w http.ResponseWriter, r *http.Request) {

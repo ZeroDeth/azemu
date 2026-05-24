@@ -117,16 +117,16 @@ func TestFIC_LIST_ReturnsChildren(t *testing.T) {
 	}
 }
 
-func TestFIC_DELETE_Returns202ThenNotFound(t *testing.T) {
+func TestFIC_DELETE_Returns200ThenNotFound(t *testing.T) {
+	// azurerm's FederatedIdentityCredentials client accepts 200 or 204 only.
+	// FIC is a child resource; synchronous 200 OK is the correct response.
 	srv := newTestServer(t)
 	createTestIdentity(t, srv.URL, "my-identity")
 	httpPut(t, ficURL(srv.URL, "my-identity", "fic-one"), ficBody)
 
 	resp := httpDelete(t, ficURL(srv.URL, "my-identity", "fic-one"))
-	assertStatus(t, resp, http.StatusAccepted)
-	if loc := resp.Header.Get("Location"); loc == "" {
-		t.Errorf("DELETE 202 missing Location header")
-	}
+	assertStatus(t, resp, http.StatusOK)
+
 	resp = httpDelete(t, ficURL(srv.URL, "my-identity", "fic-one"))
 	assertStatus(t, resp, http.StatusNotFound)
 }
