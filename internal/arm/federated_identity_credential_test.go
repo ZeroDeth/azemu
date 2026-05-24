@@ -130,3 +130,39 @@ func TestFIC_DELETE_Returns202ThenNotFound(t *testing.T) {
 	resp = httpDelete(t, ficURL(srv.URL, "my-identity", "fic-one"))
 	assertStatus(t, resp, http.StatusNotFound)
 }
+
+// ---------------------------------------------------------------------------
+// validateFederatedIdentityCredentialProperties gap tests (70% → higher)
+// ---------------------------------------------------------------------------
+
+func TestFIC_PUT_MissingIssuer_Returns400(t *testing.T) {
+	srv := newTestServer(t)
+	createTestIdentity(t, srv.URL, "my-identity")
+	resp := httpPut(t, ficURL(srv.URL, "my-identity", "fic-one"),
+		`{"properties":{"subject":"system:serviceaccount:ns:sa","audiences":["api://AzureADTokenExchange"]}}`)
+	assertStatus(t, resp, http.StatusBadRequest)
+}
+
+func TestFIC_PUT_MissingSubject_Returns400(t *testing.T) {
+	srv := newTestServer(t)
+	createTestIdentity(t, srv.URL, "my-identity")
+	resp := httpPut(t, ficURL(srv.URL, "my-identity", "fic-one"),
+		`{"properties":{"issuer":"https://token.actions.githubusercontent.com","audiences":["api://AzureADTokenExchange"]}}`)
+	assertStatus(t, resp, http.StatusBadRequest)
+}
+
+func TestFIC_PUT_MissingAudiences_Returns400(t *testing.T) {
+	srv := newTestServer(t)
+	createTestIdentity(t, srv.URL, "my-identity")
+	resp := httpPut(t, ficURL(srv.URL, "my-identity", "fic-one"),
+		`{"properties":{"issuer":"https://token.actions.githubusercontent.com","subject":"repo:org/repo:ref:refs/heads/main"}}`)
+	assertStatus(t, resp, http.StatusBadRequest)
+}
+
+func TestFIC_PUT_EmptyAudienceValue_Returns400(t *testing.T) {
+	srv := newTestServer(t)
+	createTestIdentity(t, srv.URL, "my-identity")
+	resp := httpPut(t, ficURL(srv.URL, "my-identity", "fic-one"),
+		`{"properties":{"issuer":"https://token.actions.githubusercontent.com","subject":"repo:org/repo:ref:refs/heads/main","audiences":[""]}}`)
+	assertStatus(t, resp, http.StatusBadRequest)
+}

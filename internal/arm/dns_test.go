@@ -605,3 +605,51 @@ func TestDNSZone_IDShape(t *testing.T) {
 		t.Errorf("id = %q, want suffix %q", id, wantSuffix)
 	}
 }
+
+// ---------------------------------------------------------------------------
+// dnsZoneResponse — default property pass-through (60% → higher)
+// ---------------------------------------------------------------------------
+
+func TestDNSZone_GET_UserPropertyPassThrough(t *testing.T) {
+	// PUT with a non-standard property to exercise dnsZoneResponse's default case.
+	srv := newTestServer(t)
+	httpPut(t, withAPIVersion(dnsZoneURL(srv.URL, dnsTestZone)),
+		`{"location":"global","properties":{"zoneType":"Private"}}`)
+
+	resp := httpGet(t, withAPIVersion(dnsZoneURL(srv.URL, dnsTestZone)))
+	assertStatus(t, resp, 200)
+	body := decodeJSON(t, resp)
+	props := body["properties"].(map[string]interface{})
+
+	// The custom property must survive the round-trip via the default case.
+	if props["zoneType"] != "Private" {
+		t.Errorf("zoneType = %v, want Private (user property not passed through)", props["zoneType"])
+	}
+	// Standard fields must still be present.
+	if _, ok := props["numberOfRecordSets"]; !ok {
+		t.Error("numberOfRecordSets missing from properties")
+	}
+	if _, ok := props["maxNumberOfRecordSets"]; !ok {
+		t.Error("maxNumberOfRecordSets missing from properties")
+	}
+}
+
+func TestDNSZone_GET_NumberOfRecordSetsField(t *testing.T) {
+	// Verify the numberOfRecordSets field is present and correct on a fresh zone.
+	srv := newTestServer(t)
+	httpPut(t, withAPIVersion(dnsZoneURL(srv.URL, dnsTestZone)),
+		`{"location":"global"}`)
+
+	resp := httpGet(t, withAPIVersion(dnsZoneURL(srv.URL, dnsTestZone)))
+	assertStatus(t, resp, 200)
+	body := decodeJSON(t, resp)
+	props := body["properties"].(map[string]interface{})
+
+	// Freshly created zone has SOA + NS auto-records = 2.
+	if got, ok := props["numberOfRecordSets"].(float64); !ok || got < 2 {
+		t.Errorf("numberOfRecordSets = %v, want >= 2 (SOA + NS)", props["numberOfRecordSets"])
+	}
+	if got, ok := props["maxNumberOfRecordSets"].(float64); !ok || got == 0 {
+		t.Errorf("maxNumberOfRecordSets = %v, want non-zero", props["maxNumberOfRecordSets"])
+	}
+}

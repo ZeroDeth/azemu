@@ -263,3 +263,100 @@ func TestSC_List_FilterByName(t *testing.T) {
 		t.Errorf("filtered item name = %v, want target-conn", item["name"])
 	}
 }
+
+// ---------------------------------------------------------------------------
+// endpointBelongsToProject
+// ---------------------------------------------------------------------------
+
+func TestEndpointBelongsToProject_noProjectRefs(t *testing.T) {
+	ep := &serviceEndpoint{
+		ID:          "ep1",
+		Name:        "test",
+		ProjectRefs: nil,
+	}
+	if !endpointBelongsToProject(ep, "any-project") {
+		t.Fatal("want true for endpoint with no project refs (global endpoint)")
+	}
+}
+
+func TestEndpointBelongsToProject_emptyProjectRefs(t *testing.T) {
+	ep := &serviceEndpoint{
+		ID:          "ep1",
+		Name:        "test",
+		ProjectRefs: []projectRef{},
+	}
+	if !endpointBelongsToProject(ep, "any-project") {
+		t.Fatal("want true for endpoint with empty project refs slice")
+	}
+}
+
+func TestEndpointBelongsToProject_matchesByID(t *testing.T) {
+	ep := &serviceEndpoint{
+		ID:   "ep1",
+		Name: "test",
+		ProjectRefs: []projectRef{
+			{ProjectReference: projectID{ID: "proj-id-123", Name: "my-project"}},
+		},
+	}
+	if !endpointBelongsToProject(ep, "proj-id-123") {
+		t.Fatal("want true when project ID matches")
+	}
+}
+
+func TestEndpointBelongsToProject_matchesByName(t *testing.T) {
+	ep := &serviceEndpoint{
+		ID:   "ep1",
+		Name: "test",
+		ProjectRefs: []projectRef{
+			{ProjectReference: projectID{ID: "proj-id-123", Name: "my-project"}},
+		},
+	}
+	if !endpointBelongsToProject(ep, "my-project") {
+		t.Fatal("want true when project name matches")
+	}
+}
+
+func TestEndpointBelongsToProject_differentProject(t *testing.T) {
+	ep := &serviceEndpoint{
+		ID:   "ep1",
+		Name: "test",
+		ProjectRefs: []projectRef{
+			{ProjectReference: projectID{ID: "proj-id-123", Name: "my-project"}},
+		},
+	}
+	if endpointBelongsToProject(ep, "other-project") {
+		t.Fatal("want false when project does not match any ref")
+	}
+}
+
+func TestEndpointBelongsToProject_multipleRefs_oneMatches(t *testing.T) {
+	ep := &serviceEndpoint{
+		ID:   "ep1",
+		Name: "test",
+		ProjectRefs: []projectRef{
+			{ProjectReference: projectID{ID: "proj-a", Name: "project-a"}},
+			{ProjectReference: projectID{ID: "proj-b", Name: "project-b"}},
+		},
+	}
+	if !endpointBelongsToProject(ep, "proj-b") {
+		t.Fatal("want true when second ref matches by ID")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// writeADOJSON — encode-failure path
+// ---------------------------------------------------------------------------
+
+func TestWriteADOJSON_encodeFails_doesNotPanic(t *testing.T) {
+	w := httptest.NewRecorder()
+	// A channel is not JSON-encodable; Encode returns an error.
+	writeADOJSON(w, http.StatusOK, make(chan int))
+	// Status is set before encode attempt.
+	if w.Code != http.StatusOK {
+		t.Errorf("want 200 status set before encode attempt, got %d", w.Code)
+	}
+	// Body must be empty: the encode error path leaves no partial output.
+	if w.Body.Len() != 0 {
+		t.Errorf("want empty body on encode failure, got %d bytes: %s", w.Body.Len(), w.Body.String())
+	}
+}
