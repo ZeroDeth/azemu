@@ -71,6 +71,7 @@ var canonicalLiteralSegments = map[string]string{
 	"listkeys":      "listkeys",      // POST .../storageAccounts/{name}/listKeys or .../redis/{name}/listKeys
 	"deletedvaults": "deletedvaults", // GET .../providers/Microsoft.KeyVault/locations/{loc}/deletedVaults/{name}
 	"locations":     "locations",     // subscription-scoped provider path segment
+	"fileservices":  "fileservices",  // GET .../storageAccounts/{name}/fileServices/default
 }
 
 // duplicateSlashes matches runs of two or more "/" characters. Some real

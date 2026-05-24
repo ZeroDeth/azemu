@@ -192,6 +192,12 @@ func (a *Router) Routes(r chi.Router) {
 	// azemu does not implement soft-delete; always return 404 (no deleted vault found).
 	r.Get("/{subscriptionID}/providers/microsoft.keyvault/locations/{location}/deletedvaults/{vaultName}", a.getDeletedKeyVault)
 
+	// Storage file service stub — azurerm v4 polls this endpoint after creating
+	// a storage account to wait for the file service to become available.
+	// azemu does not implement the file service; return a minimal Succeeded response.
+	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.storage/storageaccounts/{accountName}/fileservices/default", a.getStorageFileService)
+	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.storage/storageaccounts/{accountName}/fileservices", a.getStorageFileService)
+
 	// Storage Blob Containers (Microsoft.Storage/storageAccounts/blobServices/containers)
 	// The path segment "default" is a fixed literal (not a parameter) matching the real ARM API.
 	r.Put("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.storage/storageaccounts/{accountName}/blobservices/default/containers/{containerName}", a.putStorageContainer)
@@ -258,6 +264,9 @@ func (a *Router) KeyVaultDataPlaneRoutes(r chi.Router) {
 	r.Get("/{vaultName}/secrets/{secretName}", a.getKeyVaultSecret)
 	r.Delete("/{vaultName}/secrets/{secretName}", a.deleteKeyVaultSecret)
 	r.Get("/{vaultName}/secrets", a.listKeyVaultSecrets)
+	// azurerm v4 fetches certificate contacts on every plan/refresh to detect
+	// drift. azemu does not manage certificates; return an empty contact list.
+	r.Get("/{vaultName}/certificates/contacts", a.getKeyVaultCertificateContacts)
 }
 
 // --- Subscriptions ---

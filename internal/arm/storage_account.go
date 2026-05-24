@@ -328,3 +328,26 @@ func storageAccountResponse(s *store.Resource) map[string]interface{} {
 		"properties": props,
 	}
 }
+
+// getStorageFileService stubs the file service endpoint that azurerm v4 polls
+// after creating a storage account to wait for the service to become available.
+// azemu does not implement file services; returning a Succeeded response lets
+// the provider continue without waiting.
+func (a *Router) getStorageFileService(w http.ResponseWriter, r *http.Request) {
+	subID := chi.URLParam(r, "subscriptionID")
+	rgName := chi.URLParam(r, "resourceGroupName")
+	accountName := chi.URLParam(r, "accountName")
+
+	id := fmt.Sprintf(
+		"/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Storage/storageAccounts/%s/fileServices/default",
+		subID, rgName, accountName,
+	)
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"id":   id,
+		"name": "default",
+		"type": "Microsoft.Storage/storageAccounts/fileServices",
+		"properties": map[string]interface{}{
+			"provisioningState": "Succeeded",
+		},
+	})
+}
