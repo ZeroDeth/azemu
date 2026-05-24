@@ -56,7 +56,7 @@ const storageAccountBodyPremium = `{
 func TestStorageAccount_PUT_Creates_Returns201(t *testing.T) {
 	srv := newTestServer(t)
 	resp := httpPut(t, storageAccountURL(srv.URL, "sub1", "rg1", "mystorageacct1"), storageAccountBodyLRS)
-	assertStatus(t, resp, http.StatusCreated)
+	assertStatus(t, resp, http.StatusOK)
 
 	body := decodeJSON(t, resp)
 	if body["name"] != "mystorageacct1" {
@@ -125,7 +125,7 @@ func TestStorageAccount_PUT_Update_Returns200(t *testing.T) {
 	url := storageAccountURL(srv.URL, "sub1", "rg1", "storageupdate")
 
 	resp := httpPut(t, url, storageAccountBodyLRS)
-	assertStatus(t, resp, http.StatusCreated)
+	assertStatus(t, resp, http.StatusOK)
 	resp.Body.Close()
 
 	// Second PUT returns 200 OK (idempotent upsert).
@@ -139,7 +139,7 @@ func TestStorageAccount_GET_Returns200(t *testing.T) {
 	url := storageAccountURL(srv.URL, "sub1", "rg1", "storagefetch")
 
 	resp := httpPut(t, url, storageAccountBodyLRS)
-	assertStatus(t, resp, http.StatusCreated)
+	assertStatus(t, resp, http.StatusOK)
 	resp.Body.Close()
 
 	resp = httpGet(t, url)
@@ -170,7 +170,7 @@ func TestStorageAccount_HEAD_Exists_Returns204(t *testing.T) {
 	url := storageAccountURL(srv.URL, "sub1", "rg1", "storagehead")
 
 	resp := httpPut(t, url, storageAccountBodyLRS)
-	assertStatus(t, resp, http.StatusCreated)
+	assertStatus(t, resp, http.StatusOK)
 	resp.Body.Close()
 
 	resp = httpHead(t, url)
@@ -191,7 +191,7 @@ func TestStorageAccount_DELETE_Returns202(t *testing.T) {
 	url := storageAccountURL(srv.URL, "sub1", "rg1", "storagedel")
 
 	resp := httpPut(t, url, storageAccountBodyLRS)
-	assertStatus(t, resp, http.StatusCreated)
+	assertStatus(t, resp, http.StatusOK)
 	resp.Body.Close()
 
 	resp = httpDelete(t, url)
@@ -214,7 +214,7 @@ func TestStorageAccount_DELETE_SubsequentGET_Returns404(t *testing.T) {
 	url := storageAccountURL(srv.URL, "sub1", "rg1", "storagegone")
 
 	resp := httpPut(t, url, storageAccountBodyLRS)
-	assertStatus(t, resp, http.StatusCreated)
+	assertStatus(t, resp, http.StatusOK)
 	resp.Body.Close()
 
 	resp = httpDelete(t, url)
@@ -230,10 +230,10 @@ func TestStorageAccount_LIST_ByRG_Returns200(t *testing.T) {
 	srv := newTestServer(t)
 
 	resp := httpPut(t, storageAccountURL(srv.URL, "sub1", "rg1", "listacct1"), storageAccountBodyLRS)
-	assertStatus(t, resp, http.StatusCreated)
+	assertStatus(t, resp, http.StatusOK)
 	resp.Body.Close()
 	resp = httpPut(t, storageAccountURL(srv.URL, "sub1", "rg1", "listacct2"), storageAccountBodyLRS)
-	assertStatus(t, resp, http.StatusCreated)
+	assertStatus(t, resp, http.StatusOK)
 	resp.Body.Close()
 
 	resp = httpGet(t, storageAccountListByRGURL(srv.URL, "sub1", "rg1"))
@@ -252,7 +252,7 @@ func TestStorageAccount_LIST_BySub_Returns200(t *testing.T) {
 	srv := newTestServer(t)
 
 	resp := httpPut(t, storageAccountURL(srv.URL, "sub1", "rg1", "sublistacct"), storageAccountBodyLRS)
-	assertStatus(t, resp, http.StatusCreated)
+	assertStatus(t, resp, http.StatusOK)
 	resp.Body.Close()
 
 	resp = httpGet(t, storageAccountListBySubURL(srv.URL, "sub1"))
@@ -287,7 +287,7 @@ func TestStorageAccount_MissingLocation_Returns400(t *testing.T) {
 func TestStorageAccount_PremiumSKU_TierDerived(t *testing.T) {
 	srv := newTestServer(t)
 	resp := httpPut(t, storageAccountURL(srv.URL, "sub1", "rg1", "premiumacct"), storageAccountBodyPremium)
-	assertStatus(t, resp, http.StatusCreated)
+	assertStatus(t, resp, http.StatusOK)
 
 	body := decodeJSON(t, resp)
 	sku, ok := body["sku"].(map[string]interface{})
@@ -307,7 +307,7 @@ func TestStorageAccount_NameUniqueness_ConflictReturns409(t *testing.T) {
 
 	// Create account in rg1.
 	resp := httpPut(t, storageAccountURL(srv.URL, "sub1", "rg1", "uniqueacct"), storageAccountBodyLRS)
-	assertStatus(t, resp, http.StatusCreated)
+	assertStatus(t, resp, http.StatusOK)
 	resp.Body.Close()
 
 	// Attempt to create an account with the same name in rg2 (different RG, same
@@ -330,7 +330,7 @@ func TestStorageAccount_NameUniqueness_SameIDIsIdempotent(t *testing.T) {
 
 	// First PUT creates.
 	resp := httpPut(t, url, storageAccountBodyLRS)
-	assertStatus(t, resp, http.StatusCreated)
+	assertStatus(t, resp, http.StatusOK)
 	resp.Body.Close()
 
 	// Second PUT on the SAME id is an update — must not conflict with itself.
@@ -355,7 +355,7 @@ func TestStorageAccount_DefaultKind_WhenOmitted(t *testing.T) {
 	srv := newTestServer(t)
 	resp := httpPut(t, storageAccountURL(srv.URL, "sub1", "rg1", "defaultkindacct"),
 		`{"location":"uksouth","sku":{"name":"Standard_LRS"},"properties":{}}`)
-	assertStatus(t, resp, http.StatusCreated)
+	assertStatus(t, resp, http.StatusOK)
 
 	body := decodeJSON(t, resp)
 	if body["kind"] != "StorageV2" {
@@ -368,7 +368,7 @@ func TestStorageAccount_DefaultAccessTier_WhenOmitted(t *testing.T) {
 	srv := newTestServer(t)
 	resp := httpPut(t, storageAccountURL(srv.URL, "sub1", "rg1", "defaulttieracct"),
 		`{"location":"uksouth","sku":{"name":"Standard_LRS"},"kind":"StorageV2","properties":{}}`)
-	assertStatus(t, resp, http.StatusCreated)
+	assertStatus(t, resp, http.StatusOK)
 
 	body := decodeJSON(t, resp)
 	props := body["properties"].(map[string]interface{})
@@ -384,7 +384,7 @@ func TestStorageAccount_ListKeys_Returns200WithAzuriteKey(t *testing.T) {
 	keysURL := storageAccountListKeysURL(srv.URL, "sub1", "rg1", "keyacct")
 
 	resp := httpPut(t, acctURL, storageAccountBodyLRS)
-	assertStatus(t, resp, http.StatusCreated)
+	assertStatus(t, resp, http.StatusOK)
 	resp.Body.Close()
 
 	resp = httpPost(t, keysURL, "")
@@ -419,7 +419,7 @@ func TestStorageAccount_ListKeys_NotFound_Returns404(t *testing.T) {
 func TestStorageAccount_PrimaryEndpoints_UseAzuritePathStyle(t *testing.T) {
 	srv := newTestServer(t)
 	resp := httpPut(t, storageAccountURL(srv.URL, "sub1", "rg1", "pathstyleacct"), storageAccountBodyLRS)
-	assertStatus(t, resp, http.StatusCreated)
+	assertStatus(t, resp, http.StatusOK)
 
 	body := decodeJSON(t, resp)
 	props := body["properties"].(map[string]interface{})

@@ -188,6 +188,9 @@ func (a *Router) Routes(r chi.Router) {
 	r.Delete("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.keyvault/vaults/{vaultName}", a.deleteKeyVault)
 	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.keyvault/vaults", a.listKeyVaultsByRG)
 	r.Get("/{subscriptionID}/providers/microsoft.keyvault/vaults", a.listKeyVaultsBySub)
+	// azurerm v4 checks for soft-deleted Key Vaults before creating a new one.
+	// azemu does not implement soft-delete; always return 404 (no deleted vault found).
+	r.Get("/{subscriptionID}/providers/microsoft.keyvault/locations/{location}/deletedvaults/{vaultName}", a.getDeletedKeyVault)
 
 	// Storage Blob Containers (Microsoft.Storage/storageAccounts/blobServices/containers)
 	// The path segment "default" is a fixed literal (not a parameter) matching the real ARM API.

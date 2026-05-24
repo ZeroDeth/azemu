@@ -23,11 +23,12 @@ func storageContainerListURL(srvURL, sub, rg, account string) string {
 const containerBody = `{"properties": {"publicAccess": "None"}}`
 
 // createStorageAccount is a helper that creates a storage account and fails the
-// test if the PUT does not return 201.
+// test if the PUT does not return 200 (storage accounts return 200 on both
+// create and update — azurerm's storageaccounts.Create accepts 200 or 202 only).
 func createStorageAccount(t *testing.T, srvURL, sub, rg, name string) {
 	t.Helper()
 	resp := httpPut(t, storageAccountURL(srvURL, sub, rg, name), storageAccountBodyLRS)
-	assertStatus(t, resp, http.StatusCreated)
+	assertStatus(t, resp, http.StatusOK)
 	resp.Body.Close()
 }
 
