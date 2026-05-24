@@ -58,6 +58,8 @@ var canonicalLiteralSegments = map[string]string{
 	"microsoft.cdn":   "microsoft.cdn",
 	"profiles":        "profiles",
 	"endpoints":       "endpoints",
+	"microsoft.cache": "microsoft.cache",
+	"redis":           "redis",
 	// Phase 8 resource types
 	"microsoft.managedidentity":    "microsoft.managedidentity",
 	"userassignedidentities":       "userassignedidentities",
@@ -65,6 +67,10 @@ var canonicalLiteralSegments = map[string]string{
 	"microsoft.containerservice":   "microsoft.containerservice",
 	"managedclusters":              "managedclusters",
 	"agentpools":                   "agentpools",
+	// ARM action segments and subscription-scoped paths
+	"listkeys":      "listkeys",      // POST .../storageAccounts/{name}/listKeys or .../redis/{name}/listKeys
+	"deletedvaults": "deletedvaults", // GET .../providers/Microsoft.KeyVault/locations/{loc}/deletedVaults/{name}
+	"locations":     "locations",     // subscription-scoped provider path segment
 }
 
 // duplicateSlashes matches runs of two or more "/" characters. Some real
