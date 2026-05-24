@@ -158,7 +158,7 @@ func TestStorageContainer_HEAD_NotFound_Returns404(t *testing.T) {
 	resp.Body.Close()
 }
 
-func TestStorageContainer_DELETE_Returns202(t *testing.T) {
+func TestStorageContainer_DELETE_Returns200(t *testing.T) {
 	srv := newTestServer(t)
 	createStorageAccount(t, srv.URL, "sub1", "rg1", "delacct")
 
@@ -168,10 +168,8 @@ func TestStorageContainer_DELETE_Returns202(t *testing.T) {
 	resp.Body.Close()
 
 	resp = httpDelete(t, url)
-	assertStatus(t, resp, http.StatusAccepted)
-	if resp.Header.Get("Location") == "" {
-		t.Error("DELETE response missing Location header")
-	}
+	// azurerm's containers.Client#Delete expects 200 OK (synchronous delete).
+	assertStatus(t, resp, http.StatusOK)
 	resp.Body.Close()
 }
 
@@ -194,7 +192,7 @@ func TestStorageContainer_DELETE_SubsequentGET_Returns404(t *testing.T) {
 	resp.Body.Close()
 
 	resp = httpDelete(t, url)
-	assertStatus(t, resp, http.StatusAccepted)
+	assertStatus(t, resp, http.StatusOK)
 	resp.Body.Close()
 
 	resp = httpGet(t, url)

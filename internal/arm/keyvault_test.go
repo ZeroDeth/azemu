@@ -175,16 +175,14 @@ func TestKeyVault_HEAD_NotFound_Returns404(t *testing.T) {
 	assertStatus(t, resp, http.StatusNotFound)
 }
 
-func TestKeyVault_DELETE_Returns202(t *testing.T) {
+func TestKeyVault_DELETE_Returns200(t *testing.T) {
 	srv := newTestServer(t)
 	httpPut(t, keyVaultURL(srv.URL, "sub1", "rg1", "myvault1"), keyVaultBodyStandard)
 
 	resp := httpDelete(t, keyVaultURL(srv.URL, "sub1", "rg1", "myvault1"))
-	assertStatus(t, resp, http.StatusAccepted)
-
-	if resp.Header.Get("Location") == "" {
-		t.Error("Location header missing on 202 Accepted")
-	}
+	// azurerm's vaults.VaultsClient#Delete expects 200 OK when soft-delete is disabled.
+	assertStatus(t, resp, http.StatusOK)
+	resp.Body.Close()
 }
 
 func TestKeyVault_DELETE_NotFound_Returns404(t *testing.T) {

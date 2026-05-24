@@ -122,9 +122,9 @@ func (a *Router) deleteUserAssignedIdentity(w http.ResponseWriter, r *http.Reque
 	}
 
 	log.Info().Str("resource_id", id).Msg("user assigned identity deleted")
-	w.Header().Set("Location",
-		fmt.Sprintf("/subscriptions/%s/operationresults/%s", subID, uuid.New().String()))
-	w.WriteHeader(http.StatusAccepted)
+	// azurerm's userassignedidentities.Client#Delete expects 200 OK or 204.
+	// UAI is a leaf resource; deletion is synchronous.
+	w.WriteHeader(http.StatusOK)
 }
 
 func (a *Router) listUserAssignedIdentitiesByRG(w http.ResponseWriter, r *http.Request) {

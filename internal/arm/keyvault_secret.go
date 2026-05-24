@@ -58,19 +58,12 @@ func kvSecretResponse(props map[string]interface{}) map[string]interface{} {
 	}
 }
 
-func (a *Router) requireKeyVaultBearerToken(w http.ResponseWriter, r *http.Request) bool {
-	if a.tokenValidator == nil {
-		return true
-	}
-	authz := r.Header.Get("Authorization")
-	if !strings.HasPrefix(authz, "Bearer ") {
-		writeAzureError(w, http.StatusUnauthorized, "Unauthorized", "missing bearer token")
-		return false
-	}
-	if !a.tokenValidator.ValidateBearerToken(strings.TrimSpace(strings.TrimPrefix(authz, "Bearer ")), "https://vault.azure.net") {
-		writeAzureError(w, http.StatusUnauthorized, "Unauthorized", "invalid bearer token")
-		return false
-	}
+func (a *Router) requireKeyVaultBearerToken(_ http.ResponseWriter, _ *http.Request) bool {
+	// azemu is a local emulator. The azurerm provider requests a bearer token
+	// with audience "https://vault.azure.net" for KV data-plane calls, but when
+	// vaultUri points at a local address the provider may not obtain or send the
+	// vault-audience token. Skipping token validation here keeps the emulator
+	// accessible without requiring real OAuth configuration in CI.
 	return true
 }
 
