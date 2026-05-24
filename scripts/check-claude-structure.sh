@@ -91,7 +91,7 @@ fi
 #   feedback_claude_md_steering - the specific broken memory filename
 #                                 from a 2026-04-11 incident
 leak_pattern='(~/\.claude|/Users/[a-zA-Z]|/\.claude/projects|feedback_claude_md_steering)'
-leak_excludes='^(CHANGELOG\.md|scripts/check-claude-structure\.sh)$'
+leak_excludes='^(CHANGELOG\.md|website/docs/reference/changelog\.md|scripts/check-claude-structure\.sh)$'
 
 tracked=$(git ls-files | grep -Ev "$leak_excludes" || true)
 leaks=""
