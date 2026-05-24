@@ -363,9 +363,9 @@ func TestKVSecret_PUT_CustomAttributes_PassedThrough(t *testing.T) {
 	if attrs["enabled"] != false {
 		t.Errorf("attributes.enabled = %v, want false (caller-set)", attrs["enabled"])
 	}
-	// 'exp' is a custom attribute and should also be passed through.
-	if attrs["exp"] == nil {
-		t.Errorf("attributes.exp missing; want passthrough of custom attribute")
+	// 'exp' is a custom attribute and should also be passed through with the exact value.
+	if attrs["exp"] != float64(9999999999) {
+		t.Errorf("attributes.exp = %v, want %v (passthrough of custom attribute)", attrs["exp"], float64(9999999999))
 	}
 	// 'recoveryLevel' is a protected attribute; caller cannot override it.
 	if attrs["recoveryLevel"] != "Purgeable" {

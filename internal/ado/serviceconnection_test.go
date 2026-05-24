@@ -351,8 +351,12 @@ func TestWriteADOJSON_encodeFails_doesNotPanic(t *testing.T) {
 	w := httptest.NewRecorder()
 	// A channel is not JSON-encodable; Encode returns an error.
 	writeADOJSON(w, http.StatusOK, make(chan int))
-	// Function must return without panicking; status and content-type are set.
+	// Status is set before encode attempt.
 	if w.Code != http.StatusOK {
 		t.Errorf("want 200 status set before encode attempt, got %d", w.Code)
+	}
+	// Body must be empty: the encode error path leaves no partial output.
+	if w.Body.Len() != 0 {
+		t.Errorf("want empty body on encode failure, got %d bytes: %s", w.Body.Len(), w.Body.String())
 	}
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"sync/atomic"
@@ -46,8 +47,16 @@ func TestProbeHealth_returns503_false(t *testing.T) {
 }
 
 func TestProbeHealth_connectionRefused_false(t *testing.T) {
-	// Use a port that is almost certainly not listening.
-	if probeHealth("http://127.0.0.1:19999") {
+	// Bind an ephemeral port, record the address, close immediately.
+	// The OS will not immediately reassign it, so probeHealth receives
+	// connection refused rather than a timeout.
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	addr := ln.Addr().String()
+	ln.Close()
+	if probeHealth("http://" + addr) {
 		t.Fatal("want false for connection refused, got true")
 	}
 }

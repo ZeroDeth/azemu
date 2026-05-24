@@ -209,14 +209,13 @@ func TestStatusIcon_unknown(t *testing.T) {
 
 func TestSetEnvDefaults_setsWhenUnset(t *testing.T) {
 	key := "AZEMU_TEST_SETENV_UNSET_KEY"
-	t.Setenv(key, "") // ensure unset via empty string path
-	os.Unsetenv(key)  // actually unset it
+	os.Unsetenv(key)
+	t.Cleanup(func() { os.Unsetenv(key) })
 
 	setEnvDefaults(map[string]string{key: "test-value"})
 	if got := os.Getenv(key); got != "test-value" {
 		t.Errorf("want %q, got %q", "test-value", got)
 	}
-	os.Unsetenv(key) // cleanup
 }
 
 func TestSetEnvDefaults_doesNotOverride(t *testing.T) {
@@ -267,14 +266,23 @@ func TestResolveCertFile_configPathExists(t *testing.T) {
 
 func TestResolveCertFile_configPathAbsent_fallsThrough(t *testing.T) {
 	// configPath does not exist; no cwd/.azemu/cert-bundle.pem either.
-	// Should return the configPath fallback since it is non-empty.
+	// resolveCertFile returns configPath as the fallback when it is non-empty.
+	// Isolate cwd so .azemu/cert-bundle.pem in the project root cannot interfere.
+	orig, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	tmp := t.TempDir()
+	if err := os.Chdir(tmp); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.Chdir(orig) }) //nolint:errcheck
 	nonExistent := "/tmp/azemu-does-not-exist-12345.pem"
 	os.Remove(nonExistent) // ensure not present
 
 	got := resolveCertFile(nonExistent)
-	// When the file doesn't exist and no other candidate exists, returns configPath.
-	if got != nonExistent && got != "/tmp/azemu-cert.pem" {
-		t.Errorf("unexpected fallback: %q", got)
+	if got != nonExistent {
+		t.Errorf("want configPath fallback %q, got %q", nonExistent, got)
 	}
 }
 
@@ -333,6 +341,10 @@ func TestInsecureHTTPClient_returnsNonNilClient(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestSnapshotDir_returnsValidPath(t *testing.T) {
+	// Redirect HOME to a temp dir so snapshotDir does not create
+	// ~/.azemu/snapshots on the developer's real machine or CI agent.
+	t.Setenv("HOME", t.TempDir())
+
 	dir, err := snapshotDir()
 	if err != nil {
 		t.Fatalf("snapshotDir() error: %v", err)
