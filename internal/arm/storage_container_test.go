@@ -235,7 +235,7 @@ func TestStorageAccount_DELETE_CascadesContainers(t *testing.T) {
 
 	// Delete the storage account.
 	resp := httpDelete(t, storageAccountURL(srv.URL, "sub1", "rg1", "cascadeacct"))
-	assertStatus(t, resp, http.StatusAccepted)
+	assertStatus(t, resp, http.StatusOK)
 	resp.Body.Close()
 
 	// Both containers must be gone.

@@ -192,6 +192,9 @@ func (a *Router) Routes(r chi.Router) {
 	// azurerm v4 checks for soft-deleted Key Vaults before creating a new one.
 	// azemu does not implement soft-delete; always return 404 (no deleted vault found).
 	r.Get("/{subscriptionID}/providers/microsoft.keyvault/locations/{location}/deletedvaults/{vaultName}", a.getDeletedKeyVault)
+	// azurerm v4 purges the deleted vault after deleting it (purge_protection_enabled=false).
+	// azemu does not implement soft-delete/purge; return 200 OK (purge complete).
+	r.Delete("/{subscriptionID}/providers/microsoft.keyvault/locations/{location}/deletedvaults/{vaultName}", a.purgeDeletedKeyVault)
 
 	// Storage file service stub — azurerm v4 polls this endpoint after creating
 	// a storage account to wait for the file service to become available.
