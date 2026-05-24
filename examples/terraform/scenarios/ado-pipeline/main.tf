@@ -49,7 +49,8 @@ resource "azurerm_key_vault_secret" "deploy_token" {
 # --- Storage (pipeline artifacts) ---
 
 resource "azurerm_storage_account" "artifacts" {
-  name                     = "${var.prefix}artifacts"
+  # Storage account names must be lowercase letters and numbers only (no hyphens).
+  name                     = "${replace(var.prefix, "-", "")}artifacts"
   resource_group_name      = azurerm_resource_group.main.name
   location                 = var.location
   account_tier             = "Standard"
