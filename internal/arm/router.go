@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/go-chi/chi/v5"
+	chimw "github.com/go-chi/chi/v5/middleware"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 	"github.com/zerodeth/azemu/internal/store"
@@ -198,6 +199,10 @@ func (a *Router) Routes(r chi.Router) {
 	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.storage/storageaccounts/{accountName}/fileservices/default", a.getStorageFileService)
 	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.storage/storageaccounts/{accountName}/fileservices", a.getStorageFileService)
 
+	// Storage Blob Service properties — azurerm v4 reads this endpoint after
+	// creating a storage account to check/encode blob service properties.
+	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.storage/storageaccounts/{accountName}/blobservices/default", a.getBlobServiceProperties)
+
 	// Storage Blob Containers (Microsoft.Storage/storageAccounts/blobServices/containers)
 	// The path segment "default" is a fixed literal (not a parameter) matching the real ARM API.
 	r.Put("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.storage/storageaccounts/{accountName}/blobservices/default/containers/{containerName}", a.putStorageContainer)
@@ -258,6 +263,13 @@ func (a *Router) Routes(r chi.Router) {
 // The "versions" literal is registered before "/{version}" so chi's radix
 // trie matches it as a literal segment before the wildcard.
 func (a *Router) KeyVaultDataPlaneRoutes(r chi.Router) {
+	// keyvault.BaseClient#GetSecret (autorest SDK, used by azurerm v4) constructs
+	// the URL as /secrets/{name}/{version}. When secretVersion is empty the
+	// resulting path has a trailing slash: /secrets/{name}/. chi v5 does not
+	// strip trailing slashes by default, so without StripSlashes the route would
+	// fall through to the NotFound handler.
+	r.Use(chimw.StripSlashes)
+
 	r.Get("/{vaultName}/secrets/{secretName}/versions", a.listKeyVaultSecretVersions)
 	r.Get("/{vaultName}/secrets/{secretName}/{version}", a.getKeyVaultSecretVersion)
 	r.Put("/{vaultName}/secrets/{secretName}", a.putKeyVaultSecret)
