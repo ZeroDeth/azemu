@@ -134,12 +134,11 @@ func (a *Router) putKeyVaultSecret(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	status := http.StatusCreated
-	if isUpdate {
-		status = http.StatusOK
-	}
 	log.Info().Str("vault", vaultName).Str("secret", secretName).Str("version", version).Msg("key vault secret upsert")
-	writeJSON(w, status, kvSecretResponse(props))
+	// keyvault.BaseClient#SetSecret (autorest SDK) expects 200 OK on both create
+	// and update — it treats any other 2xx as an unknown error.
+	_ = isUpdate
+	writeJSON(w, http.StatusOK, kvSecretResponse(props))
 }
 
 func (a *Router) getKeyVaultSecret(w http.ResponseWriter, r *http.Request) {

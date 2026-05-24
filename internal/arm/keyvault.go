@@ -189,6 +189,16 @@ func (a *Router) getDeletedKeyVault(w http.ResponseWriter, r *http.Request) {
 		fmt.Sprintf("The deleted vault '%s' in location '%s' was not found.", name, location))
 }
 
+// purgeDeletedKeyVault stubs the purge-deleted-vault endpoint that azurerm v4
+// calls after deleting a Key Vault when purge_protection_enabled = false.
+// azemu does not implement soft-delete; returning 200 OK signals that the purge
+// is complete and allows the provider to continue.
+func (a *Router) purgeDeletedKeyVault(w http.ResponseWriter, r *http.Request) {
+	name := chi.URLParam(r, "vaultName")
+	log.Info().Str("vault_name", name).Msg("key vault purge (no-op)")
+	w.WriteHeader(http.StatusOK)
+}
+
 // getKeyVaultCertificateContacts handles the data-plane GET
 // /{vaultName}/certificates/contacts endpoint. azurerm v4 calls this on every
 // plan/refresh to detect drift in certificate contact configuration. azemu does

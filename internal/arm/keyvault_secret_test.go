@@ -58,7 +58,7 @@ func newProtectedKVTestServer(t *testing.T, validToken string) *httptest.Server 
 func TestKVSecret_PUT_Creates_Returns201(t *testing.T) {
 	srv := newTestServer(t)
 	resp := httpPut(t, kvSecretURL(srv.URL, "myvault", "mysecret"), secretBody)
-	assertStatus(t, resp, http.StatusCreated)
+	assertStatus(t, resp, http.StatusOK)
 
 	body := decodeJSON(t, resp)
 	if body["value"] != "super-secret" {
@@ -78,7 +78,7 @@ func TestKVSecret_PUT_AuthBypassedInEmulator(t *testing.T) {
 	srv := newProtectedKVTestServer(t, "valid-token")
 
 	resp := httpPut(t, kvSecretURL(srv.URL, "myvault", "mysecret"), secretBody)
-	assertStatus(t, resp, http.StatusCreated)
+	assertStatus(t, resp, http.StatusOK)
 	resp.Body.Close()
 }
 
@@ -97,7 +97,7 @@ func TestKVSecret_PUT_Idempotent_Returns200(t *testing.T) {
 func TestKVSecret_PUT_ResponseHasAttributes(t *testing.T) {
 	srv := newTestServer(t)
 	resp := httpPut(t, kvSecretURL(srv.URL, "myvault", "mysecret"), secretBody)
-	assertStatus(t, resp, http.StatusCreated)
+	assertStatus(t, resp, http.StatusOK)
 
 	body := decodeJSON(t, resp)
 	attrs, ok := body["attributes"].(map[string]interface{})
@@ -115,7 +115,7 @@ func TestKVSecret_PUT_ResponseHasAttributes(t *testing.T) {
 func TestKVSecret_PUT_ResponseHasVersionInID(t *testing.T) {
 	srv := newTestServer(t)
 	resp := httpPut(t, kvSecretURL(srv.URL, "myvault", "mysecret"), secretBody)
-	assertStatus(t, resp, http.StatusCreated)
+	assertStatus(t, resp, http.StatusOK)
 
 	body := decodeJSON(t, resp)
 	id, _ := body["id"].(string)
@@ -172,7 +172,7 @@ func TestKVSecret_GET_NotFound_Returns404(t *testing.T) {
 func TestKVSecret_GET_SpecificVersion(t *testing.T) {
 	srv := newTestServer(t)
 	putResp := httpPut(t, kvSecretURL(srv.URL, "myvault", "mysecret"), secretBody)
-	assertStatus(t, putResp, http.StatusCreated)
+	assertStatus(t, putResp, http.StatusOK)
 
 	putBody := decodeJSON(t, putResp)
 	id, _ := putBody["id"].(string)
@@ -307,7 +307,7 @@ func TestKVSecret_LIST_Versions_SecretNotFound_Returns404(t *testing.T) {
 func TestKVSecret_Tags_NormalisedToEmptyObject(t *testing.T) {
 	srv := newTestServer(t)
 	resp := httpPut(t, kvSecretURL(srv.URL, "myvault", "mysecret"), `{"value":"x"}`)
-	assertStatus(t, resp, http.StatusCreated)
+	assertStatus(t, resp, http.StatusOK)
 
 	body := decodeJSON(t, resp)
 	tags, ok := body["tags"].(map[string]interface{})
@@ -335,7 +335,7 @@ func TestKVSecret_PUT_CustomAttributes_PassedThrough(t *testing.T) {
 	srv := newTestServer(t)
 	resp := httpPut(t, kvSecretURL(srv.URL, "myvault", "mysecret"),
 		`{"value":"s3cr3t","attributes":{"enabled":false,"exp":9999999999}}`)
-	assertStatus(t, resp, http.StatusCreated)
+	assertStatus(t, resp, http.StatusOK)
 
 	body := decodeJSON(t, resp)
 	attrs, ok := body["attributes"].(map[string]interface{})

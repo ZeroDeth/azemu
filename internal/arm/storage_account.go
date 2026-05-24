@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 
 	"github.com/zerodeth/azemu/internal/store"
@@ -213,9 +212,9 @@ func (a *Router) deleteStorageAccount(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Info().Str("resource_id", id).Msg("storage account deleted")
-	w.Header().Set("Location",
-		fmt.Sprintf("/subscriptions/%s/operationresults/%s", subID, uuid.New().String()))
-	w.WriteHeader(http.StatusAccepted)
+	// azurerm's storageaccounts.Client#Delete expects 200 OK or 204 (synchronous).
+	// Returning 202 with no body causes the SDK to error with "received with no body".
+	w.WriteHeader(http.StatusOK)
 }
 
 func (a *Router) listStorageAccountsByRG(w http.ResponseWriter, r *http.Request) {
