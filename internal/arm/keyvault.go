@@ -189,6 +189,22 @@ func (a *Router) getDeletedKeyVault(w http.ResponseWriter, r *http.Request) {
 		fmt.Sprintf("The deleted vault '%s' in location '%s' was not found.", name, location))
 }
 
+// getKeyVaultCertificateContacts handles the data-plane GET
+// /{vaultName}/certificates/contacts endpoint. azurerm v4 calls this on every
+// plan/refresh to detect drift in certificate contact configuration. azemu does
+// not manage certificates; returning an empty contact list allows the provider
+// to proceed without error.
+func (a *Router) getKeyVaultCertificateContacts(w http.ResponseWriter, r *http.Request) {
+	vaultName := chi.URLParam(r, "vaultName")
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"id":    "https://" + vaultName + ".vault.azure.net/certificates/contacts",
+		"value": []interface{}{},
+		"attributes": map[string]interface{}{
+			"enabled": true,
+		},
+	})
+}
+
 // keyVaultResponse builds the canonical ARM response for a key vault.
 // provisioningState is always "Succeeded" regardless of what was stored.
 func keyVaultResponse(v *store.Resource) map[string]interface{} {
