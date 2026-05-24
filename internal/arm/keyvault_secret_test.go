@@ -335,3 +335,40 @@ func TestKVSecret_Tags_NormalisedToEmptyObject(t *testing.T) {
 		t.Errorf("len(tags) = %d, want 0 for nil input", len(tags))
 	}
 }
+
+// ---------------------------------------------------------------------------
+// putKeyVaultSecret gap tests (73.3% → higher)
+// ---------------------------------------------------------------------------
+
+func TestKVSecret_PUT_InvalidJSON_Returns400(t *testing.T) {
+	srv := newTestServer(t)
+	resp := httpPut(t, kvSecretURL(srv.URL, "myvault", "mysecret"), `not-valid-json`)
+	assertStatus(t, resp, http.StatusBadRequest)
+}
+
+func TestKVSecret_PUT_CustomAttributes_PassedThrough(t *testing.T) {
+	// A PUT with caller-supplied attributes exercises the attribute passthrough
+	// loop in putKeyVaultSecret (the for k,v range body.Attributes branch).
+	srv := newTestServer(t)
+	resp := httpPut(t, kvSecretURL(srv.URL, "myvault", "mysecret"),
+		`{"value":"s3cr3t","attributes":{"enabled":false,"exp":9999999999}}`)
+	assertStatus(t, resp, http.StatusCreated)
+
+	body := decodeJSON(t, resp)
+	attrs, ok := body["attributes"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("attributes missing or wrong type; body = %v", body)
+	}
+	// 'enabled' is a recognised attribute and should be passed through.
+	if attrs["enabled"] != false {
+		t.Errorf("attributes.enabled = %v, want false (caller-set)", attrs["enabled"])
+	}
+	// 'exp' is a custom attribute and should also be passed through.
+	if attrs["exp"] == nil {
+		t.Errorf("attributes.exp missing; want passthrough of custom attribute")
+	}
+	// 'recoveryLevel' is a protected attribute; caller cannot override it.
+	if attrs["recoveryLevel"] != "Purgeable" {
+		t.Errorf("attributes.recoveryLevel = %v, want Purgeable (protected)", attrs["recoveryLevel"])
+	}
+}
