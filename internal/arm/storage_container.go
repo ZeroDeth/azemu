@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 
 	"github.com/zerodeth/azemu/internal/store"
@@ -128,9 +127,9 @@ func (a *Router) deleteStorageContainer(w http.ResponseWriter, r *http.Request) 
 	}
 
 	log.Info().Str("resource_id", id).Msg("storage container deleted")
-	w.Header().Set("Location",
-		fmt.Sprintf("/subscriptions/%s/operationresults/%s", subID, uuid.New().String()))
-	w.WriteHeader(http.StatusAccepted)
+	// azurerm's containers.Client#Delete expects 200 OK (synchronous delete).
+	// Blob containers are child resources; deletion is immediate, not async.
+	w.WriteHeader(http.StatusOK)
 }
 
 func (a *Router) listStorageContainers(w http.ResponseWriter, r *http.Request) {

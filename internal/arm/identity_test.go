@@ -118,14 +118,13 @@ func TestUAI_HEAD_NotFound_Returns404(t *testing.T) {
 	assertStatus(t, resp, http.StatusNotFound)
 }
 
-func TestUAI_DELETE_Returns202(t *testing.T) {
+func TestUAI_DELETE_Returns200(t *testing.T) {
 	srv := newTestServer(t)
 	httpPut(t, uaiURL(srv, "my-identity"), `{"location":"uksouth"}`)
 	resp := httpDelete(t, uaiURL(srv, "my-identity"))
-	assertStatus(t, resp, http.StatusAccepted)
-	if resp.Header.Get("Location") == "" {
-		t.Error("DELETE response missing Location header")
-	}
+	// azurerm's userassignedidentities.Client#Delete expects 200 OK or 204.
+	assertStatus(t, resp, http.StatusOK)
+	resp.Body.Close()
 }
 
 func TestUAI_DELETE_NotFound_Returns404(t *testing.T) {
