@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -296,5 +297,54 @@ func TestResolveCertFile_tmpFileExists(t *testing.T) {
 	got := resolveCertFile("")
 	if got != "/tmp/azemu-cert.pem" {
 		t.Errorf("want /tmp/azemu-cert.pem, got %q", got)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// tlsInsecureConfig
+// ---------------------------------------------------------------------------
+
+func TestTLSInsecureConfig_returnsInsecureConfig(t *testing.T) {
+	cfg := tlsInsecureConfig()
+	if cfg == nil {
+		t.Fatal("want non-nil TLS config, got nil")
+	}
+	if !cfg.InsecureSkipVerify {
+		t.Error("want InsecureSkipVerify=true, got false")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// insecureHTTPClient
+// ---------------------------------------------------------------------------
+
+func TestInsecureHTTPClient_returnsNonNilClient(t *testing.T) {
+	client := insecureHTTPClient()
+	if client == nil {
+		t.Fatal("want non-nil HTTP client, got nil")
+	}
+	if client.Timeout == 0 {
+		t.Error("want non-zero timeout on insecure HTTP client")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// snapshotDir
+// ---------------------------------------------------------------------------
+
+func TestSnapshotDir_returnsValidPath(t *testing.T) {
+	dir, err := snapshotDir()
+	if err != nil {
+		t.Fatalf("snapshotDir() error: %v", err)
+	}
+	if dir == "" {
+		t.Fatal("want non-empty snapshot dir, got empty")
+	}
+	if !strings.HasSuffix(dir, filepath.Join(".azemu", "snapshots")) {
+		t.Errorf("want path ending in .azemu/snapshots, got %q", dir)
+	}
+	// Directory must exist after call.
+	if _, err := os.Stat(dir); err != nil {
+		t.Errorf("snapshot dir %q should exist after call, got: %v", dir, err)
 	}
 }
