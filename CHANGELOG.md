@@ -51,6 +51,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   section explaining the compose profile, `--requirepass` contract, and
   host-mode setup.
 
+### Added (Phase 2 secondary coverage pass)
+
+- `cmd/azemu` package now has test coverage (was 0%). New test files cover:
+  pure-logic helpers (`stringSlice`, `credentialMatches`, `formatUptime`,
+  `statusIcon`, `setEnvDefaults`, `resolveCertFile`, `tlsInsecureConfig`,
+  `insecureHTTPClient`, `snapshotDir`), HTTP helpers (`probeHealth`,
+  `waitForHealth`), and `ResolveFederatedIdentity`.
+- `internal/ado`: `endpointBelongsToProject` coverage 33%→100%;
+  `writeADOJSON` encode-failure path covered.
+- `internal/arm`: DNS `dnsZoneResponse` property passthrough, FIC
+  validation-error paths, Key Vault secret attribute passthrough and
+  custom-attribute round-trip.
+- Overall test coverage: 75.6%→78.3%. 568 tests pass with `-race`.
+
 ### Fixed
 
 - `test/integration/` build resurrected. `arm.NewRouter` had grown a

@@ -110,6 +110,20 @@ Sequential closeout batch: pkg/config tests (2.7), integration auth+metadata
 (2.8), coverage verification (2.9), VNet/Subnet backfill, cleanup commits.
 ```
 
+**Phase 2 secondary coverage pass (2026-05-24, PR #57):** Filled gaps in
+packages that were 0% or low coverage after the main Phase 2 batch. Plan:
+`docs/plans/2026-05-24-001-test-coverage-gaps-plan.md`.
+
+| # | Task | File(s) | Status | Notes |
+|---|------|---------|--------|-------|
+| 2.U1 | `cmd/azemu` pure-logic tests | `cmd_purelogic_test.go` | DONE | stringSlice, credentialMatches, formatUptime, statusIcon, setEnvDefaults, resolveCertFile, tlsInsecureConfig, insecureHTTPClient, snapshotDir |
+| 2.U2 | `cmd/azemu` HTTP helper tests | `cmd_http_test.go` | DONE | probeHealth / waitForHealth via httptest |
+| 2.U3 | `cmd/azemu` FIC resolver tests | `ficresolver_test.go` | DONE | ResolveFederatedIdentity with in-memory store |
+| 2.U4 | `internal/ado` gap tests | `serviceconnection_test.go` | DONE | endpointBelongsToProject 33%→100%, writeADOJSON encode-failure path |
+| 2.U5 | `internal/arm` gap tests | `dns_test.go`, `federated_identity_credential_test.go`, `keyvault_secret_test.go` | DONE | DNS property passthrough, FIC validation errors, KV secret attribute passthrough |
+
+Total: 78.3% overall (up from 75.6%), 568 tests pass with `-race`.
+
 ---
 
 ## Phase 2.5: Package ownership and response normalisation
