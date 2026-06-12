@@ -101,7 +101,7 @@ func TestKeyVault_PUT_VaultURIComputed(t *testing.T) {
 	// vaultUri now points at azemu's Key Vault data-plane endpoint so the
 	// azurerm provider's subsequent secrets requests land on azemu's handler.
 	// The test server uses the "https://kv-test" placeholder for kvEndpoint.
-	want := "https://kv-test/keyvault/myvault1/"
+	want := "https://myvault1.vault.localhost/"
 	if props["vaultUri"] != want {
 		t.Errorf("vaultUri = %v, want %s", props["vaultUri"], want)
 	}

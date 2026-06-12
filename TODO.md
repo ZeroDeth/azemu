@@ -70,6 +70,26 @@ The bundle file is written with mode 0600 because it contains the private key.
 - No async operation polling (DELETE returns 202 but operation URL is not implemented)
 - No resource-level tags querying
 - `api-version` parameter is accepted but not validated against known versions
+- **Storage containers are not mirrored into Azurite.** `azurerm_storage_container`
+  creates the container in azemu's ARM store only; the Azurite sidecar never
+  hears about it, and the `publicAccess` property has no data-plane effect.
+  Deferred 2026-06-12 (OTA pipeline enablement): upload scripts create the
+  container in Azurite directly, with `x-ms-blob-public-access: blob` when
+  anonymous read is needed. Documented in `docs/SETUP.md`. Follow-up: have
+  the container PUT handler issue the matching Azurite Create Container call.
+- **Key Vault keys API is sign-only RSA.** RS256 over SHA-256 digests, RSA
+  2048/3072/4096, create/import/get/list/update/delete plus versionless sign.
+  Not implemented: RS384/RS512 (one-line additions to `signAlgorithms` in
+  `internal/arm/keyvault_key.go`), PS*/ES* algorithms, EC keys, encrypt/
+  decrypt/wrap/unwrap, key export/backup/restore, and rotation policy.
+  Soft-delete is stubbed, not modelled: `deleted{keys,secrets}` purge
+  returns 204 and the GET reports nothing recoverable.
+- **Key Vault data-plane vault resolution falls back to item-name scan.**
+  Host-based requests ({vault}.vault.localhost) resolve the vault from the
+  Host header; raw clients hitting root-level `/keys/{name}` on plain
+  localhost are resolved by scanning for the item name across vaults, which
+  is ambiguous if two vaults hold a key with the same name. Path-style
+  routes (`/keyvault/{vault}/keys/...`) stay unambiguous.
 - ~~**chi route casing:** existing RG routes and the new VNet/Subnet routes use
   lowercase path literals while Azure canonical paths are camelCase.~~
   **RESOLVED 2026-04-11** by `internal/middleware/pathcase.go` (M4 above).
