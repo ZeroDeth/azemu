@@ -19,6 +19,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (Key Vault keys, sign-only RSA)
+
+- Key Vault keys data plane: create/import RSA keys (2048/3072/4096) with
+  versioning, public-JWK GET, list and list-versions, PATCH updates,
+  delete with cascade, and the `sign` operation (RS256, RSASSA-PKCS1-v1_5
+  over a SHA-256 digest), including the versionless form that resolves the
+  current key version. Signatures verify against the returned public JWK.
+  (`azurerm_key_vault_key`)
+- Host-based Key Vault data-plane routing: `vaultUri` is now
+  `https://{vault}.vault.localhost[:port]/` and root-level `/keys` and
+  `/secrets` routes resolve the vault from the Host header. The azurerm
+  provider requires both the `{name}.vault.**` host shape
+  (`KeyVaultIDFromBaseUrl`) and vault-less nested-item URLs
+  (`ParseNestedItemID`); the previous path-style ids broke
+  `azurerm_key_vault_secret` and `azurerm_key_vault_key` read-back.
+  Path-style routes under `/keyvault/{vault}/` remain for raw clients.
+- Subscription-wide Resources list (`GET /subscriptions/{sub}/resources`)
+  with `$filter=resourceType eq '...'` support; used by the provider to
+  map a vaultUri back to the vault ARM ID.
+- Key Vault soft-delete purge stubs: `POST .../deletedvaults/{name}/purge`
+  (the shape `vaults.VaultsClient#PurgeDeleted` actually sends) and
+  data-plane `DELETE /deleted{keys,secrets}/{name}` returning 204.
+- Storage `blobServices/default` PUT: the `blob_properties` block on
+  `azurerm_storage_account` no longer fails with 405; properties round-trip
+  on GET.
+- `AZURITE_ACCOUNTS` pre-registration in `docker-compose.yml`
+  (`devstoreaccount1`, `examplestorage001`, `azemuotasa`) plus a SETUP.md
+  section on registering Terraform-chosen storage account names.
+- `examples/terraform/scenarios/ota-updates/`: OTA update pipeline scenario
+  (storage account + key vault + RSA signing key) with a documented
+  publish-time sign call.
+- `azurerm_key_vault_key` example in `examples/terraform/keyvault.tf` with
+  a `key_vault_key_id` output and test assertion.
+
+### Changed (Key Vault keys, sign-only RSA)
+
+- The self-signed TLS certificate now carries a `*.vault.localhost` SAN.
+  Existing persisted bundles are regenerated automatically on startup and
+  must be trusted again (`security add-trusted-cert ...` on macOS; see
+  docs/TROUBLESHOOTING.md).
+- Key Vault nested-item ids (secret `id`, key `kid`) moved from
+  `{kvEndpoint}/keyvault/{vault}/...` to
+  `https://{vault}.vault.localhost[:port]/...`.
+
 ### Added (Phase 7.7: Azure Cache for Redis)
 
 - `Microsoft.Cache/Redis` CRUD + HEAD + list-by-RG + list-by-sub.
