@@ -142,12 +142,17 @@ func runServe(args []string) error {
 	r.Route("/{tenantID}", tokenSvc.TenantRoutes)
 	r.Route("/subscriptions", armRouter.Routes)
 	r.Route("/keyvault", armRouter.KeyVaultDataPlaneRoutes)
+	armRouter.KeyVaultNestedItemRoutes(r)
 	r.Route("/ado", func(r chi.Router) {
 		adoOIDC.Routes(r)
 		adoSC.ServiceConnectionRoutes(r)
 	})
 
-	tlsCfg, generated, err := auth.LoadOrGenerateSelfSignedTLS(cfg.CertPath, "localhost", "127.0.0.1")
+	// *.vault.localhost serves the per-vault Key Vault data-plane hosts
+	// ({vaultName}.vault.localhost) that the azurerm provider requires in
+	// vaultUri. Bundles generated before this SAN existed are regenerated
+	// automatically; the new cert must be trusted again.
+	tlsCfg, generated, err := auth.LoadOrGenerateSelfSignedTLS(cfg.CertPath, "localhost", "127.0.0.1", "*.vault.localhost")
 	if err != nil {
 		if len(tlsCfg.Certificate) == 0 {
 			log.Fatal().Err(err).Msg("failed to load/generate TLS cert")
