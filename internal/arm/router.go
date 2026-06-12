@@ -261,6 +261,10 @@ func (a *Router) Routes(r chi.Router) {
 	r.Delete("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.containerservice/managedclusters/{clusterName}", a.deleteAKSCluster)
 	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.containerservice/managedclusters", a.listAKSClustersByRG)
 	r.Get("/{subscriptionID}/providers/microsoft.containerservice/managedclusters", a.listAKSClustersBySub)
+	// Credential listing. azurerm POSTs these on every cluster read to
+	// populate kube_config / kube_admin_config; unhandled they 501.
+	r.Post("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.containerservice/managedclusters/{clusterName}/listclusterusercredential", a.listAKSClusterUserCredential)
+	r.Post("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.containerservice/managedclusters/{clusterName}/listclusteradmincredential", a.listAKSClusterAdminCredential)
 
 	// AKS Agent Pools (Microsoft.ContainerService/managedClusters/agentPools)
 	r.Put("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.containerservice/managedclusters/{clusterName}/agentpools/{poolName}", a.putAKSNodePool)
