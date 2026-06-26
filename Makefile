@@ -35,11 +35,24 @@ tf-test:
 
 # Runs only the focused scenarios under examples/terraform/scenarios/.
 # Used by CI; each scenario is designed for end-to-end azurerm round-trips.
+# Runs every scenario even if one fails, then reports a summary and exits
+# non-zero if any failed. A fail-fast loop here previously masked failures in
+# every scenario alphabetically after the first broken one.
 tf-test-scenarios:
-	@for dir in examples/terraform/scenarios/*/; do \
-		echo "--- terraform test: $$dir ---"; \
-		(cd "$$dir" && terraform init -upgrade -input=false && terraform test) || exit 1; \
-	done
+	@failed=""; passed=""; \
+	for dir in examples/terraform/scenarios/*/; do \
+		name=$$(basename "$$dir"); \
+		echo "=== terraform test: $$name ==="; \
+		if (cd "$$dir" && terraform init -upgrade -input=false && terraform test); then \
+			passed="$$passed $$name"; \
+		else \
+			failed="$$failed $$name"; \
+		fi; \
+	done; \
+	echo "================ scenario summary ================"; \
+	echo "passed:$$passed"; \
+	echo "failed:$$failed"; \
+	if [ -n "$$failed" ]; then exit 1; fi
 
 clean:
 	rm -rf bin/ coverage.out coverage.html
