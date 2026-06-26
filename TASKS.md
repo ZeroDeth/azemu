@@ -7,6 +7,18 @@ open roadmap task is scenario 8.7.1 (multi-replica AKS workload, ADR 0002);
 everything else through Phase 9 has shipped.
 Current focus: scenario 8.7.1, the last task before the v0.3 milestone closes.
 
+> **Ready-for-testing / scenario-CI health (2026-06-26, PR #74).** The
+> Terraform Scenarios CI job had been red for weeks. The fail-fast loop in
+> `make tf-test-scenarios` masked it: only the first failing scenario ran.
+> Removing the masking exposed two systemic bugs, now fixed: async DELETE
+> never resolved (no `operationresults` endpoint, relative `Location`) so every
+> destroy hung 30 min (`TODO.md` M7), and azurerm version drift broke
+> `storage_container` (`TODO.md` M6, pinned `< 4.35`). One confirmed blocker
+> remains: `azurerm_lb_probe`/`lb_rule` are written inline via the parent LB
+> PUT but `putLB` drops them (`TODO.md` M8) -- a real LB-handler change that
+> needs a plan and terraform-capable verification. Until M8 lands, the
+> `three-tier` scenario stays red.
+
 > **Strategy, non-goals, and the per-release resource roster live in
 > `ROADMAP.md`.** `TASKS.md` is the execution ledger and `ROADMAP.md` is
 > the north star. If they ever disagree, `ROADMAP.md` wins; this file
