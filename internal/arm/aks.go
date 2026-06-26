@@ -160,7 +160,7 @@ func (a *Router) deleteAKSCluster(w http.ResponseWriter, r *http.Request) {
 
 	log.Info().Str("resource_id", id).Msg("AKS cluster deleted")
 	w.Header().Set("Location",
-		fmt.Sprintf("/subscriptions/%s/operationresults/%s", subID, uuid.New().String()))
+		operationResultLocation(r, subID))
 	w.WriteHeader(http.StatusAccepted)
 }
 
@@ -431,7 +431,7 @@ func (a *Router) deleteAKSNodePool(w http.ResponseWriter, r *http.Request) {
 
 	log.Info().Str("resource_id", id).Msg("AKS node pool deleted")
 	w.Header().Set("Location",
-		fmt.Sprintf("/subscriptions/%s/operationresults/%s", subID, uuid.New().String()))
+		operationResultLocation(r, subID))
 	w.WriteHeader(http.StatusAccepted)
 }
 

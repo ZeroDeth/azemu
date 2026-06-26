@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 
 	"github.com/zerodeth/azemu/internal/store"
@@ -172,7 +171,7 @@ func (a *Router) deleteLB(w http.ResponseWriter, r *http.Request) {
 
 	log.Info().Str("resource_id", id).Msg("load balancer deleted")
 	w.Header().Set("Location",
-		fmt.Sprintf("/subscriptions/%s/operationresults/%s", subID, uuid.New().String()))
+		operationResultLocation(r, subID))
 	w.WriteHeader(http.StatusAccepted)
 }
 
@@ -364,7 +363,7 @@ func (a *Router) deleteLBBackendPool(w http.ResponseWriter, r *http.Request) {
 
 	log.Info().Str("resource_id", id).Msg("lb backend pool deleted")
 	w.Header().Set("Location",
-		fmt.Sprintf("/subscriptions/%s/operationresults/%s", subID, uuid.New().String()))
+		operationResultLocation(r, subID))
 	w.WriteHeader(http.StatusAccepted)
 }
 
@@ -502,7 +501,7 @@ func (a *Router) deleteLBRule(w http.ResponseWriter, r *http.Request) {
 
 	log.Info().Str("resource_id", id).Msg("lb rule deleted")
 	w.Header().Set("Location",
-		fmt.Sprintf("/subscriptions/%s/operationresults/%s", subID, uuid.New().String()))
+		operationResultLocation(r, subID))
 	w.WriteHeader(http.StatusAccepted)
 }
 
@@ -618,7 +617,7 @@ func (a *Router) deleteLBProbe(w http.ResponseWriter, r *http.Request) {
 
 	log.Info().Str("resource_id", id).Msg("lb probe deleted")
 	w.Header().Set("Location",
-		fmt.Sprintf("/subscriptions/%s/operationresults/%s", subID, uuid.New().String()))
+		operationResultLocation(r, subID))
 	w.WriteHeader(http.StatusAccepted)
 }
 

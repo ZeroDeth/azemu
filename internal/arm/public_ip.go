@@ -142,7 +142,7 @@ func (a *Router) deletePublicIP(w http.ResponseWriter, r *http.Request) {
 
 	log.Info().Str("resource_id", id).Msg("public IP deleted")
 	w.Header().Set("Location",
-		fmt.Sprintf("/subscriptions/%s/operationresults/%s", subID, uuid.New().String()))
+		operationResultLocation(r, subID))
 	w.WriteHeader(http.StatusAccepted)
 }
 
