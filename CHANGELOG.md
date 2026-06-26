@@ -32,6 +32,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   deprecation date (client-side wall-clock check, no opt-out), failing the
   scenario before any request reaches azemu. Migration to Front Door is
   tracked in TODO.md.
+- All Terraform scenarios (and the top-level `examples/terraform`) now pin
+  azurerm to `>= 4.0, < 4.35`, and `make tf-test*` no longer passes
+  `-upgrade`. Previously `init -upgrade` pulled the newest azurerm on every
+  run, so CI silently drifted onto provider versions azemu was never
+  validated against. azurerm 4.78+ added an `azurerm_storage_container`
+  account-ID check requiring a `core.windows.net` blob-endpoint suffix,
+  which azemu's Azurite path-style endpoints (per ADR 0001) do not satisfy;
+  that broke the ado-pipeline scenario. Pinning makes scenario CI
+  deterministic. See TODO.md M6.
+- CI: `make tf-test-scenarios` now runs every scenario and reports a
+  pass/fail summary instead of aborting on the first failure. The old
+  fail-fast loop hid the status of every scenario alphabetically after the
+  first broken one.
 
 ### Added (Key Vault keys, sign-only RSA)
 

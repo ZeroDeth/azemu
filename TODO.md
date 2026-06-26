@@ -25,6 +25,7 @@ post-mortem so the next contributor knows the recipe.
 | M3 | `unable to build authorizer for Storage API: ... endpoint "AzureStorage" is not supported in this Azure Environment` | The entire metadata response had hand-rolled field names that did not match real Azure: `portalEndpoint` vs `portal`, `graphEndpoint` vs `graph`, `appInsights` vs `appInsightsResourceId`, `suffixes.storageEndpoint` vs `suffixes.storage`, etc. go-azure-sdk silently saw missing fields and failed when constructing per-service authorizers. | FIXED 2026-04-11 | Full canonical-schema rewrite of `internal/metadata/service.go` against ground truth from `https://management.azure.com/metadata/endpoints?api-version=2022-09-01`. Pinned by `TestMetadata_CanonicalFieldNames` and `TestMetadata_CanonicalSuffixNames`. |
 | M4 | After M1-M3 fixed, the apply called the ARM router but every call landed in `/api/unhandled` with paths like `/subscriptions/.../resourceGroups/azemu-test-rg`. | chi v5 is case-sensitive and azemu's routes are registered in lowercase (`resourcegroups`). Real azurerm sends Azure-canonical camelCase (`resourceGroups`). No request from real Terraform could ever match a chi route. The `make smoke` curl test was a false positive because it was hand-constructed in lowercase. ALSO: the provider concatenates `metadata_host` with `/metadata/endpoints` and emits a leading `//` that chi treats as a separate route. | FIXED 2026-04-11 | New `internal/middleware/pathcase.go` with `NormalizePath` middleware that lowercases known ARM literal segments (case-insensitive) AND collapses runs of `/`. Wired into the production middleware stack BEFORE `RequireAPIVersion`. Pinned by 8 tests in `pathcase_test.go`. |
 | M5 | `terraform destroy` failed at the polling stage with `internal-error: a polling status of Failed should be surfaced as a PollingFailedError` | Provider calls `GET /subscriptions/.../resourceGroups/{rg}/resources?$expand=...&$top=10` to enumerate child resources before issuing the RG DELETE. azemu didn't implement this endpoint and 501'd. The provider's polling logic interpreted the 501 as "operation Failed" and emitted a misleading internal-error message. | FIXED 2026-04-11 | New handler `listResourceGroupResources` in `internal/arm/router.go` that returns `{"value": []}` for an empty RG and a populated array otherwise. OData query params accepted and ignored. Pinned by 4 tests in `rg_resources_test.go`. |
+| M6 | Scenario CI on `main` was red for weeks. After the AKS fix unblocked `aks-workload`, `ado-pipeline` then failed with `parsing Account ID: expected the account "azurite:10000" to use a domain suffix of "core.windows.net"` on `azurerm_storage_container`. | Scenarios pinned azurerm `~> 4.0` and `make tf-test*` ran `terraform init -upgrade`, so every run pulled the newest 4.x. azurerm 4.78+ tightened `azurerm_storage_container` to parse the account blob endpoint and require a `core.windows.net` suffix; azemu serves Azurite path-style endpoints (`http://azurite:10000/{account}/`, per ADR 0001), which do not match, so the provider rejected the account ID before any request reached azemu. The `tf-test-scenarios` fail-fast loop also masked every scenario after the first failure. | FIXED 2026-06-26 | Pin all scenarios + `examples/terraform` to `>= 4.0, < 4.35` and drop `-upgrade` so the constraint governs resolution; rewrite `tf-test-scenarios` to run all scenarios and report a summary. Follow-up below: support latest azurerm for `storage_container`. |
 
 ## TLS trust friction (resolved structurally)
 
@@ -57,6 +58,15 @@ The bundle file is written with mode 0600 because it contains the private key.
   migrating the scenario (and azemu's CDN emulation) from
   `azurerm_cdn_profile`/`azurerm_cdn_endpoint` to Front Door
   (`azurerm_cdn_frontdoor_*`). Classic CDN retires fully 2027-09-30.
+- **All scenarios pinned to azurerm `< 4.35`; latest azurerm not yet
+  supported (M6).** azurerm 4.78+ makes `azurerm_storage_container` parse the
+  account blob endpoint and require a `core.windows.net` suffix, which
+  azemu's Azurite path-style endpoints (per ADR 0001) do not satisfy. To lift
+  the pin, azemu must return a `*.blob.core.windows.net` blob endpoint that
+  the provider accepts while still routing container data-plane calls to the
+  Azurite sidecar (host-based routing, same pattern as the Key Vault
+  data-plane resolver). Until then `make tf-test*` runs without `-upgrade` so
+  the pin holds.
 - ~~**Website mirror missing for ADR 0002 and ADR 0003.**~~
   **RESOLVED 2026-05-23.** Both mirrors landed in PR #42 and are registered
   in `website/mkdocs.yml` nav. ADR 0002 status stays `Proposed` until
