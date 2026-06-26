@@ -1,6 +1,7 @@
 package arm
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -229,6 +230,82 @@ func aksClusterResponse(c *store.Resource) map[string]interface{} {
 		out["identity"] = identity
 	}
 	return out
+}
+
+// listAKSClusterUserCredential handles
+// POST .../managedClusters/{name}/listClusterUserCredential. The azurerm
+// provider calls it on every read of azurerm_kubernetes_cluster to populate
+// the kube_config attribute, so without it `terraform apply` fails with the
+// catch-all 501 NotImplemented.
+func (a *Router) listAKSClusterUserCredential(w http.ResponseWriter, r *http.Request) {
+	a.writeAKSClusterCredential(w, r, "clusterUser")
+}
+
+// listAKSClusterAdminCredential handles
+// POST .../managedClusters/{name}/listClusterAdminCredential. azurerm calls
+// it whenever local accounts are enabled (the default) to populate
+// kube_admin_config.
+func (a *Router) listAKSClusterAdminCredential(w http.ResponseWriter, r *http.Request) {
+	a.writeAKSClusterCredential(w, r, "clusterAdmin")
+}
+
+func (a *Router) writeAKSClusterCredential(w http.ResponseWriter, r *http.Request, role string) {
+	subID := chi.URLParam(r, "subscriptionID")
+	rgName := chi.URLParam(r, "resourceGroupName")
+	name := chi.URLParam(r, "clusterName")
+	id := aksClusterID(subID, rgName, name)
+
+	res, ok := a.store.Get(id)
+	if !ok {
+		writeAzureError(w, http.StatusNotFound, "ResourceNotFound",
+			fmt.Sprintf("The Resource 'Microsoft.ContainerService/managedClusters/%s' under resource group '%s' was not found.", name, rgName))
+		return
+	}
+
+	fqdn, _ := res.Properties["fqdn"].(string)
+	if fqdn == "" {
+		fqdn = fmt.Sprintf("%s.hcp.%s.azmk8s.io", name, res.Location)
+	}
+
+	log.Info().Str("resource_id", id).Str("role", role).Msg("AKS cluster credential listed")
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"kubeconfigs": []map[string]interface{}{
+			{
+				"name":  role,
+				"value": base64.StdEncoding.EncodeToString([]byte(aksKubeconfig(name, fqdn, role))),
+			},
+		},
+	})
+}
+
+// aksKubeconfig renders a syntactically valid kubeconfig for the emulated
+// cluster. The azurerm provider parses it (clusters, users, contexts, and a
+// user holding a token plus client cert/key are all required) but never
+// validates the certificate bytes, so fixed placeholder PEM blobs are enough.
+func aksKubeconfig(clusterName, fqdn, role string) string {
+	fakePEM := base64.StdEncoding.EncodeToString(
+		[]byte("-----BEGIN CERTIFICATE-----\nazemu-fake-credential\n-----END CERTIFICATE-----\n"))
+	token := strings.ReplaceAll(uuid.New().String()+uuid.New().String(), "-", "")
+	return fmt.Sprintf(`apiVersion: v1
+kind: Config
+clusters:
+- name: %[1]s
+  cluster:
+    server: https://%[2]s:443
+    certificate-authority-data: %[3]s
+users:
+- name: %[4]s_%[1]s
+  user:
+    client-certificate-data: %[3]s
+    client-key-data: %[3]s
+    token: %[5]s
+contexts:
+- name: %[1]s
+  context:
+    cluster: %[1]s
+    user: %[4]s_%[1]s
+current-context: %[1]s
+`, clusterName, fqdn, fakePEM, role, token)
 }
 
 // --- AKS Agent Pools ---
