@@ -19,6 +19,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- AKS: `POST .../managedClusters/{name}/listClusterUserCredential` and
+  `listClusterAdminCredential` are now implemented, returning a kubeconfig
+  that the azurerm provider parses into `kube_config` /
+  `kube_admin_config`. Previously both fell through to the unhandled-route
+  handler and its 501 NotImplemented failed every
+  `azurerm_kubernetes_cluster` apply (aks-workload scenario).
+- static-site scenario: azurerm pinned to `>= 4.0, < 4.35`. From v4.35.0
+  the provider blocks creating classic CDN resources after the 2025-10-01
+  deprecation date (client-side wall-clock check, no opt-out), failing the
+  scenario before any request reaches azemu. Migration to Front Door is
+  tracked in TODO.md.
+
 ### Added (Key Vault keys, sign-only RSA)
 
 - Key Vault keys data plane: create/import RSA keys (2048/3072/4096) with

@@ -49,6 +49,14 @@ The bundle file is written with mode 0600 because it contains the private key.
 
 ## Known Gaps
 
+- **static-site scenario pinned to azurerm < 4.35.** From v4.35.0 the
+  provider refuses to create classic CDN resources once the 2025-10-01
+  deprecation date has passed (wall-clock check in
+  `internal/services/cdn/cdn_deprecation.go`, no opt-out), so the error
+  fires client-side before any request reaches azemu. Lift the pin by
+  migrating the scenario (and azemu's CDN emulation) from
+  `azurerm_cdn_profile`/`azurerm_cdn_endpoint` to Front Door
+  (`azurerm_cdn_frontdoor_*`). Classic CDN retires fully 2027-09-30.
 - ~~**Website mirror missing for ADR 0002 and ADR 0003.**~~
   **RESOLVED 2026-05-23.** Both mirrors landed in PR #42 and are registered
   in `website/mkdocs.yml` nav. ADR 0002 status stays `Proposed` until
