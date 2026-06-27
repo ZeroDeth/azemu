@@ -1,24 +1,38 @@
 # TASKS.md -- azemu Implementation Plan
 
 Version: 0.1
-Last updated: 2026-06-26
+Last updated: 2026-06-27
 Status: Phase 0 through Phase 9 COMPLETE. v0.1.0 tagged 2026-04-21. The only
 open roadmap task is scenario 8.7.1 (multi-replica AKS workload, ADR 0002);
 everything else through Phase 9 has shipped.
 Current focus: scenario 8.7.1, the last task before the v0.3 milestone closes.
 
-> **Ready-for-testing / scenario-CI health (2026-06-26, PR #74).** The
+> **Ready-for-testing / scenario-CI health (2026-06-27, PR #74 merged).** The
 > Terraform Scenarios CI job had been red for weeks. The fail-fast loop in
 > `make tf-test-scenarios` masked it: only the first failing scenario ran.
-> Removing the masking exposed two systemic bugs, now fixed: async DELETE
-> never resolved (no `operationresults` endpoint, relative `Location`) so every
-> destroy hung 30 min (`TODO.md` M7), and azurerm version drift broke
-> `storage_container` (`TODO.md` M6, pinned `< 4.35`). A third bug, inline
-> `azurerm_lb_probe`/`lb_rule` management dropped by `putLB` (`TODO.md` M8),
-> is also fixed (additive inline-child persistence). All three fixes ship on
-> PR #74; CI confirms the end-to-end scenario round-trips, since Terraform
-> cannot run in the dev container (the agent proxy blocks the provider
-> registry).
+> Removing the masking exposed the systemic bugs, now all fixed and merged to
+> `main`:
+>
+> - **M9** (the real destroy-hang root cause): the metadata `resourceManager`
+>   endpoint carried a trailing slash, so the provider built DELETE URIs as
+>   `//subscriptions/...`; the hashicorp/go-azure-sdk delete poller then GETs
+>   the parent list (`200`) forever instead of the resource (`404`) and hung
+>   ~30 min per resource. Dropping the slash fixes it.
+> - **M7**: an `operationresults` endpoint plus absolute
+>   `Azure-AsyncOperation`/`Location` headers. These are ignored by the SDK for
+>   DELETE (it skips the async-operation poller), so M7 was a red herring for
+>   the hang; the endpoint remains for non-delete LRO polling.
+> - **M8**: inline `azurerm_lb_probe`/`lb_rule` management dropped by `putLB`;
+>   now persisted as child resources and reconciled (upsert listed, delete
+>   stale when the array key is present, untouched when omitted).
+> - **M6**: azurerm version drift broke `storage_container`; scenarios pinned
+>   `>= 4.0, < 4.35` with `init -upgrade` dropped.
+>
+> All six scenarios round-trip `terraform apply` + `destroy` against the real
+> `hashicorp/azurerm` provider, verified locally and by the Terraform Scenarios
+> CI job on the PR branch (Terraform cannot run in the dev container itself,
+> since the agent proxy blocks the provider registry). PR #74 squash-merged to
+> `main` as `114a333`, which re-runs the same green tree.
 
 <!-- MD028: HTML comment separates adjacent blockquotes. -->
 
