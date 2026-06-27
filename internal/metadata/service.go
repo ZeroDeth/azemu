@@ -83,7 +83,14 @@ func (s *Service) endpoints(w http.ResponseWriter, r *http.Request) {
 		},
 
 		// === Resource manager and identity endpoints (redirected to azemu) ===
-		"resourceManager":            armBase + "/",
+		// No trailing slash: the hashicorp/go-azure-sdk builds request URIs as
+		// resourceManager + resourceID, so a trailing slash here produces a
+		// leading "//" (e.g. "//subscriptions/..."). url.ParseRequestURI then
+		// treats the first path segment as the host, the delete poller's
+		// resourceManagerResourcePathFromUri drops the resource name, and every
+		// `terraform destroy` polls the parent list (200) instead of the resource
+		// (404) until it times out. See TODO.md M9.
+		"resourceManager":            armBase,
 		"activeDirectoryDataLake":    armBase + "/",
 		"microsoftGraphResourceId":   authBase + "/",
 		"appServiceResourceId":       armBase,

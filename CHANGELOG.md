@@ -21,6 +21,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `terraform destroy` no longer hangs. The metadata `resourceManager`
+  endpoint dropped its trailing slash (`https://localhost:<port>`). With the
+  trailing slash, the azurerm provider built DELETE URIs as
+  `//subscriptions/...`; the hashicorp/go-azure-sdk delete poller GETs the
+  resource and waits for a `404`, but its URI parser treats the leading `//`
+  host-relatively, drops the resource name, and polled the parent list
+  (`200`) until the 30-minute delete timeout. Removing the trailing slash
+  makes the poller GET the real resource, which returns `404` immediately
+  (azemu deletes synchronously), so destroy completes at once. Verified
+  end-to-end against the real azurerm provider. See TODO.md M9.
 - Load balancer probes and load balancing rules now round-trip. They have no
   standalone ARM create operation, so the azurerm provider (`azurerm_lb_probe`,
   `azurerm_lb_rule`) writes them inline via the parent Load Balancer PUT, but
