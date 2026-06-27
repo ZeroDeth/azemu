@@ -19,6 +19,8 @@ Current focus: scenario 8.7.1, the last task before the v0.3 milestone closes.
 > needs a plan and terraform-capable verification. Until M8 lands, the
 > `three-tier` scenario stays red.
 
+<!-- MD028: HTML comment separates adjacent blockquotes. -->
+
 > **Strategy, non-goals, and the per-release resource roster live in
 > `ROADMAP.md`.** `TASKS.md` is the execution ledger and `ROADMAP.md` is
 > the north star. If they ever disagree, `ROADMAP.md` wins; this file
