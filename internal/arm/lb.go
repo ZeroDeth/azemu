@@ -87,22 +87,16 @@ func (a *Router) putLB(w http.ResponseWriter, r *http.Request) {
 	body.Properties["provisioningState"] = "Succeeded"
 
 	id := lbID(subID, rgName, name)
+	loc := strings.ToLower(body.Location)
 
 	// probes and loadBalancingRules have no standalone ARM create operation;
-	// the azurerm provider writes them inline via this parent LB PUT. Persist
-	// each as a child store entry so getLB embeds it on read-back. Without this
-	// the provider sees the probe vanish ("Root object was present, but now
-	// absent"). Additive on purpose: a later azurerm_lb PUT omits these arrays
-	// and must not wipe an existing probe/rule. See TODO.md M8.
-	loc := strings.ToLower(body.Location)
-	if err := a.upsertLBInlineChildren(id, loc, body.Properties, "probes", lbProbeType); err != nil {
-		writeAzureError(w, http.StatusInternalServerError, "InternalServerError", err.Error())
-		return
-	}
-	if err := a.upsertLBInlineChildren(id, loc, body.Properties, "loadBalancingRules", lbRuleType); err != nil {
-		writeAzureError(w, http.StatusInternalServerError, "InternalServerError", err.Error())
-		return
-	}
+	// the azurerm provider manages azurerm_lb_probe / azurerm_lb_rule by
+	// read-modify-write on the parent LB, writing the full desired array inline
+	// via this PUT. Capture each array (and whether the key was present) before
+	// stripping it from the stored body, then reconcile child store entries to
+	// match after the parent write succeeds. See TODO.md M8.
+	probesRaw, probesPresent := body.Properties["probes"].([]interface{})
+	rulesRaw, rulesPresent := body.Properties["loadBalancingRules"].([]interface{})
 
 	// Drop child arrays that must not be stored inline; they are re-assembled
 	// from child store entries at response time.
@@ -123,7 +117,7 @@ func (a *Router) putLB(w http.ResponseWriter, r *http.Request) {
 		ID:         id,
 		Name:       name,
 		Type:       lbTypeString,
-		Location:   strings.ToLower(body.Location),
+		Location:   loc,
 		Tags:       normaliseTags(body.Tags),
 		Properties: body.Properties,
 	}
@@ -133,6 +127,23 @@ func (a *Router) putLB(w http.ResponseWriter, r *http.Request) {
 		writeAzureError(w, http.StatusInternalServerError, "InternalServerError",
 			fmt.Sprintf("put load balancer %q: %s", name, err))
 		return
+	}
+
+	// Reconcile inline children only after the parent write succeeds, so a
+	// failed parent PUT never leaves orphaned probe/rule entries behind. The
+	// key-present guard means an azurerm_lb PUT (which omits these arrays) does
+	// not disturb children managed by azurerm_lb_probe / azurerm_lb_rule.
+	if probesPresent {
+		if err := a.reconcileLBInlineChildren(id, loc, probesRaw, "probes", lbProbeType); err != nil {
+			writeAzureError(w, http.StatusInternalServerError, "InternalServerError", err.Error())
+			return
+		}
+	}
+	if rulesPresent {
+		if err := a.reconcileLBInlineChildren(id, loc, rulesRaw, "loadBalancingRules", lbRuleType); err != nil {
+			writeAzureError(w, http.StatusInternalServerError, "InternalServerError", err.Error())
+			return
+		}
 	}
 
 	status := http.StatusCreated
@@ -224,18 +235,18 @@ func (a *Router) lbChildren(lbid string) []*store.Resource {
 	return a.store.List(lbid + "/")
 }
 
-// upsertLBInlineChildren persists probes / loadBalancingRules that the azurerm
-// provider writes inline via the parent LB PUT (they have no standalone ARM
-// create operation). Each array element becomes a child store entry that
-// getLB re-embeds on read-back. It is additive: it never removes children, so
-// a subsequent azurerm_lb PUT that omits the array cannot wipe an existing
-// probe or rule. Removing a single probe/rule is covered by LB cascade delete.
-// See TODO.md M8.
-func (a *Router) upsertLBInlineChildren(lbid, location string, props map[string]interface{}, key, childType string) error {
-	raw, ok := props[key].([]interface{})
-	if !ok {
-		return nil
-	}
+// reconcileLBInlineChildren makes the child store entries for the given key
+// (probes / loadBalancingRules) match the array the azurerm provider wrote
+// inline on the parent LB PUT. Each array element is upserted as a child store
+// entry that getLB re-embeds on read-back; any existing child of the same kind
+// that the array no longer lists is deleted, because the azurerm_lb_probe and
+// azurerm_lb_rule resources signal a removal by PUTting the parent LB with the
+// element dropped from the array. The caller invokes this only when the key was
+// present in the payload, so an azurerm_lb PUT that omits the array leaves
+// these children untouched. See TODO.md M8.
+func (a *Router) reconcileLBInlineChildren(lbid, location string, raw []interface{}, key, childType string) error {
+	prefix := fmt.Sprintf("%s/%s/", lbid, key)
+	keep := make(map[string]struct{}, len(raw))
 	for _, item := range raw {
 		m, ok := item.(map[string]interface{})
 		if !ok {
@@ -250,7 +261,7 @@ func (a *Router) upsertLBInlineChildren(lbid, location string, props map[string]
 			childProps = map[string]interface{}{}
 		}
 		childProps["provisioningState"] = "Succeeded"
-		childID := fmt.Sprintf("%s/%s/%s", lbid, key, name)
+		childID := prefix + name
 		if err := a.store.Put(childID, &store.Resource{
 			ID:         childID,
 			Name:       name,
@@ -260,7 +271,17 @@ func (a *Router) upsertLBInlineChildren(lbid, location string, props map[string]
 		}); err != nil {
 			return fmt.Errorf("put inline lb child %q: %w", childID, err)
 		}
+		keep[childID] = struct{}{}
 		log.Info().Str("resource_id", childID).Str("via", "inline-lb-put").Msg("lb child upsert")
+	}
+	// Remove children the incoming array no longer lists.
+	for _, child := range a.store.List(prefix) {
+		if _, ok := keep[child.ID]; ok {
+			continue
+		}
+		if a.store.Delete(child.ID) {
+			log.Info().Str("resource_id", child.ID).Str("via", "inline-lb-put").Msg("lb child reconcile delete")
+		}
 	}
 	return nil
 }

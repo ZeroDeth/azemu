@@ -68,7 +68,7 @@ The bundle file is written with mode 0600 because it contains the private key.
   the pin, azemu must return a `*.blob.core.windows.net` blob endpoint that
   the provider accepts while still routing container data-plane calls to the
   Azurite sidecar (host-based routing, same pattern as the Key Vault
-  data-plane resolver). Until then `make tf-test*` runs without `-upgrade` so
+  data-plane resolver). Until then, `make tf-test*` runs without `-upgrade` so
   the pin holds.
 - ~~**Website mirror missing for ADR 0002 and ADR 0003.**~~
   **RESOLVED 2026-05-23.** Both mirrors landed in PR #42 and are registered

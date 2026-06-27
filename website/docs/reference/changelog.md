@@ -21,6 +21,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `terraform destroy` no longer hangs. The metadata `resourceManager`
+  endpoint dropped its trailing slash (`https://localhost:<port>`). With the
+  trailing slash, the azurerm provider built DELETE URIs as
+  `//subscriptions/...`; the hashicorp/go-azure-sdk delete poller GETs the
+  resource and waits for a `404`, but its URI parser treats the leading `//`
+  host-relatively, drops the resource name, and polled the parent list
+  (`200`) until the 30-minute delete timeout. Removing the trailing slash
+  makes the poller GET the real resource, which returns `404` immediately
+  (azemu deletes synchronously), so destroy completes at once. Verified
+  end-to-end against the real azurerm provider. See TODO.md M9.
+- Load balancer probes and load balancing rules now round-trip. They have no
+  standalone ARM create operation, so the azurerm provider (`azurerm_lb_probe`,
+  `azurerm_lb_rule`) writes them inline via the parent Load Balancer PUT, but
+  `putLB` dropped those inline arrays, so the provider saw the probe vanish
+  after apply (`Provider produced inconsistent result after apply: ... Root
+  object was present, but now absent`). `putLB` now persists inline
+  `probes`/`loadBalancingRules` as child entries that `getLB` embeds, writing
+  them only after the parent LB store write succeeds so a failed PUT cannot
+  orphan children. The arrays are reconciled, not just appended: a PUT that
+  includes the array with an element removed (an `azurerm_lb_probe` /
+  `azurerm_lb_rule` destroy, which is a read-modify-write on the parent LB)
+  deletes the stale child, while a PUT that omits the array entirely (a plain
+  `azurerm_lb` apply) leaves existing children untouched. See TODO.md M8.
+- Async DELETE polling now resolves instead of hanging. Every resource's
+  `202 Accepted` DELETE set a `Location: /subscriptions/{sub}/operationresults/{id}`
+  header, but nothing served that path, so the azurerm provider polled a dead
+  URL until its 30-minute delete timeout (`polling after Delete: context
+  deadline exceeded`) and the relative URL also failed the older go-autorest
+  CDN poller outright (`StatusCode=0`). New `internal/arm/operations.go` adds
+  the `operationresults` endpoint (returns `{"status":"Succeeded"}`; azemu
+  deletes synchronously) and builds an absolute `Location` carrying the
+  request's `api-version`. Each DELETE advertises the operation via both
+  `Azure-AsyncOperation` (which the azurerm poller prefers and which expects
+  the `{"status":"Succeeded"}` body the endpoint returns) and `Location`. This
+  affected every async-delete resource (NSG, LB and children, CDN, subnet,
+  DNS zone, VNet, AKS, Redis, App Gateway, Public IP, resource group). See
+  TODO.md M7.
 - AKS: `POST .../managedClusters/{name}/listClusterUserCredential` and
   `listClusterAdminCredential` are now implemented, returning a kubeconfig
   that the azurerm provider parses into `kube_config` /
@@ -32,6 +69,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   deprecation date (client-side wall-clock check, no opt-out), failing the
   scenario before any request reaches azemu. Migration to Front Door is
   tracked in TODO.md.
+- All Terraform scenarios (and the top-level `examples/terraform`) now pin
+  azurerm to `>= 4.0, < 4.35`, and `make tf-test*` no longer passes
+  `-upgrade`. Previously `init -upgrade` pulled the newest azurerm on every
+  run, so CI silently drifted onto provider versions azemu was never
+  validated against. azurerm 4.78+ added an `azurerm_storage_container`
+  account-ID check requiring a `core.windows.net` blob-endpoint suffix,
+  which azemu's Azurite path-style endpoints (per ADR 0001) do not satisfy;
+  that broke the ado-pipeline scenario. Pinning makes scenario CI
+  deterministic. See TODO.md M6.
+- CI: `make tf-test-scenarios` now runs every scenario and reports a
+  pass/fail summary instead of aborting on the first failure. The old
+  fail-fast loop hid the status of every scenario alphabetically after the
+  first broken one.
 
 ### Added (Key Vault keys, sign-only RSA)
 
