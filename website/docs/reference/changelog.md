@@ -19,6 +19,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- CDN content data plane. The CDN was control-plane only: azemu stored the
+  endpoint and computed its `{name}.azureedge.net` host but served nothing
+  through it, so any scenario asserting a CDN read path had to fetch the Blob
+  origin directly. A request to the endpoint host `{name}.azureedge.net` (on the
+  ARM port) is now reverse-proxied to the endpoint's Blob origin (Azurite,
+  path-style), streaming the body back with the origin's `Content-Type` and
+  `Cache-Control` passed through unchanged, which is how Azure CDN honours origin
+  metadata by default. `GET` and `HEAD` only. The host is multiplexed on the ARM
+  port behind a new `*.azureedge.net` cert SAN, mirroring the Key Vault
+  `{vault}.vault.localhost` data-plane pattern. The capability is generic (it
+  serves any blob path, unaware of content) so it upgrades the `static-site`
+  scenario and any future CDN-fronted design. Delivery-rule TTL overrides are a
+  tracked follow-up.
+
 ### Fixed
 
 - `terraform destroy` no longer hangs. The metadata `resourceManager`

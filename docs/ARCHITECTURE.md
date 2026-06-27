@@ -88,6 +88,28 @@ This requires:
   `resourceGroups`; chi routes are lowercase. See
   `internal/middleware/pathcase.go`.
 
+## Host-routed data planes (Key Vault, CDN)
+
+Two Azure data planes are addressed by host rather than by ARM path, so azemu
+multiplexes them on the ARM port (`:4566`) behind a host check, the same way
+real Azure serves them from distinct hostnames. A wrapper inspects the request
+`Host` before the ARM router sees it:
+
+- `{vault}.vault.localhost` -> the Key Vault secrets/keys data plane. The
+  `vaultUri` returned by the management plane points here; the handler resolves
+  the vault from the host. See `internal/arm/router.go` (`vaultNameFromHost`).
+- `{endpoint}.azureedge.net` -> the CDN content data plane. The handler resolves
+  the CDN endpoint from the host, finds its Blob origin
+  (`{account}.blob.core.windows.net` -> the storage account), and reverse-proxies
+  the request to Azurite path-style (`{AZEMU_AZURITE_ENDPOINT}/{account}/...`),
+  passing the origin's `Content-Type` and `Cache-Control` through unchanged.
+  That mirrors Azure CDN honouring origin metadata by default. `GET`/`HEAD`
+  only. See `internal/arm/cdn_dataplane.go`.
+
+Both hosts are covered by wildcard SANs (`*.vault.localhost`, `*.azureedge.net`)
+on the self-signed cert, so a client that trusts the azemu cert and resolves the
+host to `127.0.0.1` reaches them over TLS on `:4566`.
+
 ## Package layout
 
 ```text

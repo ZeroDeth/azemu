@@ -150,9 +150,11 @@ func runServe(args []string) error {
 
 	// *.vault.localhost serves the per-vault Key Vault data-plane hosts
 	// ({vaultName}.vault.localhost) that the azurerm provider requires in
-	// vaultUri. Bundles generated before this SAN existed are regenerated
-	// automatically; the new cert must be trusted again.
-	tlsCfg, generated, err := auth.LoadOrGenerateSelfSignedTLS(cfg.CertPath, "localhost", "127.0.0.1", "*.vault.localhost")
+	// vaultUri. *.azureedge.net serves the CDN endpoint content hosts
+	// ({endpoint}.azureedge.net) that the CDN data-plane proxy answers. Bundles
+	// generated before either SAN existed are regenerated automatically; the new
+	// cert must be trusted again.
+	tlsCfg, generated, err := auth.LoadOrGenerateSelfSignedTLS(cfg.CertPath, "localhost", "127.0.0.1", "*.vault.localhost", "*.azureedge.net")
 	if err != nil {
 		if len(tlsCfg.Certificate) == 0 {
 			log.Fatal().Err(err).Msg("failed to load/generate TLS cert")
@@ -198,9 +200,22 @@ func runServe(args []string) error {
 		WriteTimeout: 5 * time.Second,
 	}
 
+	// On the ARM port, multiplex the CDN content data plane: a request to a
+	// {endpoint}.azureedge.net host is served by the CDN proxy, everything else
+	// by the ARM control plane. Real Azure serves CDN content from a distinct
+	// host; azemu colocates both on the ARM port so one trusted cert and port
+	// cover the read path. Mirrors the Key Vault {vault}.vault.localhost split.
+	armAndCDN := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		if arm.IsCDNContentHost(req.Host) {
+			armRouter.ServeCDNContent(w, req)
+			return
+		}
+		r.ServeHTTP(w, req)
+	})
+
 	httpSrv := &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.HTTPPort),
-		Handler:      r,
+		Handler:      armAndCDN,
 		TLSConfig:    sharedTLS,
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 30 * time.Second,
