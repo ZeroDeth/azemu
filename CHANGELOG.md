@@ -21,6 +21,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Load balancer probes and load balancing rules now round-trip. They have no
+  standalone ARM create operation, so the azurerm provider (`azurerm_lb_probe`,
+  `azurerm_lb_rule`) writes them inline via the parent Load Balancer PUT, but
+  `putLB` dropped those inline arrays, so the provider saw the probe vanish
+  after apply (`Provider produced inconsistent result after apply: ... Root
+  object was present, but now absent`). `putLB` now persists inline
+  `probes`/`loadBalancingRules` as child entries that `getLB` embeds. The
+  upsert is additive, so a later probe-less `azurerm_lb` PUT cannot wipe them.
+  See TODO.md M8.
 - Async DELETE polling now resolves instead of hanging. Every resource's
   `202 Accepted` DELETE set a `Location: /subscriptions/{sub}/operationresults/{id}`
   header, but nothing served that path, so the azurerm provider polled a dead

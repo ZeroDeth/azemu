@@ -13,11 +13,12 @@ Current focus: scenario 8.7.1, the last task before the v0.3 milestone closes.
 > Removing the masking exposed two systemic bugs, now fixed: async DELETE
 > never resolved (no `operationresults` endpoint, relative `Location`) so every
 > destroy hung 30 min (`TODO.md` M7), and azurerm version drift broke
-> `storage_container` (`TODO.md` M6, pinned `< 4.35`). One confirmed blocker
-> remains: `azurerm_lb_probe`/`lb_rule` are written inline via the parent LB
-> PUT but `putLB` drops them (`TODO.md` M8) -- a real LB-handler change that
-> needs a plan and terraform-capable verification. Until M8 lands, the
-> `three-tier` scenario stays red.
+> `storage_container` (`TODO.md` M6, pinned `< 4.35`). A third bug, inline
+> `azurerm_lb_probe`/`lb_rule` management dropped by `putLB` (`TODO.md` M8),
+> is also fixed (additive inline-child persistence). All three fixes ship on
+> PR #74; CI confirms the end-to-end scenario round-trips, since Terraform
+> cannot run in the dev container (the agent proxy blocks the provider
+> registry).
 
 <!-- MD028: HTML comment separates adjacent blockquotes. -->
 

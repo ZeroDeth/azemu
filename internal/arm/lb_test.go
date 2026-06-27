@@ -864,3 +864,41 @@ func TestLBProbe_LIST_ReturnsValueWrapper(t *testing.T) {
 		t.Errorf("len(items) = %d, want 2", len(items))
 	}
 }
+
+// TestLB_PUT_InlineProbe_PersistsAndEmbeds pins M8: azurerm_lb_probe (and
+// lb_rule) have no standalone ARM create operation, so the provider writes
+// them inline via the parent LB PUT. putLB must persist them and getLB must
+// embed them, and the persistence is additive: a later LB PUT that omits
+// probes must not wipe an existing probe.
+func TestLB_PUT_InlineProbe_PersistsAndEmbeds(t *testing.T) {
+	srv := newTestServer(t)
+	url := lbURL(srv.URL, "sub1", "rg1", "lb1")
+
+	body := `{"location":"uksouth","sku":{"name":"Standard"},"properties":{"probes":[{"name":"http","properties":{"protocol":"Http","port":80,"requestPath":"/"}}]}}`
+	assertStatus(t, httpPut(t, url, body), http.StatusCreated)
+
+	if probes := lbProbeNames(t, httpGet(t, url)); len(probes) != 1 || probes[0] != "http" {
+		t.Fatalf("probe not embedded after inline PUT: %v", probes)
+	}
+
+	// A later azurerm_lb PUT omits probes; the existing probe must survive.
+	assertStatus(t, httpPut(t, url, `{"location":"uksouth","properties":{}}`), http.StatusOK)
+	if probes := lbProbeNames(t, httpGet(t, url)); len(probes) != 1 || probes[0] != "http" {
+		t.Fatalf("probe wiped by probe-less LB PUT: %v", probes)
+	}
+}
+
+func lbProbeNames(t *testing.T, resp *http.Response) []string {
+	t.Helper()
+	props, _ := decodeJSON(t, resp)["properties"].(map[string]interface{})
+	raw, _ := props["probes"].([]interface{})
+	names := []string{}
+	for _, p := range raw {
+		if m, ok := p.(map[string]interface{}); ok {
+			if n, ok := m["name"].(string); ok {
+				names = append(names, n)
+			}
+		}
+	}
+	return names
+}
