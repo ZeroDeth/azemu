@@ -19,6 +19,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- CDN content data plane. The CDN was control-plane only: azemu stored the
+  endpoint and computed its `{name}.azureedge.net` host but served nothing
+  through it, so any scenario asserting a CDN read path had to fetch the Blob
+  origin directly. A request to the endpoint host `{name}.azureedge.net` (on the
+  ARM port) is now reverse-proxied to the endpoint's Blob origin (Azurite,
+  path-style), streaming the body back with the origin's `Content-Type` and
+  `Cache-Control` passed through unchanged, which is how Azure CDN honours origin
+  metadata by default. `GET` and `HEAD` only. The host is multiplexed on the ARM
+  port behind a new `*.azureedge.net` cert SAN, mirroring the Key Vault
+  `{vault}.vault.localhost` data-plane pattern. The capability is generic (it
+  serves any blob path, unaware of content) so it upgrades the `static-site`
+  scenario and any future CDN-fronted design. Delivery-rule TTL overrides are a
+  tracked follow-up.
+- `ota-delivery` scenario: a server-less, static-file OTA delivery design
+  validated end to end against azemu (Phase 8.7.1). A build step signs an Expo
+  Updates Protocol v1 manifest with a Key Vault key and writes immutable
+  artefacts to Blob; a release step promotes a version by a server-side blob
+  copy and writes `rollout.json`; the CDN content data plane serves the signed
+  manifest and assets. The scenario's own `fixturegen` tool (written from the
+  public protocol shape, not a port of any pipeline) drives publish, promote,
+  and a read-path verify that checks the multipart `Content-Type`, the cache
+  TTLs, and the manifest signature. CI runs the ARM-half `terraform test`;
+  `make ota-delivery` runs the full local loop against Azurite.
+
 ### Fixed
 
 - `terraform destroy` no longer hangs. The metadata `resourceManager`

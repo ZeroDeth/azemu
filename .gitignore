@@ -47,6 +47,10 @@ state.json
 # Local TLS cert bundle written by AZEMU_CERT_PATH (contains private key)
 .azemu/
 
+# Public key the ota-delivery e2e exports from terraform for signature
+# verification; regenerated each run and torn down by e2e.sh.
+examples/terraform/scenarios/ota-delivery/pub.pem
+
 # Per-project Claude Code tooling cache — personal state stays local, but
 # .claude/rules/, .claude/agents/, and .claude/skills/ are project-shared
 # content per https://code.claude.com/docs/en/memory (path-scoped rules),
@@ -62,3 +66,6 @@ state.json
 
 # MkDocs build output
 website/site/
+
+# Stray binary if `go build ./examples/...` is run from the repo root
+/fixturegen

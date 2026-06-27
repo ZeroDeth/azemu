@@ -1,4 +1,4 @@
-.PHONY: build run test docker docker-run docker-compose docker-compose-down clean smoke tf-test tf-test-scenarios coverage
+.PHONY: build run test docker docker-run docker-compose docker-compose-down clean smoke tf-test tf-test-scenarios coverage ota-delivery
 
 BINARY  := azemu
 MODULE  := github.com/zerodeth/azemu
@@ -93,3 +93,20 @@ smoke:
 	@echo ""
 	@echo "--- All smoke tests passed ---"
 	@kill %1 2>/dev/null || true
+
+# End-to-end OTA delivery scenario (local-only): brings up the stack, then
+# provisions ARM, publishes a signed update, promotes it, and asserts the CDN
+# read path before tearing everything down. CI runs only the ARM-half tftest
+# (examples/terraform/scenarios/ota-delivery/main.tftest.hcl) via
+# tf-test-scenarios; this target adds the publish + serve-assert loop that needs
+# the live Azurite data plane.
+ota-delivery:
+	@echo "Starting azemu + Azurite..."
+	@docker compose up -d --build
+	@ready=0; for i in $$(seq 1 30); do \
+		if curl -sf http://localhost:4568/health >/dev/null 2>&1; then ready=1; break; fi; \
+		echo "waiting for azemu ($$i/30)..."; sleep 2; \
+	done; \
+	if [ "$$ready" -ne 1 ]; then echo "azemu never became healthy"; docker compose down -v; exit 1; fi
+	@SSL_CERT_FILE=$$PWD/.azemu/cert-bundle.pem bash examples/terraform/scenarios/ota-delivery/e2e.sh; \
+		status=$$?; docker compose down -v; exit $$status
