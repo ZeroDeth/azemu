@@ -64,9 +64,9 @@ terraform -chdir=examples/terraform init
 terraform -chdir=examples/terraform apply -auto-approve
 ```
 
-azemu speaks the standard provider protocol, so it runs unmodified against
-both Terraform and [OpenTofu](https://opentofu.org). Swap `terraform` for
-`tofu` and everything works the same.
+azemu serves the standard Azure endpoints, so the same `azurerm` provider runs
+unmodified under both Terraform and [OpenTofu](https://opentofu.org). Swap
+`terraform` for `tofu` and everything works the same.
 
 !!! info "Prerequisites"
     Requires Docker, Docker Compose, and Terraform 1.6+ or OpenTofu 1.6+.

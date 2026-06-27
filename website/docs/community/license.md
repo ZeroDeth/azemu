@@ -1,6 +1,6 @@
 # License, Forking & OpenTofu
 
-azemu is free and open source. This page explains the licence, what you can
+azemu is free and open source. This page explains the license, what you can
 do with the code, how to fork it responsibly, and why we recommend running
 it with [OpenTofu](https://opentofu.org).
 
@@ -21,8 +21,8 @@ MIT permission notice must be kept in all copies or substantial portions of
 the software. There is no warranty.
 
 !!! note "Not legal advice"
-    This page summarises the licences involved to help you make decisions.
-    It is not legal advice. When in doubt, read the licence texts and talk
+    This page summarizes the licenses involved to help you make decisions.
+    It is not legal advice. When in doubt, read the license texts and talk
     to a lawyer.
 
 ## Forking azemu
@@ -43,7 +43,7 @@ maintains your copy:
 2. **Rename and rebrand.** Pick your own project name, module path, and
    binary name. Do not present your fork as the official azemu, and do not
    imply endorsement by the azemu maintainers. The name "azemu" and the
-   project's logos are not part of the MIT grant; the licence covers the
+   project's logos are not part of the MIT grant; the license covers the
    code, not the brand or trademarks.
 
 3. **Update the module path.** Change `module github.com/zerodeth/azemu` in
@@ -71,8 +71,8 @@ OpenTofu provider, register it under **your own namespace**:
 
 - In the [Terraform Registry](https://registry.terraform.io) and the
   [OpenTofu Registry](https://search.opentofu.org), providers are namespaced
-  by the publisher's organisation (for example `hashicorp/azurerm` or
-  `opentofu/azurerm`). Publish under your own GitHub organisation
+  by the publisher's organization (for example `hashicorp/azurerm` or
+  `opentofu/azurerm`). Publish under your own GitHub organization
   (`your-org/your-provider`), not under `hashicorp/`, `opentofu/`, or
   `zerodeth/`.
 - Provider source addresses in user configuration follow the same
@@ -89,7 +89,7 @@ azemu is an emulator of the Azure ARM API, not a Terraform distribution. It
 works with both Terraform and OpenTofu because both speak the same provider
 protocol and both honour the `metadata_host` redirect.
 
-It is worth understanding how the two tools are licensed, because it affects
+It is worth understanding how the two tools are licensed because it affects
 which one you can use freely:
 
 | Tool | License | Open source? | Notes |
@@ -97,7 +97,7 @@ which one you can use freely:
 | Terraform `>= 1.6` | [BUSL 1.1](https://github.com/hashicorp/terraform/blob/main/LICENSE) | No (source-available) | HashiCorp relicensed Terraform from MPL 2.0 to the Business Source License in August 2023. BUSL restricts production use that competes with HashiCorp's offerings. |
 | Terraform `< 1.6` | MPL 2.0 | Yes | The last fully open-source Terraform releases. |
 | OpenTofu | [MPL 2.0](https://github.com/opentofu/opentofu/blob/main/LICENSE) | Yes | A drop-in fork of Terraform, governed by the Linux Foundation. Backward compatible with Terraform 1.6, no usage restrictions. |
-| `azurerm` provider | MPL 2.0 | Yes | The provider itself did not change licence. It remains open source and is published to both registries. |
+| `azurerm` provider | MPL 2.0 | Yes | The provider itself did not change license. It remains open source and is published to both registries. |
 
 ### Why we recommend OpenTofu
 
@@ -106,9 +106,9 @@ loop. Pairing an MIT emulator with a source-available core tool would leave
 a non-open-source link in that chain. OpenTofu keeps the whole toolchain
 open:
 
-- It is a true drop-in: swap the `terraform` command for `tofu`.
-- It uses the same `azurerm` provider and the same HCL configuration.
-- It carries no production-use restrictions.
+- A true drop-in: swap the `terraform` command for `tofu`.
+- The same `azurerm` provider and the same HCL configuration work unchanged.
+- No production-use restrictions.
 
 azemu is tested against both, and we are not asking you to drop Terraform if
 it works for you. We simply default our examples and recommendations to

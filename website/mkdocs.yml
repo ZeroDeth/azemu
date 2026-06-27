@@ -1,6 +1,6 @@
 site_name: azemu
 site_url: https://zerodeth.github.io/azemu
-site_description: An open-source, local Azure emulator for Terraform-first and OpenTofu development
+site_description: An open-source, local Azure emulator for Terraform, OpenTofu, and other Azure tooling
 site_author: azemu contributors
 repo_url: https://github.com/zerodeth/azemu
 repo_name: zerodeth/azemu

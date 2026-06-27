@@ -29,8 +29,8 @@ certificate. The cert is generated at first start and persisted at
 
 ### Prefer OpenTofu?
 
-azemu uses the standard provider protocol, so [OpenTofu](https://opentofu.org)
-is a drop-in replacement. Swap `terraform` for `tofu`:
+azemu serves the standard Azure endpoints used by the `azurerm` provider, so
+[OpenTofu](https://opentofu.org) is a drop-in replacement. Swap `terraform` for `tofu`:
 
 ```bash
 cd examples/terraform

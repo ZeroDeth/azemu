@@ -8,9 +8,10 @@ LocalStack, but for Azure.
 [![Works with OpenTofu](https://img.shields.io/badge/OpenTofu-compatible-brightgreen.svg)](https://opentofu.org)
 [![Docs](https://img.shields.io/badge/docs-zerodeth.github.io%2Fazemu-blue.svg)](https://zerodeth.github.io/azemu)
 
-**Status:** v0.1-dev. `terraform init && apply && destroy` proven end-to-end against the
-official `hashicorp/azurerm` v4.x provider (resource groups, virtual networks, subnets).
-The same loop works with [OpenTofu](https://opentofu.org), a drop-in replacement.
+**Status:** v0.1-dev. `terraform init && terraform apply && terraform destroy` proven
+end-to-end against the official `hashicorp/azurerm` v4.x provider (resource groups,
+virtual networks, subnets). The same loop works with [OpenTofu](https://opentofu.org),
+a drop-in replacement.
 
 See [ROADMAP.md](ROADMAP.md) for the vision, resource roster, and milestones.
 **Contributions are welcome,** see [CONTRIBUTING.md](CONTRIBUTING.md) and the
@@ -21,8 +22,8 @@ See [ROADMAP.md](ROADMAP.md) for the vision, resource roster, and milestones.
 azemu runs a local HTTPS server that implements enough of the Azure ARM API
 surface for `terraform init/apply/destroy` to work without an Azure subscription.
 The official `hashicorp/azurerm` provider connects to azemu via its `metadata_host`
-configuration, requiring zero provider forks or patches. Because azemu speaks the
-standard provider protocol, it works the same with Terraform or OpenTofu.
+configuration, requiring zero provider forks or patches. Because the same `azurerm`
+provider works with Terraform or OpenTofu, azemu behaves the same under either tool.
 
 The emulated surface is plain Azure (the ARM REST API, the metadata service, and
 OIDC), so any tool that speaks Azure can target it. The `azemu` binary ships
