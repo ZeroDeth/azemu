@@ -2,21 +2,39 @@
 
 Single source of truth for vision, non-goals, resource roster, and milestones.
 
-Last updated: 2026-04-21
+Last updated: 2026-06-27
 
 ---
 
 ## TL;DR
 
-**azemu is a local Azure emulator that runs real `terraform apply` from the
-official `hashicorp/azurerm` provider with no subscription, no account, and
-no network.** One binary. Fidelity-first. Terraform-native.
+**azemu is a local Azure emulator that runs real infrastructure tooling
+against a fake Azure with no subscription, no account, and no network.**
+One binary serves the ARM REST API, the metadata service, and OIDC, with
+convenience subcommands that drive Terraform, OpenTofu, Pulumi, kubectl, and
+Python against the same emulated endpoints. Fidelity-first: every supported
+resource round-trips a real provider.
 
 ```bash
 docker compose up -d
 terraform init && terraform apply -auto-approve
 # ... runs against a fake Azure, no login, no cost.
 ```
+
+## How coverage grows
+
+azemu grows from what people actually need, not from a master plan. The
+[parity matrix](../concepts/parity-matrix.md) is the live map of what is
+covered and how deeply. If a resource or behaviour you need is missing:
+
+- Open a [feature request](https://github.com/zerodeth/azemu/issues/new?labels=enhancement)
+  naming the `azurerm` resource and the ARM provider path, or
+- Start a [discussion](https://github.com/zerodeth/azemu/discussions) with
+  your use case.
+
+Real use cases set priority. Coverage expands one tested resource at a time:
+a resource that cannot round-trip a real provider does not ship as Full, and
+the non-goals still hold.
 
 ## Why azemu
 
@@ -36,10 +54,14 @@ The difference shows up in four places:
    in a unit test" is not enough. "The provider does not reject the
    response" is the bar.
 
-2. **Terraform-first, narrow scope.** azemu is not trying to be an Azure
-   CLI replacement, an `azcopy` target, or a drop-in for `Az.PowerShell`.
-   It is the shortest path from "contributor writes `azurerm` HCL" to
-   "state file on disk". Everything else is someone else's project.
+2. **Fidelity over breadth, broadening deliberately.** Terraform and
+   OpenTofu are the proven path: the shortest route from "engineer writes
+   `azurerm` HCL" to "state file on disk". The ambition is broad Azure
+   service coverage and more toolchains (Pulumi, kubectl, Python already
+   ship as subcommands), but breadth is earned one tested resource at a
+   time. The specific things azemu is deliberately not (an `azcopy` target,
+   a real Kubernetes control plane, a LocalStack-style multi-cloud clone)
+   are listed under non-goals.
 
 3. **Open-source governance from day 1.** `CODE_OF_CONDUCT.md`,
    `SECURITY.md`, `RELEASING.md`, `CODEOWNERS`, `CONTRIBUTING.md`, a

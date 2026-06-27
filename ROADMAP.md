@@ -5,21 +5,42 @@
 > unimplemented endpoints live in `TODO.md`. This file is the strategic
 > north star the other two files answer to.
 
-Last updated: 2026-04-21
+Last updated: 2026-06-27
 
 ---
 
 ## TL;DR
 
-**azemu is a local Azure emulator that runs real `terraform apply` from the
-official `hashicorp/azurerm` provider with no subscription, no account, and
-no network.** One binary. Fidelity-first. Terraform-native.
+**azemu is a local Azure emulator that runs real infrastructure tooling
+against a fake Azure with no subscription, no account, and no network.**
+One binary serves the ARM REST API, the metadata service, and OIDC, with
+convenience subcommands that drive Terraform, OpenTofu, Pulumi, kubectl, and
+Python against the same emulated endpoints. Fidelity-first: every supported
+resource round-trips a real provider.
 
 ```bash
 docker compose up -d
 terraform init && terraform apply -auto-approve
 # ... runs against a fake Azure, no login, no cost.
 ```
+
+## How coverage grows
+
+azemu grows from what people actually need, not from a master plan. The
+[parity matrix](docs/PARITY.md) is the live map of what is covered and how
+deeply. If a resource or behaviour you need is missing:
+
+- Open a [feature request](https://github.com/zerodeth/azemu/issues/new?labels=enhancement)
+  naming the `azurerm` resource and the ARM provider path, or
+- Start a [discussion](https://github.com/zerodeth/azemu/discussions) with
+  your use case.
+
+Real use cases set priority. The emulated surface is plain Azure (the ARM
+REST API, the metadata service, and OIDC), so any tool that speaks Azure can
+target it; azemu ships `tf`, `pulumi`, `kubectl`, and `python` subcommands,
+with Terraform and OpenTofu as the proven, tested path today. Coverage
+expands one tested resource at a time: a resource that cannot round-trip a
+real provider does not ship as Full. The non-goals below still hold.
 
 ## Why azemu
 
@@ -39,10 +60,15 @@ The difference shows up in five places:
    instead of rediscovering them. "It compiles in a unit test" is not
    enough. "The provider does not reject the response" is the bar.
 
-2. **Terraform-first, narrow scope.** azemu is not trying to be an Azure
-   CLI replacement, an `azcopy` target, or a drop-in for `Az.PowerShell`.
-   It is the shortest path from "contributor writes `azurerm` HCL" to
-   "state file on disk". Everything else is someone else's project.
+2. **Fidelity over breadth, broadening deliberately.** Terraform and
+   OpenTofu are the proven path: the shortest route from "engineer writes
+   `azurerm` HCL" to "state file on disk". The ambition is broad Azure
+   service coverage and more toolchains (Pulumi, kubectl, Python already
+   ship as subcommands), but breadth is earned one tested resource at a
+   time. A resource that cannot round-trip a real provider does not ship as
+   Full. The specific things azemu is deliberately not (an `azcopy` target,
+   a real Kubernetes control plane, a LocalStack-style multi-cloud clone)
+   are listed under non-goals.
 
 3. **Open-source governance from day 1.** `CODE_OF_CONDUCT.md`,
    `SECURITY.md`, `RELEASING.md`, `CODEOWNERS`, `CONTRIBUTING.md`, a
@@ -170,8 +196,9 @@ Priority order inside v0.2 is top-down; ship the first row first.
 
 | Idea | Why it is there |
 |---|---|
+| Wider resource coverage | Driven by feature requests; each new resource held to the round-trip test bar. |
 | Postgres-backed store | Multi-process CI clusters where one azemu serves many runners |
-| `azemu` multi-toolchain CLI | Subcommands (`azemu tf`, `azemu pulumi`, `azemu kubectl`, `azemu python`) auto-start the emulator, inject env vars, and exec the underlying tool. One binary, any IaC toolchain. Replaces the shell `scripts/aztf` wrapper. |
+| `azemu` multi-toolchain CLI | SHIPPED (Phase 9). Subcommands (`azemu tf`, `azemu pulumi`, `azemu kubectl`, `azemu python`) auto-start the emulator, inject env vars, and exec the underlying tool. One binary, any toolchain. Replaced the shell `scripts/aztf` wrapper. |
 | Plugin SDK | Out-of-process resource modules so community can ship providers without forking |
 | Native Terraform test framework (`.tftest.hcl`) | First-class support for `terraform test` in the emulator test pyramid |
 | Front Door, Traffic Manager | Requested by users once Application Gateway lands |
@@ -237,7 +264,7 @@ Managed Identity. Entire loop runs against azemu with zero cloud cost.
 
 | Project | Scope | Strategy | Where azemu differs |
 |---|---|---|---|
-| LocalStack | AWS-first, Azure experimental | Breadth across clouds | azemu is Azure-only and Terraform-first |
+| LocalStack | AWS-first, Azure experimental | Breadth across clouds | azemu is Azure-only and fidelity-first, with multiple IaC toolchains driving one emulated ARM surface |
 | miniblue | Azure, 20+ services | Breadth-first, stub-heavy | azemu is depth-first; every resource round-trips real `terraform apply` |
 | Azurite | Storage only (official Microsoft) | Data-plane fidelity for one service | azemu covers the management plane across many services and delegates the Storage data plane to Azurite as a docker-compose sidecar. See [ADR 0001](docs/adr/0001-delegate-storage-data-plane-to-azurite.md). |
 | Terraform mocks (hand-rolled) | Scenario-specific | Fast but brittle | azemu is reusable, maintained, and documented |

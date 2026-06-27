@@ -44,9 +44,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and a read-path verify that checks the multipart `Content-Type`, the cache
   TTLs, and the manifest signature. CI runs the ARM-half `terraform test`;
   `make ota-delivery` runs the full local loop against Azurite.
+- Documentation site: a "License & Forking" page covering the MIT licence,
+  responsible forking (rebrand, keep attribution, register derived providers
+  under your own namespace), and the Terraform BUSL vs OpenTofu MPL licensing
+  difference. Linked from the home page, README, and contributing guide.
+- OpenTofu is documented as a supported drop-in alongside Terraform across
+  the install guide, "How It Works", the home page, and the README.
+
+### Changed
+
+- Documentation site is production-ready and contribution-focused: per-page
+  "edit on GitHub" links, social/community links, a footer, a copyright
+  notice, and badges. The home page and contributing guide now open with a
+  clear invitation to contribute and point at good first issues and
+  Discussions.
+- Reframed the project narrative (README, ROADMAP, site home and roadmap) to
+  be tool-first and demand-driven: azemu emulates plain Azure (ARM, metadata,
+  OIDC) and drives multiple toolchains (`tf`/`pulumi`/`kubectl`/`python`
+  subcommands), and coverage grows from user feature requests rather than a
+  published master plan. Added a clear "tell us what you need" feedback path
+  (feature requests + discussions) anchored on the parity matrix. The
+  fidelity-first engineering bar and the existing non-goals are unchanged.
+- Redesigned the docs site home page for clarity: a clean "what azemu
+  emulates today" table, an "examples that solve real use cases" section
+  linking the six working scenarios, a short "what we are aiming for", and a
+  single "get involved" call to action with a GitHub-star nudge.
 
 ### Fixed
 
+- Docs site no longer references the removed `scripts/aztf` wrapper. The
+  home-page quick start uses `terraform -chdir`, and the install guide
+  documents the `azemu tf` subcommand that replaced it.
 - `terraform destroy` no longer hangs. The metadata `resourceManager`
   endpoint dropped its trailing slash (`https://localhost:<port>`). With the
   trailing slash, the azurerm provider built DELETE URIs as
