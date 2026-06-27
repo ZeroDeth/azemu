@@ -2,9 +2,13 @@
 
 Version: 0.1
 Last updated: 2026-06-27
-Status: Phase 0 through Phase 9 COMPLETE. v0.1.0 tagged 2026-04-21. The only
-open roadmap task is scenario 8.7.1 (multi-replica AKS workload, ADR 0002);
-everything else through Phase 9 has shipped.
+Status: Phase 0 through Phase 9 COMPLETE. v0.1.0 tagged 2026-04-21. Scenario
+8.7.1 is in progress, reframed from the kind/AKS-workload hybrid to a
+server-less OTA delivery design (no compute on the read path): an ADO pipeline
+signs an update manifest with a Key Vault key and writes immutable artefacts to
+Blob, a release pipeline promotes by a server-side blob copy, and a CDN serves
+the static files. This needed one generic azemu capability (a CDN content data
+plane); it ships with the `ota-delivery` scenario.
 Current focus: scenario 8.7.1, the last task before the v0.3 milestone closes.
 
 > **Ready-for-testing / scenario-CI health (2026-06-27, PR #74 merged).** The
@@ -323,7 +327,7 @@ azemu with zero cloud cost. See ROADMAP v0.3 and the non-goals section.
 | 8.5 | Azure DevOps OIDC issuer endpoint | `SYSTEM_OIDCREQUESTURI` compatible; plain HTTP on `:4569` | DONE | New package `internal/ado/`. Own RSA-2048 key independent of TokenService. `/.well-known/openid-configuration` + `/discovery/keys` + OIDC token endpoint. 10 unit tests. |
 | 8.6 | ADO service connection CRUD | `/{org}/{project}/_apis/serviceendpoint/endpoints` | DONE | In-memory store with `sync.RWMutex`. Auto-assigns UUID. `isReady: true`, `owner: "Library"` on create/update. Name-filter on list. 14 unit tests. |
 | 8.7 | `scenarios/aks-workload/` | — | DONE | RG + VNet + Subnet + AKS (3-node) + User-Assigned Identity + Key Vault + Secret. |
-| 8.7.1 | `scenarios/aks-workload/` multi-replica with secrets and shared cache | — | TODO | Reference deployment scenario implementing the hybrid pattern from [ADR 0002](../docs/adr/0002-azemu-plus-kind-for-aks-workload-deployments.md). Adds Storage + Blob (Azurite), Federated Identity Credential (8.2), Redis (7.7), and a `kind` cluster running a 3-replica deployment with Key Vault CSI mount. Public reference workload: self-hosted [expo-open-ota](https://github.com/expo/expo-open-ota). Depends on 8.2 and 7.7. |
+| 8.7.1 | `scenarios/ota-delivery/` server-less OTA delivery (Blob + Key Vault sign + CDN) | `examples/terraform/scenarios/ota-delivery/`, `internal/arm/cdn_dataplane.go` | IN PROGRESS | Reframed from the kind/AKS-workload hybrid to a server-less, static-file delivery design with no compute on the read path: a build pipeline signs an Expo Updates Protocol v1 manifest with a Key Vault key (existing key data plane) and writes immutable artefacts to Blob; a release pipeline promotes by a server-side blob copy and writes `rollout.json`; a CDN fronts the Blob origin. Needed one generic azemu capability, a CDN content data plane (reverse-proxy to the Blob origin with origin-header passthrough on `{endpoint}.azureedge.net`), which also upgrades `static-site`. The kind/CSI/expo-open-ota path in [ADR 0002](../docs/adr/0002-azemu-plus-kind-for-aks-workload-deployments.md) is deferred; this design avoids a second runtime. CI runs the ARM-half tftest; `make ota-delivery` runs the full publish + serve-assert loop locally. |
 | 8.9 | Mirror ADR 0002 to `website/docs/resources/design-decisions/0002-azemu-plus-kind-for-aks-workload-deployments.md` and add nav entry to `website/mkdocs.yml` | `website/docs/resources/design-decisions/`, `website/mkdocs.yml` | DONE | Landed in PR #42 alongside website mermaid fixes. Status kept as `Proposed` until 8.7.1 ships. |
 | 8.8 | `scenarios/ado-pipeline/` | — | DONE | ARM resources for ADO pipeline: managed identity + federated credential + Key Vault + secret + Storage + blob container. ADO service connection example via curl in README. |
 
