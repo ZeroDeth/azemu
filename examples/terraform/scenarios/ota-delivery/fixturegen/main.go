@@ -12,10 +12,14 @@
 //	promote  server-side copy the pre-signed multipart to the live manifest.json
 //	         path and write rollout.json. No signing, no Key Vault access: this
 //	         is the release half's zero-trust boundary.
+//	verify   fetch the manifest, rollout, and an asset through the CDN host and
+//	         check the multipart Content-Type, the cache TTLs, and the manifest
+//	         signature against the exported public key.
 //
 // Authentication to Azurite uses Shared Key (the well-known dev key azemu's
-// listKeys returns). Reads on the CDN read path are anonymous and are asserted
-// separately by assert.sh.
+// listKeys returns). Reads on the CDN read path are anonymous and are checked
+// by the verify subcommand. Operational logs go to stderr via zerolog; stdout
+// carries only the VERSION=/ASSET= machine-readable contract that e2e.sh reads.
 package main
 
 import (
@@ -43,11 +47,13 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/rs/zerolog/log"
 )
 
 func main() {
 	if len(os.Args) < 2 {
-		fail("usage: fixturegen <publish|promote> [flags]")
+		fail("usage: fixturegen <publish|promote|verify> [flags]")
 	}
 	var err error
 	switch os.Args[1] {
@@ -65,8 +71,11 @@ func main() {
 	}
 }
 
+// fail logs the message via the repo-standard structured logger (stderr) and
+// exits non-zero. stdout is reserved for the machine-readable VERSION=/ASSET=
+// contract that e2e.sh parses.
 func fail(msg string) {
-	fmt.Fprintln(os.Stderr, "fixturegen:", msg)
+	log.Error().Msg("fixturegen: " + msg)
 	os.Exit(1)
 }
 
@@ -83,6 +92,8 @@ type config struct {
 	cacert    string // PEM bundle to trust for the Key Vault TLS call
 }
 
+// parseFlags reads the common -flag value pairs both subcommands accept and
+// returns the assembled config, failing if the required account/key are absent.
 func parseFlags(args []string) config {
 	c := config{azurite: "http://127.0.0.1:10000", container: "ota", version: 1}
 	for i := 0; i+1 < len(args); i += 2 {
@@ -124,6 +135,8 @@ func (c config) blobPath(rest string) string {
 	return fmt.Sprintf("%s/%s/%s", c.container, c.prefix, strings.TrimLeft(rest, "/"))
 }
 
+// versionDir returns the blob path for an artefact under the current version's
+// immutable directory: {container}/{prefix}/v{n}/{rest}.
 func (c config) versionDir(rest string) string {
 	return c.blobPath(fmt.Sprintf("v%d/%s", c.version, rest))
 }
@@ -134,6 +147,7 @@ func b64url(b []byte) string {
 	return base64.RawURLEncoding.EncodeToString(b)
 }
 
+// runPublish builds and signs an update, then uploads the immutable artefacts.
 func runPublish(args []string) error {
 	c := parseFlags(args)
 
@@ -204,12 +218,15 @@ func runPublish(args []string) error {
 		if err := c.putBlob(u.path, u.contentType, u.cache, u.body, true); err != nil {
 			return fmt.Errorf("put %s: %w", u.path, err)
 		}
-		fmt.Printf("published %s\n", u.path)
+		log.Info().Str("blob", u.path).Msg("published immutable artefact")
 	}
+	// Machine-readable contract on stdout for e2e.sh; everything else is stderr.
 	fmt.Printf("VERSION=%d\nASSET=%s\n", c.version, assetName)
 	return nil
 }
 
+// runPromote copies the pre-signed multipart to the live manifest and writes
+// rollout.json. It performs no signing and needs no Key Vault access.
 func runPromote(args []string) error {
 	c := parseFlags(args)
 
@@ -220,7 +237,7 @@ func runPromote(args []string) error {
 	if err := c.copyBlob(src, c.blobPath("manifest.json")); err != nil {
 		return fmt.Errorf("promote copy: %w", err)
 	}
-	fmt.Printf("promoted %s -> %s\n", src, c.blobPath("manifest.json"))
+	log.Info().Str("from", src).Str("to", c.blobPath("manifest.json")).Msg("promoted to live manifest")
 
 	// Write rollout state. Minimal shape: the client self-selects its cohort.
 	rollout := fmt.Sprintf(`{"version":%d,"percent":100}`, c.version)
@@ -228,10 +245,12 @@ func runPromote(args []string) error {
 	if err := c.putBlob(c.blobPath("rollout.json"), "application/json", cacheShort, []byte(rollout), false); err != nil {
 		return fmt.Errorf("put rollout.json: %w", err)
 	}
-	fmt.Printf("wrote %s %s\n", c.blobPath("rollout.json"), rollout)
+	log.Info().Str("blob", c.blobPath("rollout.json")).Str("rollout", rollout).Msg("wrote rollout state")
 	return nil
 }
 
+// renderMultipart wraps the manifest bytes in a multipart/mixed body, carrying
+// the signature in the manifest part header so a server-side copy preserves it.
 func renderMultipart(manifestBytes []byte, sig string) []byte {
 	var b bytes.Buffer
 	fmt.Fprintf(&b, "--%s\r\n", multipartBoundary)
@@ -297,15 +316,18 @@ func (c config) kvClient() *http.Client {
 		if pemBytes, err := os.ReadFile(c.cacert); err == nil {
 			pool := x509.NewCertPool()
 			if pool.AppendCertsFromPEM(pemBytes) {
-				tr.TLSClientConfig = &tls.Config{RootCAs: pool}
+				tr.TLSClientConfig = &tls.Config{RootCAs: pool, MinVersion: tls.VersionTLS12}
 			}
 		}
 	}
-	return &http.Client{Transport: tr}
+	// Overall timeout so a stalled Key Vault response cannot hang the publish.
+	return &http.Client{Transport: tr, Timeout: 30 * time.Second}
 }
 
 // --- Azurite Shared Key data-plane helpers ---
 
+// createContainer creates the blob container with public blob read access,
+// tolerating a 409 when it already exists from a prior run.
 func (c config) createContainer() error {
 	u := fmt.Sprintf("%s/%s/%s?restype=container", c.azurite, c.account, c.container)
 	req, err := http.NewRequest(http.MethodPut, u, nil)
@@ -326,6 +348,10 @@ func (c config) createContainer() error {
 	return nil
 }
 
+// putBlob uploads a block blob with the given Content-Type and (stored)
+// Cache-Control. When immutable is set the write is overwrite-disabled via
+// If-None-Match: *, so re-publishing an existing version fails instead of
+// silently replacing bytes.
 func (c config) putBlob(path, contentType, cache string, body []byte, immutable bool) error {
 	u := fmt.Sprintf("%s/%s/%s", c.azurite, c.account, path)
 	req, err := http.NewRequest(http.MethodPut, u, bytes.NewReader(body))
@@ -382,6 +408,13 @@ func (c config) copyBlob(srcPath, dstPath string) error {
 
 // signedDo stamps the request with the Date and Shared Key Authorization header
 // Azurite requires for writes, then sends it.
+// azuriteHTTPClient carries an overall timeout so a stalled Azurite response
+// cannot hang publish/promote indefinitely (a connect-only dial timeout does
+// not bound the full request).
+var azuriteHTTPClient = &http.Client{Timeout: 30 * time.Second}
+
+// signedDo stamps the request with the date and Shared Key Authorization header
+// Azurite requires for writes, then sends it via the timeout-bounded client.
 func (c config) signedDo(req *http.Request, contentType string) (*http.Response, error) {
 	date := time.Now().UTC().Format(http.TimeFormat)
 	req.Header.Set("x-ms-date", date)
@@ -399,7 +432,7 @@ func (c config) signedDo(req *http.Request, contentType string) (*http.Response,
 	_, _ = mac.Write([]byte(stringToSign))
 	sig := base64.StdEncoding.EncodeToString(mac.Sum(nil))
 	req.Header.Set("Authorization", "SharedKey "+c.account+":"+sig)
-	return http.DefaultClient.Do(req)
+	return azuriteHTTPClient.Do(req)
 }
 
 // stringToSign builds the canonical Shared Key string for blob requests, per
@@ -432,6 +465,8 @@ func (c config) stringToSign(req *http.Request, contentType string) (string, err
 	return strings.Join(parts, "\n"), nil
 }
 
+// canonicalizedHeaders builds the sorted, lowercased x-ms-* header block for
+// the Shared Key string-to-sign.
 func canonicalizedHeaders(h http.Header) string {
 	var keys []string
 	for k := range h {
@@ -448,6 +483,8 @@ func canonicalizedHeaders(h http.Header) string {
 	return b.String()
 }
 
+// canonicalizedResource builds the "/account/path" plus sorted query block for
+// the Shared Key string-to-sign.
 func (c config) canonicalizedResource(u *url.URL) (string, error) {
 	var b strings.Builder
 	fmt.Fprintf(&b, "/%s%s", c.account, u.EscapedPath())
@@ -515,7 +552,7 @@ func runVerify(args []string) error {
 	if err := verifyManifestSignature(mResp, mBody, pubkeyPath); err != nil {
 		return fmt.Errorf("manifest signature: %w", err)
 	}
-	fmt.Println("ok: manifest.json multipart + short TTL + signature verified")
+	log.Info().Msg("ok: manifest.json multipart + short TTL + signature verified")
 
 	// 2. rollout.json: expected body, short TTL.
 	rResp, rBody, err := fetch(client, base+"/rollout.json")
@@ -529,7 +566,7 @@ func runVerify(args []string) error {
 	if err := assertShortTTL(rResp.Header.Get("Cache-Control")); err != nil {
 		return fmt.Errorf("rollout cache: %w", err)
 	}
-	fmt.Println("ok: rollout.json body + short TTL")
+	log.Info().Msg("ok: rollout.json body + short TTL")
 
 	// 3. asset: immutable long TTL.
 	if asset != "" {
@@ -540,7 +577,7 @@ func runVerify(args []string) error {
 		if cc := aResp.Header.Get("Cache-Control"); !strings.Contains(cc, "immutable") {
 			return fmt.Errorf("asset Cache-Control = %q, want immutable", cc)
 		}
-		fmt.Println("ok: asset immutable TTL")
+		log.Info().Msg("ok: asset immutable TTL")
 	}
 	return nil
 }
@@ -560,13 +597,15 @@ func cdnClient(fqdn, port, cacert string) *http.Client {
 		if pem, err := os.ReadFile(cacert); err == nil {
 			pool := x509.NewCertPool()
 			if pool.AppendCertsFromPEM(pem) {
-				tr.TLSClientConfig = &tls.Config{RootCAs: pool}
+				tr.TLSClientConfig = &tls.Config{RootCAs: pool, MinVersion: tls.VersionTLS12}
 			}
 		}
 	}
-	return &http.Client{Transport: tr}
+	// Overall timeout so verify cannot block forever on a wedged CDN endpoint.
+	return &http.Client{Transport: tr, Timeout: 30 * time.Second}
 }
 
+// fetch GETs a URL, reads the body, and errors on any non-200 status.
 func fetch(client *http.Client, urlStr string) (*http.Response, []byte, error) {
 	resp, err := client.Get(urlStr)
 	if err != nil {
@@ -650,6 +689,8 @@ func parseExpoSignature(h string) string {
 	return m[1]
 }
 
+// hexShort returns the first 8 bytes of a hash as a 16-char hex string, used to
+// content-address bundle and asset filenames.
 func hexShort(b []byte) string {
 	const hexdigits = "0123456789abcdef"
 	out := make([]byte, 16)
@@ -660,6 +701,8 @@ func hexShort(b []byte) string {
 	return string(out)
 }
 
+// pathSegment returns the i-th slash-separated segment of the prefix, used to
+// pull the runtime version out of {rv}/{channel}/{platform}.
 func pathSegment(prefix string, i int) string {
 	segs := strings.Split(prefix, "/")
 	if i < len(segs) {

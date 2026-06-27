@@ -205,13 +205,7 @@ func runServe(args []string) error {
 	// by the ARM control plane. Real Azure serves CDN content from a distinct
 	// host; azemu colocates both on the ARM port so one trusted cert and port
 	// cover the read path. Mirrors the Key Vault {vault}.vault.localhost split.
-	armAndCDN := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		if arm.IsCDNContentHost(req.Host) {
-			armRouter.ServeCDNContent(w, req)
-			return
-		}
-		r.ServeHTTP(w, req)
-	})
+	armAndCDN := cdnHostMux(armRouter, r)
 
 	httpSrv := &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.HTTPPort),
@@ -284,6 +278,19 @@ func runServe(args []string) error {
 	}
 
 	return nil
+}
+
+// cdnHostMux dispatches CDN content hosts ({endpoint}.azureedge.net) to the CDN
+// data plane and every other host to the ARM control plane. Extracted from the
+// server wiring so the routing decision is unit-testable.
+func cdnHostMux(armRouter *arm.Router, next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		if arm.IsCDNContentHost(req.Host) {
+			armRouter.ServeCDNContent(w, req)
+			return
+		}
+		next.ServeHTTP(w, req)
+	})
 }
 
 func printBanner(w *os.File, cfg *config.Config, certPath string) {

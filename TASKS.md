@@ -2,9 +2,9 @@
 
 Version: 0.1
 Last updated: 2026-06-27
-Status: Phase 0 through Phase 9 COMPLETE. v0.1.0 tagged 2026-04-21. Scenario
-8.7.1 is in progress, reframed from the kind/AKS-workload hybrid to a
-server-less OTA delivery design (no compute on the read path): an ADO pipeline
+Status: Phases 0 through 9 are shipped except scenario 8.7.1, which is in
+progress. v0.1.0 tagged 2026-04-21. 8.7.1 was reframed from the kind/AKS-workload
+hybrid to a server-less OTA delivery design (no compute on the read path): an ADO pipeline
 signs an update manifest with a Key Vault key and writes immutable artefacts to
 Blob, a release pipeline promotes by a server-side blob copy, and a CDN serves
 the static files. This needed one generic azemu capability (a CDN content data

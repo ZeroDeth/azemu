@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/rs/zerolog/log"
 
@@ -18,6 +19,17 @@ import (
 // read path) rather than the ARM control plane.
 const cdnHostSuffix = ".azureedge.net"
 
+// cdnOriginClient fetches blobs from the Azurite origin. It carries an overall
+// timeout so a slow or wedged origin cannot pin the handler goroutine, and it
+// returns 3xx responses as-is (CheckRedirect) so the edge proxies redirects
+// rather than following them.
+var cdnOriginClient = &http.Client{
+	Timeout: 30 * time.Second,
+	CheckRedirect: func(*http.Request, []*http.Request) error {
+		return http.ErrUseLastResponse
+	},
+}
+
 // cdnEndpointNameFromHost returns the endpoint name encoded in a
 // "{endpoint}.azureedge.net" host, mirroring the hostName the azurerm provider
 // computes for azurerm_cdn_endpoint. Returns false for any other host shape
@@ -27,6 +39,8 @@ func cdnEndpointNameFromHost(host string) (string, bool) {
 	if h, _, err := net.SplitHostPort(host); err == nil {
 		hostname = h
 	}
+	// DNS hostnames are case-insensitive; normalise before the suffix check.
+	hostname = strings.ToLower(hostname)
 	if !strings.HasSuffix(hostname, cdnHostSuffix) {
 		return "", false
 	}
@@ -83,7 +97,9 @@ func (a *Router) ServeCDNContent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	originURL := a.blobOriginURL(account, r.URL.Path, r.URL.RawQuery)
+	// Use the escaped path so encoded blob keys (%20, %23, %2F, ...) reach the
+	// origin intact rather than being decoded by net/http.
+	originURL := a.blobOriginURL(account, r.URL.EscapedPath(), r.URL.RawQuery)
 	proxyReq, err := http.NewRequestWithContext(r.Context(), r.Method, originURL, nil)
 	if err != nil {
 		writeAzureError(w, http.StatusInternalServerError, "InternalServerError",
@@ -91,7 +107,7 @@ func (a *Router) ServeCDNContent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp, err := http.DefaultClient.Do(proxyReq)
+	resp, err := cdnOriginClient.Do(proxyReq)
 	if err != nil {
 		log.Error().Err(err).Str("endpoint", name).Str("origin", originURL).
 			Msg("cdn origin fetch failed")

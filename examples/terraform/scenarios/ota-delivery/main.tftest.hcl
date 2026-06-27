@@ -31,8 +31,8 @@ run "ota_delivery_lifecycle" {
   }
 
   assert {
-    condition     = startswith(output.key_vault_uri, "https://")
-    error_message = "key_vault_uri must be an HTTPS URL"
+    condition     = startswith(output.key_vault_uri, "https://") && strcontains(output.key_vault_uri, ".vault.localhost")
+    error_message = "key_vault_uri must be an emulator-routable {vault}.vault.localhost HTTPS URL"
   }
 
   assert {

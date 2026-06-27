@@ -27,7 +27,9 @@ FG=(go run ./examples/terraform/scenarios/ota-delivery/fixturegen)
 
 cd "$SCENARIO_DIR"
 cleanup() {
-  terraform destroy -auto-approve >/dev/null 2>&1 || true
+  # The trap may fire after the script has cd'd back to the repo root, so target
+  # the scenario state explicitly rather than the current directory.
+  terraform -chdir="$SCENARIO_DIR" destroy -auto-approve >/dev/null 2>&1 || true
   rm -f "$SCENARIO_DIR/pub.pem"
 }
 trap cleanup EXIT

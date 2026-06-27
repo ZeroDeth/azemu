@@ -103,9 +103,10 @@ smoke:
 ota-delivery:
 	@echo "Starting azemu + Azurite..."
 	@docker compose up -d --build
-	@for i in $$(seq 1 30); do \
-		curl -sf http://localhost:4568/health >/dev/null 2>&1 && break; \
+	@ready=0; for i in $$(seq 1 30); do \
+		if curl -sf http://localhost:4568/health >/dev/null 2>&1; then ready=1; break; fi; \
 		echo "waiting for azemu ($$i/30)..."; sleep 2; \
-	done
+	done; \
+	if [ "$$ready" -ne 1 ]; then echo "azemu never became healthy"; docker compose down -v; exit 1; fi
 	@SSL_CERT_FILE=$$PWD/.azemu/cert-bundle.pem bash examples/terraform/scenarios/ota-delivery/e2e.sh; \
 		status=$$?; docker compose down -v; exit $$status
