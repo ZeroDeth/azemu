@@ -137,9 +137,7 @@ func (a *Router) deleteAppGW(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Info().Str("resource_id", id).Msg("application gateway deleted")
-	w.Header().Set("Location",
-		operationResultLocation(r, subID))
-	w.WriteHeader(http.StatusAccepted)
+	a.acceptAsyncDelete(w, r, subID)
 }
 
 func (a *Router) listAppGWsByRG(w http.ResponseWriter, r *http.Request) {

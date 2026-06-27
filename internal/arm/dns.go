@@ -249,9 +249,7 @@ func (a *Router) deleteDNSZone(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Info().Str("resource_id", id).Msg("dns zone deleted")
-	w.Header().Set("Location",
-		operationResultLocation(r, subID))
-	w.WriteHeader(http.StatusAccepted)
+	a.acceptAsyncDelete(w, r, subID)
 }
 
 func (a *Router) listDNSZonesByRG(w http.ResponseWriter, r *http.Request) {

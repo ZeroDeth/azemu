@@ -128,9 +128,7 @@ func (a *Router) deleteSubnet(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Info().Str("resource_id", id).Msg("subnet deleted")
-	w.Header().Set("Location",
-		operationResultLocation(r, subID))
-	w.WriteHeader(http.StatusAccepted)
+	a.acceptAsyncDelete(w, r, subID)
 }
 
 func (a *Router) listSubnets(w http.ResponseWriter, r *http.Request) {

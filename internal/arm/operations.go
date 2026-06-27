@@ -42,3 +42,25 @@ func (a *Router) getOperationResult(w http.ResponseWriter, r *http.Request) {
 		"status": "Succeeded",
 	})
 }
+
+// acceptAsyncDelete writes the 202 Accepted response for an async DELETE.
+//
+// It advertises the operation via BOTH headers pointing at the same
+// operationresults URL:
+//   - Azure-AsyncOperation: the hashicorp/go-azure-sdk poller prefers this and
+//     expects the polled URL to return {"status":"Succeeded"} -- exactly what
+//     getOperationResult returns.
+//   - Location: the fallback the older go-autorest poller (e.g. CDN) uses.
+//
+// A Location-only response made the SDK treat operationresults as a
+// resource-results URL (which expects the resource body on 200, not a status
+// object), so the poll never reached a terminal state and ran to the delete
+// timeout. Per
+// https://learn.microsoft.com/azure/azure-resource-manager/management/async-operations
+// Azure-AsyncOperation takes precedence when both are present.
+func (a *Router) acceptAsyncDelete(w http.ResponseWriter, r *http.Request, subID string) {
+	loc := operationResultLocation(r, subID)
+	w.Header().Set("Azure-AsyncOperation", loc)
+	w.Header().Set("Location", loc)
+	w.WriteHeader(http.StatusAccepted)
+}

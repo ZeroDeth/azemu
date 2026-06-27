@@ -38,9 +38,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   CDN poller outright (`StatusCode=0`). New `internal/arm/operations.go` adds
   the `operationresults` endpoint (returns `{"status":"Succeeded"}`; azemu
   deletes synchronously) and builds an absolute `Location` carrying the
-  request's `api-version`. This affected every async-delete resource
-  (NSG, LB and children, CDN, subnet, DNS zone, VNet, AKS, Redis, App
-  Gateway, Public IP, resource group). See TODO.md M7.
+  request's `api-version`. Each DELETE advertises the operation via both
+  `Azure-AsyncOperation` (which the azurerm poller prefers and which expects
+  the `{"status":"Succeeded"}` body the endpoint returns) and `Location`. This
+  affected every async-delete resource (NSG, LB and children, CDN, subnet,
+  DNS zone, VNet, AKS, Redis, App Gateway, Public IP, resource group). See
+  TODO.md M7.
 - AKS: `POST .../managedClusters/{name}/listClusterUserCredential` and
   `listClusterAdminCredential` are now implemented, returning a kubeconfig
   that the azurerm provider parses into `kube_config` /

@@ -621,8 +621,7 @@ func (a *Router) deleteResourceGroup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// ARM returns 202 Accepted with a tracking header for async delete
-	w.Header().Set("Location", operationResultLocation(r, subID))
-	w.WriteHeader(http.StatusAccepted)
+	a.acceptAsyncDelete(w, r, subID)
 }
 
 func (a *Router) listResourceGroups(w http.ResponseWriter, r *http.Request) {

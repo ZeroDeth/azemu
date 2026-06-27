@@ -136,9 +136,7 @@ func (a *Router) deleteCDNProfile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Info().Str("resource_id", id).Msg("CDN profile deleted")
-	w.Header().Set("Location",
-		operationResultLocation(r, subID))
-	w.WriteHeader(http.StatusAccepted)
+	a.acceptAsyncDelete(w, r, subID)
 }
 
 func (a *Router) listCDNProfilesByRG(w http.ResponseWriter, r *http.Request) {
@@ -311,9 +309,7 @@ func (a *Router) deleteCDNEndpoint(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Info().Str("resource_id", id).Msg("CDN endpoint deleted")
-	w.Header().Set("Location",
-		operationResultLocation(r, subID))
-	w.WriteHeader(http.StatusAccepted)
+	a.acceptAsyncDelete(w, r, subID)
 }
 
 func (a *Router) listCDNEndpoints(w http.ResponseWriter, r *http.Request) {

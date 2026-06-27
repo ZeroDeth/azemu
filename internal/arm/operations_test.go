@@ -38,6 +38,11 @@ func TestDelete_SetsAbsolutePollableLocation(t *testing.T) {
 	if loc == "" {
 		t.Fatal("DELETE response missing Location header")
 	}
+	// Azure-AsyncOperation must also be set (and match): the go-azure-sdk poller
+	// prefers it and expects the {"status":"Succeeded"} body the endpoint returns.
+	if ao := del.Header.Get("Azure-AsyncOperation"); ao != loc {
+		t.Errorf("Azure-AsyncOperation = %q, want it to match Location %q", ao, loc)
+	}
 	// Must be absolute: the older go-autorest poller cannot resolve a relative
 	// Location and fails with StatusCode=0.
 	if !strings.HasPrefix(loc, "http://") && !strings.HasPrefix(loc, "https://") {

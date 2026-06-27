@@ -186,9 +186,7 @@ func (a *Router) deleteLB(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Info().Str("resource_id", id).Msg("load balancer deleted")
-	w.Header().Set("Location",
-		operationResultLocation(r, subID))
-	w.WriteHeader(http.StatusAccepted)
+	a.acceptAsyncDelete(w, r, subID)
 }
 
 func (a *Router) listLBsByRG(w http.ResponseWriter, r *http.Request) {
@@ -419,9 +417,7 @@ func (a *Router) deleteLBBackendPool(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Info().Str("resource_id", id).Msg("lb backend pool deleted")
-	w.Header().Set("Location",
-		operationResultLocation(r, subID))
-	w.WriteHeader(http.StatusAccepted)
+	a.acceptAsyncDelete(w, r, subID)
 }
 
 func (a *Router) listLBBackendPools(w http.ResponseWriter, r *http.Request) {
@@ -557,9 +553,7 @@ func (a *Router) deleteLBRule(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Info().Str("resource_id", id).Msg("lb rule deleted")
-	w.Header().Set("Location",
-		operationResultLocation(r, subID))
-	w.WriteHeader(http.StatusAccepted)
+	a.acceptAsyncDelete(w, r, subID)
 }
 
 func (a *Router) listLBRules(w http.ResponseWriter, r *http.Request) {
@@ -673,9 +667,7 @@ func (a *Router) deleteLBProbe(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Info().Str("resource_id", id).Msg("lb probe deleted")
-	w.Header().Set("Location",
-		operationResultLocation(r, subID))
-	w.WriteHeader(http.StatusAccepted)
+	a.acceptAsyncDelete(w, r, subID)
 }
 
 func (a *Router) listLBProbes(w http.ResponseWriter, r *http.Request) {

@@ -159,9 +159,7 @@ func (a *Router) deleteAKSCluster(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Info().Str("resource_id", id).Msg("AKS cluster deleted")
-	w.Header().Set("Location",
-		operationResultLocation(r, subID))
-	w.WriteHeader(http.StatusAccepted)
+	a.acceptAsyncDelete(w, r, subID)
 }
 
 func (a *Router) listAKSClustersByRG(w http.ResponseWriter, r *http.Request) {
@@ -430,9 +428,7 @@ func (a *Router) deleteAKSNodePool(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Info().Str("resource_id", id).Msg("AKS node pool deleted")
-	w.Header().Set("Location",
-		operationResultLocation(r, subID))
-	w.WriteHeader(http.StatusAccepted)
+	a.acceptAsyncDelete(w, r, subID)
 }
 
 func (a *Router) listAKSNodePools(w http.ResponseWriter, r *http.Request) {

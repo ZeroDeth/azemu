@@ -141,9 +141,7 @@ func (a *Router) deletePublicIP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Info().Str("resource_id", id).Msg("public IP deleted")
-	w.Header().Set("Location",
-		operationResultLocation(r, subID))
-	w.WriteHeader(http.StatusAccepted)
+	a.acceptAsyncDelete(w, r, subID)
 }
 
 func (a *Router) listPublicIPsByRG(w http.ResponseWriter, r *http.Request) {
