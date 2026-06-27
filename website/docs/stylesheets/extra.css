@@ -325,6 +325,23 @@
   }
 }
 
+/* Badge row */
+.azemu-badges {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin: 0 0 1.5rem;
+}
+
+.azemu-badges a {
+  border-bottom: none !important;
+}
+
+.azemu-badges img {
+  height: 22px;
+}
+
 /* CTA buttons */
 .azemu-cta-group {
   display: flex;

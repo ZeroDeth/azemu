@@ -27,6 +27,12 @@ provider "azurerm" {
 }
 ```
 
+The same configuration works with [OpenTofu](https://opentofu.org). Both
+tools use the `azurerm` provider and both honour `metadata_host`, so azemu
+does not care which one you run. See
+[License & Forking](../community/license.md) for the licensing difference
+between Terraform and OpenTofu.
+
 ## Why HTTPS is required
 
 The azurerm provider inspects the `resourceManager` URL from the metadata
