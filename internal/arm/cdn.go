@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 
 	"github.com/zerodeth/azemu/internal/store"
@@ -137,9 +136,7 @@ func (a *Router) deleteCDNProfile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Info().Str("resource_id", id).Msg("CDN profile deleted")
-	w.Header().Set("Location",
-		fmt.Sprintf("/subscriptions/%s/operationresults/%s", subID, uuid.New().String()))
-	w.WriteHeader(http.StatusAccepted)
+	a.acceptAsyncDelete(w, r, subID)
 }
 
 func (a *Router) listCDNProfilesByRG(w http.ResponseWriter, r *http.Request) {
@@ -312,9 +309,7 @@ func (a *Router) deleteCDNEndpoint(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Info().Str("resource_id", id).Msg("CDN endpoint deleted")
-	w.Header().Set("Location",
-		fmt.Sprintf("/subscriptions/%s/operationresults/%s", subID, uuid.New().String()))
-	w.WriteHeader(http.StatusAccepted)
+	a.acceptAsyncDelete(w, r, subID)
 }
 
 func (a *Router) listCDNEndpoints(w http.ResponseWriter, r *http.Request) {

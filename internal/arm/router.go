@@ -11,7 +11,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
-	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 	"github.com/zerodeth/azemu/internal/store"
 )
@@ -70,6 +69,12 @@ func (a *Router) Routes(r chi.Router) {
 	// $filter=resourceType eq '...'. The azurerm provider uses it to map a
 	// Key Vault vaultUri back to the vault's ARM resource ID.
 	r.Get("/{subscriptionID}/resources", a.listSubscriptionResources)
+
+	// Async operation result polling. Every 202 Accepted DELETE sets a
+	// Location header pointing here; azurerm's poller GETs it until it sees a
+	// terminal status. azemu deletes synchronously, so this always reports
+	// Succeeded. Without it, destroy hangs until the provider's delete timeout.
+	r.Get("/{subscriptionID}/operationresults/{operationID}", a.getOperationResult)
 
 	// Virtual networks (Microsoft.Network/virtualNetworks)
 	r.Put("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/virtualnetworks/{vnetName}", a.putVNet)
@@ -616,8 +621,7 @@ func (a *Router) deleteResourceGroup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// ARM returns 202 Accepted with a tracking header for async delete
-	w.Header().Set("Location", fmt.Sprintf("/subscriptions/%s/operationresults/%s", subID, uuid.New().String()))
-	w.WriteHeader(http.StatusAccepted)
+	a.acceptAsyncDelete(w, r, subID)
 }
 
 func (a *Router) listResourceGroups(w http.ResponseWriter, r *http.Request) {

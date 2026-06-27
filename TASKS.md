@@ -1,9 +1,26 @@
 # TASKS.md -- azemu Implementation Plan
 
 Version: 0.1
-Last updated: 2026-05-23
-Status: Phase 1 through Phase 8 COMPLETE (minus scenario 8.7.1). v0.1.0 tagged 2026-04-21.
-Current focus: Phase 9 implementation.
+Last updated: 2026-06-26
+Status: Phase 0 through Phase 9 COMPLETE. v0.1.0 tagged 2026-04-21. The only
+open roadmap task is scenario 8.7.1 (multi-replica AKS workload, ADR 0002);
+everything else through Phase 9 has shipped.
+Current focus: scenario 8.7.1, the last task before the v0.3 milestone closes.
+
+> **Ready-for-testing / scenario-CI health (2026-06-26, PR #74).** The
+> Terraform Scenarios CI job had been red for weeks. The fail-fast loop in
+> `make tf-test-scenarios` masked it: only the first failing scenario ran.
+> Removing the masking exposed two systemic bugs, now fixed: async DELETE
+> never resolved (no `operationresults` endpoint, relative `Location`) so every
+> destroy hung 30 min (`TODO.md` M7), and azurerm version drift broke
+> `storage_container` (`TODO.md` M6, pinned `< 4.35`). A third bug, inline
+> `azurerm_lb_probe`/`lb_rule` management dropped by `putLB` (`TODO.md` M8),
+> is also fixed (additive inline-child persistence). All three fixes ship on
+> PR #74; CI confirms the end-to-end scenario round-trips, since Terraform
+> cannot run in the dev container (the agent proxy blocks the provider
+> registry).
+
+<!-- MD028: HTML comment separates adjacent blockquotes. -->
 
 > **Strategy, non-goals, and the per-release resource roster live in
 > `ROADMAP.md`.** `TASKS.md` is the execution ledger and `ROADMAP.md` is
@@ -316,7 +333,7 @@ env vars and config, and execs the underlying tool. Replaces `scripts/aztf`.
 
 Acceptance: `azemu tf apply` from a cold start (no running emulator) exits 0
 against the `examples/terraform/` config. `azemu pulumi preview` works with
-the Pulumi Azure Native provider pointed at azemu.
+the Pulumi Azure Native provider pointed at azemu. ✅
 
 ### Phase 10: Plugin SDK
 

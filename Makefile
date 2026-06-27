@@ -31,15 +31,33 @@ docker-compose-down:
 	docker compose down -v
 
 tf-test:
-	cd examples/terraform && terraform init -upgrade -input=false && terraform test
+	cd examples/terraform && terraform init -input=false && terraform test
 
 # Runs only the focused scenarios under examples/terraform/scenarios/.
 # Used by CI; each scenario is designed for end-to-end azurerm round-trips.
+# init runs WITHOUT -upgrade so the azurerm version constraint pinned in each
+# scenario's provider.tf (>= 4.0, < 4.35) governs resolution. -upgrade forced
+# the newest azurerm on every run, which drifted past the version azemu is
+# validated against and broke scenarios (e.g. storage_container account-ID
+# domain-suffix checks added after 4.77).
+# Runs every scenario even if one fails, then reports a summary and exits
+# non-zero if any failed. A fail-fast loop here previously masked failures in
+# every scenario alphabetically after the first broken one.
 tf-test-scenarios:
-	@for dir in examples/terraform/scenarios/*/; do \
-		echo "--- terraform test: $$dir ---"; \
-		(cd "$$dir" && terraform init -upgrade -input=false && terraform test) || exit 1; \
-	done
+	@failed=""; passed=""; \
+	for dir in examples/terraform/scenarios/*/; do \
+		name=$$(basename "$$dir"); \
+		echo "=== terraform test: $$name ==="; \
+		if (cd "$$dir" && terraform init -input=false && terraform test); then \
+			passed="$$passed $$name"; \
+		else \
+			failed="$$failed $$name"; \
+		fi; \
+	done; \
+	echo "================ scenario summary ================"; \
+	echo "passed:$$passed"; \
+	echo "failed:$$failed"; \
+	if [ -n "$$failed" ]; then exit 1; fi
 
 clean:
 	rm -rf bin/ coverage.out coverage.html
