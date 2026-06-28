@@ -37,6 +37,14 @@ resource "azurerm_key_vault" "main" {
 # A real app reads the cache connection string from Key Vault rather than
 # embedding it. azemu returns deterministic dev keys from the Redis listKeys
 # endpoint, so the provider populates primary_connection_string.
+#
+# NOTE: passing a value into azurerm_key_vault_secret writes that value into
+# the Terraform state file. Against azemu the connection string contains only
+# a deterministic dev key, so there is no real secret here. In a real Azure
+# deployment this makes the state secret-bearing: store it in an encrypted
+# remote backend with access controls, or have the cache write its own access
+# keys to Key Vault out of band instead of round-tripping them through
+# Terraform. See the README for details.
 resource "azurerm_key_vault_secret" "redis_connection" {
   name         = "redis-connection-string"
   value        = azurerm_redis_cache.cache.primary_connection_string

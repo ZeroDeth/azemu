@@ -22,6 +22,16 @@ endpoint, so the provider populates `primary_access_key` and
 `primary_connection_string`. The cache hostname comes from azemu's
 configured Redis endpoint, and the SSL port is `6380`.
 
+## Secret handling note
+
+Passing a value into `azurerm_key_vault_secret` writes that value into the
+Terraform state file. Against azemu the connection string contains only a
+deterministic development key, so nothing sensitive is stored here. In a real
+Azure deployment this pattern makes the state secret-bearing: keep state in an
+encrypted remote backend with access controls, or have the cache publish its
+own access keys to Key Vault out of band rather than round-tripping them
+through Terraform.
+
 ## Prerequisites
 
 - Docker and Docker Compose
