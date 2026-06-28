@@ -139,7 +139,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   run, so CI silently drifted onto provider versions azemu was never
   validated against. azurerm 4.78+ added an `azurerm_storage_container`
   account-ID check requiring a `core.windows.net` blob-endpoint suffix,
-  which azemu's Azurite path-style endpoints (per ADR 0001) do not satisfy;
+  which azemu's Azurite path-style endpoints (per design note 1) do not satisfy;
   that broke the ado-pipeline scenario. Pinning makes scenario CI
   deterministic. See TODO.md M6.
 - CI: `make tf-test-scenarios` now runs every scenario and reports a
@@ -213,11 +213,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   pinned by `TestMetadata_CanonicalSuffixNames`.
 - `examples/terraform/redis_cache.tf` plus `redis_cache_id` /
   `redis_cache_hostname` outputs and a `terraform test` assertion.
-- `docs/adr/0003-add-azure-cache-for-redis.md` promoted from Proposed to
+- `docs/design-notes/0003-add-azure-cache-for-redis.md` promoted from Proposed to
   Implemented (Implemented date: 2026-04-28).
-- `website/docs/resources/design-decisions/0002-...md` and `0003-...md`
+- `website/docs/resources/design-notes/0002-...md` and `0003-...md`
   mirrors plus mkdocs nav entries (closes the website-mirror gap from
-  TODO.md for ADRs 0002 and 0003).
+  TODO.md for design notes 2 and 3).
 - `docs/SETUP.md` and `website/docs/reference/setup.md`: new
   `AZEMU_REDIS_ENDPOINT` env-var row and a "Redis sidecar (optional)"
   section explaining the compose profile, `--requirepass` contract, and
@@ -270,8 +270,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Microsoft.KeyVault/vaults` CRUD + HEAD + list-by-RG + list-by-sub.
   `vaultUri` computed as `https://{name}.vault.azure.net/`; SKU defaults to
   `standard`; soft-delete defaults to 90 days. (`azurerm_key_vault`)
-- `docs/adr/0001-delegate-storage-data-plane-to-azurite.md`: Architecture
-  Decision Record capturing the Azurite delegation decision and its
+- `docs/design-notes/0001-delegate-storage-data-plane-to-azurite.md`: design
+  note capturing the Azurite delegation decision and its
   rationale, alternatives, and consequences. Status: Implemented.
 - `docs/SETUP.md`: Storage and Azurite section; `AZEMU_AZURITE_ENDPOINT` in
   the env-var table; Azurite port table.

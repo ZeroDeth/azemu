@@ -4,7 +4,7 @@ paths:
   - docs/TROUBLESHOOTING.md
   - docs/SETUP.md
   - docs/ARCHITECTURE.md
-  - docs/adr/**
+  - docs/design-notes/**
   - CONTRIBUTING.md
   - ROADMAP.md
   - CODE_OF_CONDUCT.md
@@ -27,7 +27,7 @@ updating. The mapping is:
 | docs/TROUBLESHOOTING.md | website/docs/resources/troubleshooting.md |
 | docs/SETUP.md | website/docs/reference/setup.md |
 | docs/ARCHITECTURE.md | website/docs/concepts/architecture.md, website/docs/getting-started/how-it-works.md |
-| docs/adr/*.md | website/docs/resources/design-decisions/*.md |
+| docs/design-notes/*.md | website/docs/resources/design-notes/*.md |
 | CONTRIBUTING.md | website/docs/community/contributing.md |
 | ROADMAP.md | website/docs/community/roadmap.md |
 | CODE_OF_CONDUCT.md | website/docs/community/code-of-conduct.md |
