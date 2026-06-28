@@ -93,6 +93,7 @@ func runServe(args []string) error {
 		log.Fatal().Err(err).Msg("failed to create ADO OIDC service")
 	}
 	adoSC := ado.NewServiceConnectionService()
+	adoPipelines := ado.NewPipelineRunService()
 
 	reqLog := mw.NewRequestRecorder(500)
 
@@ -160,6 +161,7 @@ func runServe(args []string) error {
 	r.Route("/ado", func(r chi.Router) {
 		adoOIDC.Routes(r)
 		adoSC.ServiceConnectionRoutes(r)
+		adoPipelines.PipelineRunRoutes(r)
 	})
 
 	// *.vault.localhost serves the per-vault Key Vault data-plane hosts
