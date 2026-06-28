@@ -16,6 +16,7 @@ Format follows a light variant of [MADR](https://adr.github.io/madr/).
 | 0001 | [Delegate Storage data plane to Azurite](0001-delegate-storage-data-plane-to-azurite.md) | Implemented |
 | 0002 | [azemu + kind hybrid for AKS workload deployments](0002-azemu-plus-kind-for-aks-workload-deployments.md) | Proposed |
 | 0003 | [Add Azure Cache for Redis](0003-add-azure-cache-for-redis.md) | Implemented |
+| 0004 | [How far azemu emulates Azure DevOps Pipelines](0004-azure-devops-pipelines-scope.md) | Proposed |
 
 ## When to write an ADR
 
@@ -37,4 +38,4 @@ Do not write an ADR for:
 ## Filename convention
 
 `NNNN-kebab-case-title.md`, zero-padded to four digits, allocated in
-order. The next ADR is `0002-...`.
+order. The next ADR is `0005-...`.
