@@ -56,6 +56,9 @@ type Config struct {
 	// a real ADO agent is served over plain HTTP on the local pipeline worker.
 	// Source: AZEMU_ADO_PORT env var. Default: 4569.
 	ADOPort int
+	// ConsolePort is the plain-HTTP port for the web console SPA.
+	// Source: AZEMU_CONSOLE_PORT env var. Default: 4570.
+	ConsolePort int
 }
 
 func Load() *Config {
@@ -73,6 +76,7 @@ func Load() *Config {
 	cfg.KeyVaultEndpoint = envOr("AZEMU_KV_ENDPOINT", "https://localhost:4566")
 	cfg.RedisEndpoint = envOr("AZEMU_REDIS_ENDPOINT", "redis://azemu-redis:6379")
 	cfg.ADOPort = envIntOr("AZEMU_ADO_PORT", 4569)
+	cfg.ConsolePort = envIntOr("AZEMU_CONSOLE_PORT", 4570)
 	return cfg
 }
 

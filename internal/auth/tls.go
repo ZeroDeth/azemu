@@ -13,6 +13,8 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"slices"
+	"strings"
 	"time"
 )
 
@@ -92,7 +94,7 @@ func GenerateSelfSignedTLS(hosts ...string) (tls.Certificate, error) {
 // AZEMU_CERT_PATH, and every subsequent restart reuses the same cert.
 func LoadOrGenerateSelfSignedTLS(path string, hosts ...string) (tls.Certificate, bool, error) {
 	if path != "" {
-		if cert, ok := tryLoadBundle(path); ok {
+		if cert, ok := tryLoadBundle(path, hosts...); ok {
 			return cert, false, nil
 		}
 	}
@@ -120,9 +122,12 @@ func LoadOrGenerateSelfSignedTLS(path string, hosts ...string) (tls.Certificate,
 
 // tryLoadBundle reads a PEM cert+key bundle from path and returns a usable
 // tls.Certificate plus true on success. Returns false on any failure
-// (missing file, parse error, expired cert, etc.) so the caller can
-// transparently fall back to generating a fresh pair.
-func tryLoadBundle(path string) (tls.Certificate, bool) {
+// (missing file, parse error, expired cert, a requested host not covered
+// by the certificate's SANs, etc.) so the caller can transparently fall
+// back to generating a fresh pair. The host check migrates bundles created
+// before the wildcard Key Vault SAN (*.vault.localhost) was added; the
+// regenerated cert must be trusted again.
+func tryLoadBundle(path string, hosts ...string) (tls.Certificate, bool) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return tls.Certificate{}, false
@@ -149,6 +154,19 @@ func tryLoadBundle(path string) (tls.Certificate, bool) {
 	now := time.Now()
 	if now.Before(parsed.NotBefore) || now.After(parsed.NotAfter) {
 		return tls.Certificate{}, false
+	}
+	for _, h := range hosts {
+		// VerifyHostname treats a wildcard request like "*.vault.localhost"
+		// as a literal; match it against the cert's DNS SANs directly.
+		if strings.HasPrefix(h, "*.") {
+			if !slices.Contains(parsed.DNSNames, h) {
+				return tls.Certificate{}, false
+			}
+			continue
+		}
+		if err := parsed.VerifyHostname(h); err != nil {
+			return tls.Certificate{}, false
+		}
 	}
 	return cert, true
 }

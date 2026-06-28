@@ -4,12 +4,13 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/http"
+	"regexp"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
-	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 	"github.com/zerodeth/azemu/internal/store"
 )
@@ -64,6 +65,16 @@ func (a *Router) Routes(r chi.Router) {
 	// Returning 501 here surfaces as the cryptic provider-side error
 	// "a polling status of `Failed` should be surfaced as a PollingFailedError".
 	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/resources", a.listResourceGroupResources)
+	// Subscription-wide resource listing with optional
+	// $filter=resourceType eq '...'. The azurerm provider uses it to map a
+	// Key Vault vaultUri back to the vault's ARM resource ID.
+	r.Get("/{subscriptionID}/resources", a.listSubscriptionResources)
+
+	// Async operation result polling. Every 202 Accepted DELETE sets a
+	// Location header pointing here; azurerm's poller GETs it until it sees a
+	// terminal status. azemu deletes synchronously, so this always reports
+	// Succeeded. Without it, destroy hangs until the provider's delete timeout.
+	r.Get("/{subscriptionID}/operationresults/{operationID}", a.getOperationResult)
 
 	// Virtual networks (Microsoft.Network/virtualNetworks)
 	r.Put("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.network/virtualnetworks/{vnetName}", a.putVNet)
@@ -194,6 +205,9 @@ func (a *Router) Routes(r chi.Router) {
 	r.Get("/{subscriptionID}/providers/microsoft.keyvault/locations/{location}/deletedvaults/{vaultName}", a.getDeletedKeyVault)
 	// azurerm v4 purges the deleted vault after deleting it (purge_protection_enabled=false).
 	// azemu does not implement soft-delete/purge; return 200 OK (purge complete).
+	// The provider's vaults.VaultsClient#PurgeDeleted sends POST .../purge;
+	// the bare DELETE form is kept for raw clients.
+	r.Post("/{subscriptionID}/providers/microsoft.keyvault/locations/{location}/deletedvaults/{vaultName}/purge", a.purgeDeletedKeyVault)
 	r.Delete("/{subscriptionID}/providers/microsoft.keyvault/locations/{location}/deletedvaults/{vaultName}", a.purgeDeletedKeyVault)
 
 	// Storage file service stub — azurerm v4 polls this endpoint after creating
@@ -203,8 +217,11 @@ func (a *Router) Routes(r chi.Router) {
 	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.storage/storageaccounts/{accountName}/fileservices", a.getStorageFileService)
 
 	// Storage Blob Service properties — azurerm v4 reads this endpoint after
-	// creating a storage account to check/encode blob service properties.
+	// creating a storage account to check/encode blob service properties, and
+	// writes it when the `blob_properties` block is set (a missing PUT route
+	// surfaces as "unexpected status 405" during apply).
 	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.storage/storageaccounts/{accountName}/blobservices/default", a.getBlobServiceProperties)
+	r.Put("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.storage/storageaccounts/{accountName}/blobservices/default", a.putBlobServiceProperties)
 
 	// Storage Blob Containers (Microsoft.Storage/storageAccounts/blobServices/containers)
 	// The path segment "default" is a fixed literal (not a parameter) matching the real ARM API.
@@ -249,6 +266,10 @@ func (a *Router) Routes(r chi.Router) {
 	r.Delete("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.containerservice/managedclusters/{clusterName}", a.deleteAKSCluster)
 	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.containerservice/managedclusters", a.listAKSClustersByRG)
 	r.Get("/{subscriptionID}/providers/microsoft.containerservice/managedclusters", a.listAKSClustersBySub)
+	// Credential listing. azurerm POSTs these on every cluster read to
+	// populate kube_config / kube_admin_config; unhandled they 501.
+	r.Post("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.containerservice/managedclusters/{clusterName}/listclusterusercredential", a.listAKSClusterUserCredential)
+	r.Post("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.containerservice/managedclusters/{clusterName}/listclusteradmincredential", a.listAKSClusterAdminCredential)
 
 	// AKS Agent Pools (Microsoft.ContainerService/managedClusters/agentPools)
 	r.Put("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.containerservice/managedclusters/{clusterName}/agentpools/{poolName}", a.putAKSNodePool)
@@ -279,9 +300,172 @@ func (a *Router) KeyVaultDataPlaneRoutes(r chi.Router) {
 	r.Get("/{vaultName}/secrets/{secretName}", a.getKeyVaultSecret)
 	r.Delete("/{vaultName}/secrets/{secretName}", a.deleteKeyVaultSecret)
 	r.Get("/{vaultName}/secrets", a.listKeyVaultSecrets)
+
+	// The azurerm provider polls GET {vaultUri} as a data-plane availability
+	// check before nested-item operations; a 404 makes it retry for minutes.
+	// Return 200 with an empty object to signal the vault is reachable.
+	r.Get("/{vaultName}", a.getKeyVaultDataPlaneRoot)
+
+	// Keys data plane (sign-only RSA scope). Literal segments ("create",
+	// "versions") register before "/{version}" wildcards, matching the
+	// secrets pattern above. PATCH is registered on both the versionless and
+	// versioned paths because autorest's UpdateKey sends /keys/{name}/ when
+	// the version is empty (StripSlashes reduces it to /keys/{name}).
+	r.Post("/{vaultName}/keys/{keyName}/create", a.createKeyVaultKey)
+	// Versionless sign resolves the current pointer; Azure SDKs and az cli
+	// call sign without a version to mean "latest".
+	r.Post("/{vaultName}/keys/{keyName}/sign", a.signKeyVaultKey)
+	r.Post("/{vaultName}/keys/{keyName}/{version}/sign", a.signKeyVaultKey)
+	r.Get("/{vaultName}/keys/{keyName}/versions", a.listKeyVaultKeyVersions)
+	r.Get("/{vaultName}/keys/{keyName}/{version}", a.getKeyVaultKeyVersion)
+	r.Patch("/{vaultName}/keys/{keyName}/{version}", a.updateKeyVaultKey)
+	r.Put("/{vaultName}/keys/{keyName}", a.importKeyVaultKey)
+	r.Get("/{vaultName}/keys/{keyName}", a.getKeyVaultKey)
+	r.Patch("/{vaultName}/keys/{keyName}", a.updateKeyVaultKey)
+	r.Delete("/{vaultName}/keys/{keyName}", a.deleteKeyVaultKey)
+	r.Get("/{vaultName}/keys", a.listKeyVaultKeys)
+
 	// azurerm v4 fetches certificate contacts on every plan/refresh to detect
 	// drift. azemu does not manage certificates; return an empty contact list.
 	r.Get("/{vaultName}/certificates/contacts", a.getKeyVaultCertificateContacts)
+}
+
+// KeyVaultNestedItemRoutes mounts root-level /keys and /secrets routes.
+// The azurerm provider derives data-plane URLs in two ways, neither of which
+// carries a vault path segment:
+//
+//   - vaultUri + /keys/... or /secrets/... for create/set operations, where
+//     vaultUri is https://{vault}.vault.localhost[:port]/ (host identifies
+//     the vault);
+//   - nested-item IDs (kid, secret id) parsed with ParseNestedItemID, which
+//     requires the URL path to be exactly /keys/{name}[/{version}], with
+//     follow-up requests against {scheme}://{host}/keys/...
+//
+// These routes resolve the owning vault from the Host header first and fall
+// back to an item-name scan (item names are unique enough within a local
+// emulator), then inject the vaultName URL param so the same handlers used
+// by the path-style routes under /keyvault/{vaultName}/ work unchanged.
+func (a *Router) KeyVaultNestedItemRoutes(r chi.Router) {
+	// Availability poll: the provider GETs vaultUri root before nested-item
+	// operations and retries on 404, so the per-vault host must answer 200.
+	r.Get("/", a.getKeyVaultHostRoot)
+
+	r.Route("/keys", func(r chi.Router) {
+		r.Use(chimw.StripSlashes)
+		r.Post("/{keyName}/create", a.withVaultFor("keyName", "keyvault/key/current", "KeyNotFound", a.createKeyVaultKey))
+		r.Get("/{keyName}/versions", a.withVaultFor("keyName", "keyvault/key/current", "KeyNotFound", a.listKeyVaultKeyVersions))
+		r.Post("/{keyName}/sign", a.withVaultFor("keyName", "keyvault/key/current", "KeyNotFound", a.signKeyVaultKey))
+		r.Post("/{keyName}/{version}/sign", a.withVaultFor("keyName", "keyvault/key/current", "KeyNotFound", a.signKeyVaultKey))
+		r.Get("/{keyName}/{version}", a.withVaultFor("keyName", "keyvault/key/current", "KeyNotFound", a.getKeyVaultKeyVersion))
+		r.Patch("/{keyName}/{version}", a.withVaultFor("keyName", "keyvault/key/current", "KeyNotFound", a.updateKeyVaultKey))
+		r.Put("/{keyName}", a.withVaultFor("keyName", "keyvault/key/current", "KeyNotFound", a.importKeyVaultKey))
+		r.Get("/{keyName}", a.withVaultFor("keyName", "keyvault/key/current", "KeyNotFound", a.getKeyVaultKey))
+		r.Patch("/{keyName}", a.withVaultFor("keyName", "keyvault/key/current", "KeyNotFound", a.updateKeyVaultKey))
+		r.Delete("/{keyName}", a.withVaultFor("keyName", "keyvault/key/current", "KeyNotFound", a.deleteKeyVaultKey))
+	})
+	r.Route("/secrets", func(r chi.Router) {
+		r.Use(chimw.StripSlashes)
+		r.Get("/{secretName}/versions", a.withVaultFor("secretName", "keyvault/secret/current", "SecretNotFound", a.listKeyVaultSecretVersions))
+		r.Get("/{secretName}/{version}", a.withVaultFor("secretName", "keyvault/secret/current", "SecretNotFound", a.getKeyVaultSecretVersion))
+		r.Put("/{secretName}", a.withVaultFor("secretName", "keyvault/secret/current", "SecretNotFound", a.putKeyVaultSecret))
+		r.Get("/{secretName}", a.withVaultFor("secretName", "keyvault/secret/current", "SecretNotFound", a.getKeyVaultSecret))
+		r.Delete("/{secretName}", a.withVaultFor("secretName", "keyvault/secret/current", "SecretNotFound", a.deleteKeyVaultSecret))
+	})
+	// azurerm v4 fetches certificate contacts on every plan/refresh; mirror
+	// the path-style stub for the host-based form.
+	r.Get("/certificates/contacts", a.getKeyVaultCertificateContacts)
+
+	// Soft-delete purge stubs. With the default features {} block the
+	// provider purges deleted keys/secrets after destroy (DELETE
+	// /deleted{keys,secrets}/{name}, expecting 204) and may poll the GET
+	// form. azemu deletes immediately and keeps no soft-deleted state, so
+	// purge is a no-op success and the GET reports nothing to recover.
+	r.Delete("/deletedkeys/{keyName}", a.purgeDeletedKeyVaultItem)
+	r.Get("/deletedkeys/{keyName}", a.getDeletedKeyVaultItem)
+	r.Delete("/deletedsecrets/{secretName}", a.purgeDeletedKeyVaultItem)
+	r.Get("/deletedsecrets/{secretName}", a.getDeletedKeyVaultItem)
+}
+
+// purgeDeletedKeyVaultItem acknowledges a purge of a soft-deleted key or
+// secret. azemu has no soft-delete state, so there is nothing to remove.
+func (a *Router) purgeDeletedKeyVaultItem(w http.ResponseWriter, r *http.Request) {
+	log.Info().Str("path", r.URL.Path).Msg("key vault deleted-item purge (no-op)")
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// getDeletedKeyVaultItem reports that no soft-deleted item exists, which
+// the provider treats as "already purged".
+func (a *Router) getDeletedKeyVaultItem(w http.ResponseWriter, r *http.Request) {
+	writeAzureError(w, http.StatusNotFound, "KeyNotFound",
+		"Deleted item not found: azemu does not retain soft-deleted Key Vault items.")
+}
+
+// vaultNameFromHost extracts the vault name from a per-vault data-plane
+// host of the form {vault}.vault.{suffix}, mirroring how the azurerm
+// provider treats {vault}.vault.azure.net. Returns false for any other
+// host shape (e.g. plain localhost).
+func vaultNameFromHost(host string) (string, bool) {
+	hostname := host
+	if h, _, err := net.SplitHostPort(host); err == nil {
+		hostname = h
+	}
+	parts := strings.Split(hostname, ".")
+	if len(parts) >= 3 && parts[1] == "vault" && parts[0] != "" {
+		return parts[0], true
+	}
+	return "", false
+}
+
+// withVaultFor resolves the vault for a root-level data-plane request and
+// injects it as the vaultName URL param so the path-style handlers work
+// unchanged. Resolution order: Host header ({vault}.vault.*), then a scan
+// for an existing item with the requested name. Responds 404 with the given
+// error code when neither resolves.
+func (a *Router) withVaultFor(paramName, currentType, notFoundCode string, next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		vaultName, ok := vaultNameFromHost(r.Host)
+		if !ok {
+			itemName := chi.URLParam(r, paramName)
+			vaultName, ok = a.findVaultForItem(currentType, itemName)
+			if !ok {
+				writeAzureError(w, http.StatusNotFound, notFoundCode,
+					fmt.Sprintf("A key vault item with name %q was not found in any vault.", itemName))
+				return
+			}
+		}
+		chi.RouteContext(r.Context()).URLParams.Add("vaultName", vaultName)
+		next(w, r)
+	}
+}
+
+// getKeyVaultHostRoot answers GET / for per-vault hosts
+// ({vault}.vault.localhost). 200 when the vault exists, 404 otherwise.
+// Non-vault hosts get a plain 404 so the route stays invisible to other
+// root traffic.
+func (a *Router) getKeyVaultHostRoot(w http.ResponseWriter, r *http.Request) {
+	name, ok := vaultNameFromHost(r.Host)
+	if !ok || !a.vaultExists(name) {
+		writeAzureError(w, http.StatusNotFound, "VaultNotFound",
+			fmt.Sprintf("Vault was not found for host %q.", r.Host))
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{})
+}
+
+// findVaultForItem scans the data-plane store for a current-pointer entry of
+// the given type and name, returning the owning vault name. Store IDs have
+// the shape /keyvault/{vault}/{keys|secrets}/{name}/current.
+func (a *Router) findVaultForItem(currentType, itemName string) (string, bool) {
+	for _, res := range a.store.List("/keyvault/") {
+		if res.Type != currentType || res.Name != itemName {
+			continue
+		}
+		parts := strings.Split(res.ID, "/")
+		if len(parts) >= 3 {
+			return parts[2], true
+		}
+	}
+	return "", false
 }
 
 // --- Subscriptions ---
@@ -437,8 +621,7 @@ func (a *Router) deleteResourceGroup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// ARM returns 202 Accepted with a tracking header for async delete
-	w.Header().Set("Location", fmt.Sprintf("/subscriptions/%s/operationresults/%s", subID, uuid.New().String()))
-	w.WriteHeader(http.StatusAccepted)
+	a.acceptAsyncDelete(w, r, subID)
 }
 
 func (a *Router) listResourceGroups(w http.ResponseWriter, r *http.Request) {
@@ -486,6 +669,47 @@ func (a *Router) listResourceGroupResources(w http.ResponseWriter, r *http.Reque
 	}
 	writeJSON(w, http.StatusOK, map[string]interface{}{"value": items})
 }
+
+// listSubscriptionResources implements the subscription-wide Resources List
+// API (GET /subscriptions/{sub}/resources). The azurerm provider uses it
+// with $filter=resourceType eq 'Microsoft.KeyVault/vaults' to populate its
+// Key Vaults cache when mapping a vaultUri back to the vault ARM ID. Only
+// the resourceType equality filter is honoured; other filters are ignored
+// and the full set is returned. Pagination is not implemented (no nextLink),
+// matching the store's bounded size.
+func (a *Router) listSubscriptionResources(w http.ResponseWriter, r *http.Request) {
+	subID := chi.URLParam(r, "subscriptionID")
+	prefix := fmt.Sprintf("/subscriptions/%s/resourceGroups/", subID)
+
+	wantType := ""
+	if f := r.URL.Query().Get("$filter"); f != "" {
+		if m := resourceTypeFilterRe.FindStringSubmatch(f); m != nil {
+			wantType = m[1]
+		}
+	}
+
+	items := []map[string]interface{}{}
+	for _, res := range a.store.List(prefix) {
+		if res.Type == "Microsoft.Resources/resourceGroups" {
+			continue
+		}
+		if wantType != "" && !strings.EqualFold(res.Type, wantType) {
+			continue
+		}
+		items = append(items, map[string]interface{}{
+			"id":       res.ID,
+			"name":     res.Name,
+			"type":     res.Type,
+			"location": res.Location,
+			"tags":     res.Tags,
+		})
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"value": items})
+}
+
+// resourceTypeFilterRe extracts the type from an OData filter of the form
+// "resourceType eq 'Microsoft.KeyVault/vaults'" (case-insensitive key).
+var resourceTypeFilterRe = regexp.MustCompile(`(?i)resourcetype\s+eq\s+'([^']+)'`)
 
 func resourceGroupResponse(r *store.Resource) map[string]interface{} {
 	return map[string]interface{}{

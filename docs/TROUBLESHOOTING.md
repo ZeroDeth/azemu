@@ -40,6 +40,38 @@ so you only have to add it to the keychain once. The flox profile defaults
 this to `.azemu/cert-bundle.pem` for you. See `docs/SETUP.md` "Persistent
 (recommended)" for the full flow.
 
+### Cert errors after upgrading: bundle regenerated for `*.vault.localhost`
+
+**Cause:** azemu now serves Key Vault data-plane traffic on per-vault hosts
+(`{vaultName}.vault.localhost`), which requires a `*.vault.localhost` SAN in
+the TLS certificate. On startup azemu checks the persisted bundle and
+regenerates it when the SAN is missing, so a bundle created by an older
+version is replaced and the previously trusted cert no longer matches.
+
+**Fix:** Re-run the trust step for the regenerated bundle (macOS):
+
+```bash
+security add-trusted-cert \
+  -d -r trustRoot \
+  -k ~/Library/Keychains/login.keychain-db \
+  .azemu/cert-bundle.pem
+```
+
+On Linux, repeat the `update-ca-certificates` flow above.
+
+### `expected a URI in the format the-keyvault-name.vault.**`
+
+**Cause:** A Key Vault `vaultUri` (or a secret/key id parsed from state)
+does not use the per-vault host form. State written by an azemu version
+older than the host-based Key Vault routing carries path-style ids
+(`https://localhost:4566/keyvault/{vault}/...`) that the azurerm provider
+cannot parse.
+
+**Fix:** Recreate the affected resources: `terraform destroy` (or
+`terraform state rm` for the key vault items) and re-apply against the
+current azemu so the new host-form ids are written to state. azemu state
+itself can be cleared with `POST /api/state/reset`.
+
 ### `Failed to connect to localhost port 4566/4567`
 
 **Cause:** The server is not running, or a previous azemu process is still
