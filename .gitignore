@@ -1,8 +1,11 @@
 # Binary output. The bare `azemu` pattern that used to live here was a
 # bug — it matched the cmd/azemu/ source directory and silently kept
 # main.go untracked for the entire project history. The build artefact
-# itself is at bin/azemu, which is already covered above.
+# itself is at bin/azemu, which is already covered above. The anchored
+# /azemu below ignores only the repo-root artefact left by a bare
+# `go build ./cmd/azemu/`, without matching the cmd/azemu/ source dir.
 bin/
+/azemu
 *.exe
 
 # goreleaser output
