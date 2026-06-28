@@ -11,7 +11,7 @@
 <span class="designnote-decision-label">▸ DECISION</span>
 
 **Stay at the auth-and-provisioning boundary azemu has today, and treat a
-read-only Pipelines run API as demand-driven: add it only when a real scenario
+read-only pipeline run API as demand-driven: add it only when a real scenario
 needs to read pipeline or build state. Do not build a local pipeline runner.**
 
 - azemu already serves the part that is awkward without a cloud: the ADO OIDC
