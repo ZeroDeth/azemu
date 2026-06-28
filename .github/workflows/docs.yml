@@ -9,7 +9,7 @@ on:
       - "docs/TROUBLESHOOTING.md"
       - "docs/SETUP.md"
       - "docs/ARCHITECTURE.md"
-      - "docs/adr/**"
+      - "docs/design-notes/**"
       - "CONTRIBUTING.md"
       - "ROADMAP.md"
       - "CODE_OF_CONDUCT.md"
