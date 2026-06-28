@@ -8,10 +8,10 @@ LocalStack, but for Azure.
 [![Works with OpenTofu](https://img.shields.io/badge/OpenTofu-compatible-brightgreen.svg)](https://opentofu.org)
 [![Docs](https://img.shields.io/badge/docs-zerodeth.github.io%2Fazemu-blue.svg)](https://zerodeth.github.io/azemu)
 
-**Status:** v0.1-dev. `terraform init && terraform apply && terraform destroy` proven
-end-to-end against the official `hashicorp/azurerm` v4.x provider (resource groups,
-virtual networks, subnets). The same loop works with [OpenTofu](https://opentofu.org),
-a drop-in replacement.
+**Status:** v0.3.0. `terraform init && terraform apply && terraform destroy` proven
+end-to-end against the official `hashicorp/azurerm` v4.x provider across networking,
+storage, Key Vault, CDN, identity, AKS, and Azure DevOps OIDC. The same loop works
+with [OpenTofu](https://opentofu.org), a drop-in replacement.
 
 See [ROADMAP.md](ROADMAP.md) for the vision, resource roster, and milestones.
 **Contributions are welcome,** see [CONTRIBUTING.md](CONTRIBUTING.md) and the
@@ -175,9 +175,9 @@ See [docs/SETUP.md](docs/SETUP.md) for the contributor onboarding guide.
 - [x] v0.1 Phase 2: Test coverage backfill (store, auth, middleware, config)
 - [x] v0.1 Phase 3: Docker, docker-compose, examples, startup banner
 - [x] v0.1 Phase 4: File-backed state, export/import HTTP endpoints
-- [ ] v0.1 Phase 5: Docs, governance, release prep (in progress)
-- [ ] v0.2: DNS zones, storage accounts, key vault secrets
-- [ ] v0.3: IMDS, workload identity, Azure DevOps OIDC
+- [x] v0.1 Phase 5: Docs, governance, release prep
+- [x] v0.2: DNS, Load Balancer, App Gateway, Public IP, NSG, Storage, Key Vault secrets+keys, CDN
+- [x] v0.3: IMDS, workload identity, Azure DevOps OIDC, AKS, Managed Identity, Redis, CLI subcommands
 
 See [ROADMAP.md](ROADMAP.md) for the full resource roster and milestones.
 
