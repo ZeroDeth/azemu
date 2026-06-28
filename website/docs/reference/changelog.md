@@ -21,6 +21,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `redis-cache` scenario: a Redis cache with its connection string stored in
+  Key Vault, the common pattern of provisioning a managed cache and reading
+  its connection details as a secret instead of embedding them. Runs end to
+  end against azemu via `terraform test` and exercises the Redis `listKeys`
+  endpoint and the Key Vault secret data plane.
 - CDN content data plane. The CDN was control-plane only: azemu stored the
   endpoint and computed its `{name}.azureedge.net` host but served nothing
   through it, so any scenario asserting a CDN read path had to fetch the Blob

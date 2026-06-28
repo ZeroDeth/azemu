@@ -104,6 +104,7 @@ They double as integration tests, so they keep working.
 - **[Three-tier web app](https://github.com/zerodeth/azemu/tree/main/examples/terraform/scenarios/three-tier)**: a web/app/data architecture built from networking resources.
 - **[Static site with CDN and DNS](https://github.com/zerodeth/azemu/tree/main/examples/terraform/scenarios/static-site)**: a static website on Storage behind a CDN profile and a custom DNS zone.
 - **[DNS zone with records](https://github.com/zerodeth/azemu/tree/main/examples/terraform/scenarios/dns-with-records)**: a DNS zone with A, AAAA, CNAME, TXT, and MX record sets.
+- **[Redis cache with Key Vault](https://github.com/zerodeth/azemu/tree/main/examples/terraform/scenarios/redis-cache)**: a Redis cache whose connection string is stored in Key Vault, the read-from-secret pattern.
 - **[AKS workload](https://github.com/zerodeth/azemu/tree/main/examples/terraform/scenarios/aks-workload)**: management-plane provisioning for a workload that reads Key Vault secrets via workload identity.
 - **[Azure DevOps pipeline](https://github.com/zerodeth/azemu/tree/main/examples/terraform/scenarios/ado-pipeline)**: the ARM resources for an ADO pipeline that authenticates with workload identity federation (OIDC).
 - **[Server-less OTA delivery](https://github.com/zerodeth/azemu/tree/main/examples/terraform/scenarios/ota-delivery)**: an end-to-end over-the-air update flow with a Key Vault-signed manifest, immutable Blob artefacts, and a CDN read path, verified locally with no compute on the read path.
