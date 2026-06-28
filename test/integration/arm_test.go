@@ -13,8 +13,13 @@ package integration
 
 import (
 	"bytes"
+	"crypto"
+	"crypto/rsa"
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
 	"io"
+	"math/big"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -604,12 +609,11 @@ func TestARM_DNSZoneFullFlow(t *testing.T) {
 		t.Errorf("list all returned %v items, want 4", len(allItems))
 	}
 
-	// 9. Delete the A record individually.
+	// 9. Delete the A record individually. Record set deletes are synchronous
+	// (204 No Content); only zone deletes are async (see deleteDNSRecordSet in
+	// internal/arm/dns.go).
 	resp = doJSON(t, http.MethodDelete, aRecordURL, "")
-	mustStatus(t, resp, http.StatusAccepted)
-	if resp.Header.Get("Location") == "" {
-		t.Errorf("Location header missing on record DELETE")
-	}
+	mustStatus(t, resp, http.StatusNoContent)
 	resp.Body.Close()
 	resp = doJSON(t, http.MethodGet, aRecordURL, "")
 	mustStatus(t, resp, http.StatusNotFound)
@@ -649,14 +653,16 @@ func TestARM_StorageAccountFullFlow(t *testing.T) {
 	cont2URL := base + "/subscriptions/sub1/resourcegroups/rg1/providers/microsoft.storage/storageaccounts/integrationacct/blobservices/default/containers/cont2" + apiVersionQ
 	listURL := base + "/subscriptions/sub1/resourcegroups/rg1/providers/microsoft.storage/storageaccounts/integrationacct/blobservices/default/containers" + apiVersionQ
 
-	// 1. Create storage account.
+	// 1. Create storage account. azurerm's storageaccounts.Create accepts
+	// 200 or 202 only, not 201 (see putStorageAccount in
+	// internal/arm/storage_account.go).
 	resp := doJSON(t, http.MethodPut, acctURL, `{
 		"location": "uksouth",
 		"sku": {"name": "Standard_LRS"},
 		"kind": "StorageV2",
 		"properties": {"accessTier": "Hot"}
 	}`)
-	mustStatus(t, resp, http.StatusCreated)
+	mustStatus(t, resp, http.StatusOK)
 	acctBody := decode(t, resp)
 
 	// Verify SKU and kind are at top level.
@@ -731,12 +737,10 @@ func TestARM_StorageAccountFullFlow(t *testing.T) {
 		t.Fatalf("container list = %v, want 2 items", listBody["value"])
 	}
 
-	// 6. Delete cont1 individually.
+	// 6. Delete cont1 individually. Container deletes are synchronous 200 OK
+	// (see deleteStorageContainer in internal/arm/storage_container.go).
 	resp = doJSON(t, http.MethodDelete, cont1URL, "")
-	mustStatus(t, resp, http.StatusAccepted)
-	if resp.Header.Get("Location") == "" {
-		t.Error("Location header missing on container DELETE")
-	}
+	mustStatus(t, resp, http.StatusOK)
 	resp.Body.Close()
 
 	resp = doJSON(t, http.MethodGet, cont1URL, "")
@@ -748,12 +752,11 @@ func TestARM_StorageAccountFullFlow(t *testing.T) {
 	mustStatus(t, resp, http.StatusOK)
 	resp.Body.Close()
 
-	// 7. Delete the storage account — cascades cont2.
+	// 7. Delete the storage account — cascades cont2. Account deletes are
+	// synchronous 200 OK; a bodyless 202 makes the SDK error (see
+	// deleteStorageAccount in internal/arm/storage_account.go).
 	resp = doJSON(t, http.MethodDelete, acctURL, "")
-	mustStatus(t, resp, http.StatusAccepted)
-	if resp.Header.Get("Location") == "" {
-		t.Error("Location header missing on account DELETE")
-	}
+	mustStatus(t, resp, http.StatusOK)
 	resp.Body.Close()
 
 	// Account gone.
@@ -897,11 +900,11 @@ func TestARM_KeyVaultFullFlow(t *testing.T) {
 	if !ok {
 		t.Fatalf("properties missing")
 	}
-	// buildFullServer wires AZEMU_KV_ENDPOINT="https://kv-test", so vaultUri
-	// points at azemu's own data-plane mount under that host, NOT real-Azure
-	// {name}.vault.azure.net.
-	if props["vaultUri"] != "https://kv-test/keyvault/mytestvault/" {
-		t.Errorf("vaultUri = %v, want https://kv-test/keyvault/mytestvault/", props["vaultUri"])
+	// vaultUri uses the per-vault host form {name}.vault.localhost that the
+	// azurerm provider requires (KeyVaultIDFromBaseUrl), resolving to azemu
+	// instead of real-Azure {name}.vault.azure.net.
+	if props["vaultUri"] != "https://mytestvault.vault.localhost/" {
+		t.Errorf("vaultUri = %v, want https://mytestvault.vault.localhost/", props["vaultUri"])
 	}
 	if props["provisioningState"] != "Succeeded" {
 		t.Errorf("provisioningState = %v, want Succeeded", props["provisioningState"])
@@ -929,16 +932,127 @@ func TestARM_KeyVaultFullFlow(t *testing.T) {
 		t.Fatalf("list value = %v, want 1 item", list["value"])
 	}
 
-	// 5. DELETE is async (202 Accepted) with Location header.
+	// 5. DELETE returns 200 OK. azurerm's vaults.VaultsClient#Delete expects
+	// 200 when soft-delete is disabled (see deleteKeyVault in
+	// internal/arm/keyvault.go); azemu does not implement soft-delete.
 	resp = doJSON(t, http.MethodDelete, vaultURL, "")
-	mustStatus(t, resp, http.StatusAccepted)
-	if resp.Header.Get("Location") == "" {
-		t.Error("Location header missing on DELETE")
-	}
+	mustStatus(t, resp, http.StatusOK)
 	resp.Body.Close()
 
 	// 6. GET returns 404 after delete.
 	resp = doJSON(t, http.MethodGet, vaultURL, "")
 	mustStatus(t, resp, http.StatusNotFound)
+	resp.Body.Close()
+}
+
+// TestARM_KeyVaultKeySignFlow exercises the OTA manifest-signing pipeline:
+// provision a vault via ARM, create an RSA-2048 key via the data plane, sign
+// a SHA-256 digest with RS256, and verify the signature against the public
+// JWK returned by GET. Runs through the production-like TLS harness so the
+// data-plane mount, middleware, and vaultUri rewrite are all exercised.
+func TestARM_KeyVaultKeySignFlow(t *testing.T) {
+	srv := buildProductionLikeServer(t)
+	client := srv.Client()
+	base := srv.URL
+
+	do := func(method, url, body string) *http.Response {
+		t.Helper()
+		var rdr io.Reader
+		if body != "" {
+			rdr = strings.NewReader(body)
+		}
+		req, err := http.NewRequest(method, url, rdr)
+		if err != nil {
+			t.Fatalf("new request: %v", err)
+		}
+		if body != "" {
+			req.Header.Set("Content-Type", "application/json")
+		}
+		resp, err := client.Do(req)
+		if err != nil {
+			t.Fatalf("do %s %s: %v", method, url, err)
+		}
+		return resp
+	}
+
+	// 1. Provision the vault via the ARM control plane.
+	vaultURL := base + "/subscriptions/sub1/resourcegroups/rg1/providers/microsoft.keyvault/vaults/otavault" + apiVersionQ
+	resp := do(http.MethodPut, vaultURL, `{
+		"location": "uksouth",
+		"properties": {
+			"sku": {"family": "A", "name": "standard"},
+			"tenantId": "00000000-0000-0000-0000-000000000001"
+		}
+	}`)
+	mustStatus(t, resp, http.StatusCreated)
+	created := decode(t, resp)
+	props, _ := created["properties"].(map[string]interface{})
+	if props["vaultUri"] != "https://otavault.vault.localhost/" {
+		t.Fatalf("vaultUri = %v, want https://otavault.vault.localhost/", props["vaultUri"])
+	}
+
+	// 2. Create an RSA-2048 signing key via the data plane.
+	resp = do(http.MethodPost, base+"/keyvault/otavault/keys/manifest-signer/create",
+		`{"kty":"RSA","key_size":2048,"key_ops":["sign","verify"]}`)
+	mustStatus(t, resp, http.StatusOK)
+	bundle := decode(t, resp)
+	jwk, _ := bundle["key"].(map[string]interface{})
+	if jwk == nil {
+		t.Fatalf("create response has no key object: %v", bundle)
+	}
+	kid, _ := jwk["kid"].(string)
+	version := kid[strings.LastIndex(kid, "/")+1:]
+
+	// 3. GET the key back; rebuild the public key from the JWK.
+	resp = do(http.MethodGet, base+"/keyvault/otavault/keys/manifest-signer", "")
+	mustStatus(t, resp, http.StatusOK)
+	got := decode(t, resp)
+	gotJWK, _ := got["key"].(map[string]interface{})
+	nB, err := base64.RawURLEncoding.DecodeString(gotJWK["n"].(string))
+	if err != nil {
+		t.Fatalf("decode jwk n: %v", err)
+	}
+	eB, err := base64.RawURLEncoding.DecodeString(gotJWK["e"].(string))
+	if err != nil {
+		t.Fatalf("decode jwk e: %v", err)
+	}
+	pub := &rsa.PublicKey{
+		N: new(big.Int).SetBytes(nB),
+		E: int(new(big.Int).SetBytes(eB).Int64()),
+	}
+
+	// 4. Sign a manifest digest (RS256 = RSASSA-PKCS1-v1_5 over SHA-256).
+	manifest := []byte(`{"id":"0001","launchAsset":{"url":"https://cdn.example/bundle.js"}}`)
+	digest := sha256.Sum256(manifest)
+	resp = do(http.MethodPost, base+"/keyvault/otavault/keys/manifest-signer/"+version+"/sign",
+		`{"alg":"RS256","value":"`+base64.RawURLEncoding.EncodeToString(digest[:])+`"}`)
+	mustStatus(t, resp, http.StatusOK)
+	signResult := decode(t, resp)
+	if signResult["kid"] != kid {
+		t.Errorf("sign kid = %v, want %v", signResult["kid"], kid)
+	}
+
+	// 5. The signature must verify against the JWK's public key.
+	sig, err := base64.RawURLEncoding.DecodeString(signResult["value"].(string))
+	if err != nil {
+		t.Fatalf("decode signature: %v", err)
+	}
+	if err := rsa.VerifyPKCS1v15(pub, crypto.SHA256, digest[:], sig); err != nil {
+		t.Fatalf("signature does not verify against returned JWK: %v", err)
+	}
+
+	// 6. Delete the key; subsequent GET is 404.
+	resp = do(http.MethodDelete, base+"/keyvault/otavault/keys/manifest-signer", "")
+	mustStatus(t, resp, http.StatusOK)
+	resp.Body.Close()
+	resp = do(http.MethodGet, base+"/keyvault/otavault/keys/manifest-signer", "")
+	mustStatus(t, resp, http.StatusNotFound)
+	resp.Body.Close()
+
+	// 7. Vault delete succeeds with the key already gone.
+	resp = do(http.MethodDelete, vaultURL, "")
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusAccepted {
+		t.Fatalf("vault delete status = %d, want 200 or 202", resp.StatusCode)
+	}
 	resp.Body.Close()
 }

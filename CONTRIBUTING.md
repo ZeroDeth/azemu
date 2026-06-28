@@ -1,9 +1,29 @@
 # Contributing to azemu
 
-Thanks for your interest in azemu. This document covers how to add a
-resource, the test bar every change has to clear, and the PR checklist.
+azemu is an open-source project and contributions of every size are welcome.
+You do not need to be an Azure or Go expert to help: a clear bug report or a
+docs fix moves the project forward as much as a new resource handler does.
 
-If you are new here, start with:
+## Ways to contribute
+
+- **Report a compatibility gap.** If `terraform apply` or `tofu apply` fails
+  against azemu, open an issue with the config and the error. These are the
+  most useful reports we get.
+- **Add a resource.** The most common code contribution. See
+  [Adding a new ARM resource](#adding-a-new-arm-resource) below.
+- **Improve the docs.** Typos, clarifications, and new troubleshooting
+  entries are all fair game.
+- **Ask and answer questions** in
+  [Discussions](https://github.com/zerodeth/azemu/discussions).
+
+New contributors: look for issues labelled
+[`good first issue`](https://github.com/zerodeth/azemu/labels/good%20first%20issue).
+If none are open, ask in Discussions and we will help you find a starting
+point. For how the MIT licence, forking, and OpenTofu fit together, see the
+[License & Forking guide](https://zerodeth.github.io/azemu/community/license/).
+
+This document covers how to add a resource, the test bar every change has to
+clear, and the PR checklist. If you are new here, start with:
 
 - [`README.md`](README.md) for the project pitch and the Docker quick-start.
 - [`AGENTS.md`](AGENTS.md) for the cross-vendor agent spec and the pointers

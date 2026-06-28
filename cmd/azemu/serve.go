@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -21,6 +22,7 @@ import (
 	"github.com/zerodeth/azemu/internal/ado"
 	"github.com/zerodeth/azemu/internal/arm"
 	"github.com/zerodeth/azemu/internal/auth"
+	"github.com/zerodeth/azemu/internal/console"
 	"github.com/zerodeth/azemu/internal/metadata"
 	mw "github.com/zerodeth/azemu/internal/middleware"
 	"github.com/zerodeth/azemu/internal/store"
@@ -92,6 +94,8 @@ func runServe(args []string) error {
 	}
 	adoSC := ado.NewServiceConnectionService()
 
+	reqLog := mw.NewRequestRecorder(500)
+
 	r := chi.NewRouter()
 	r.Use(chimw.RequestID)
 	r.Use(chimw.RealIP)
@@ -104,7 +108,7 @@ func runServe(args []string) error {
 	r.NotFound(mw.LogUnhandledRequests(unhandled))
 	r.HandleFunc("/api/unhandled", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		_ = json.NewEncoder(w).Encode(map[string]any{
 			"unhandled_routes": unhandled.List(),
 		})
 	})
@@ -136,18 +140,33 @@ func runServe(args []string) error {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"status":"reset"}`))
 	})
+	r.Get("/api/requests/stream", reqLog.SSEHandler)
 
 	r.Route("/metadata/identity", imdsSvc.Routes)
 	r.Route("/metadata", metaSvc.Routes)
 	r.Route("/{tenantID}", tokenSvc.TenantRoutes)
-	r.Route("/subscriptions", armRouter.Routes)
-	r.Route("/keyvault", armRouter.KeyVaultDataPlaneRoutes)
+
+	// ARM routes are wrapped with the request recorder so only ARM traffic
+	// appears in the request log – not health, metadata, state API, or ADO.
+	r.Group(func(r chi.Router) {
+		r.Use(reqLog.Middleware)
+		r.Route("/subscriptions", armRouter.Routes)
+		r.Route("/keyvault", armRouter.KeyVaultDataPlaneRoutes)
+		armRouter.KeyVaultNestedItemRoutes(r)
+	})
+
 	r.Route("/ado", func(r chi.Router) {
 		adoOIDC.Routes(r)
 		adoSC.ServiceConnectionRoutes(r)
 	})
 
-	tlsCfg, generated, err := auth.LoadOrGenerateSelfSignedTLS(cfg.CertPath, "localhost", "127.0.0.1")
+	// *.vault.localhost serves the per-vault Key Vault data-plane hosts
+	// ({vaultName}.vault.localhost) that the azurerm provider requires in
+	// vaultUri. *.azureedge.net serves the CDN endpoint content hosts
+	// ({endpoint}.azureedge.net) that the CDN data-plane proxy answers. Bundles
+	// generated before either SAN existed are regenerated automatically; the new
+	// cert must be trusted again.
+	tlsCfg, generated, err := auth.LoadOrGenerateSelfSignedTLS(cfg.CertPath, "localhost", "127.0.0.1", "*.vault.localhost", "*.azureedge.net")
 	if err != nil {
 		if len(tlsCfg.Certificate) == 0 {
 			log.Fatal().Err(err).Msg("failed to load/generate TLS cert")
@@ -180,7 +199,7 @@ func runServe(args []string) error {
 	healthMux := http.NewServeMux()
 	healthMux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		_ = json.NewEncoder(w).Encode(map[string]any{
 			"status":         "ok",
 			"version":        Version,
 			"uptime_seconds": int(time.Since(startTime).Seconds()),
@@ -193,9 +212,16 @@ func runServe(args []string) error {
 		WriteTimeout: 5 * time.Second,
 	}
 
+	// On the ARM port, multiplex the CDN content data plane: a request to a
+	// {endpoint}.azureedge.net host is served by the CDN proxy, everything else
+	// by the ARM control plane. Real Azure serves CDN content from a distinct
+	// host; azemu colocates both on the ARM port so one trusted cert and port
+	// cover the read path. Mirrors the Key Vault {vault}.vault.localhost split.
+	armAndCDN := cdnHostMux(armRouter, r)
+
 	httpSrv := &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.HTTPPort),
-		Handler:      r,
+		Handler:      armAndCDN,
 		TLSConfig:    sharedTLS,
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 30 * time.Second,
@@ -216,7 +242,19 @@ func runServe(args []string) error {
 		WriteTimeout: 30 * time.Second,
 	}
 
-	errCh := make(chan error, 4)
+	// Trust anchor for the console's ARM reverse proxy: the server's own
+	// self-signed leaf, so the loopback proxy verifies TLS instead of skipping
+	// it. nil if the cert cannot be parsed; Handler then falls back to skipping
+	// verification on the loopback-only hop.
+	armCertPool := armCertPoolFromTLS(tlsCfg)
+	consoleSrv := &http.Server{
+		Addr:         fmt.Sprintf(":%d", cfg.ConsolePort),
+		Handler:      console.Handler(cfg.HTTPPort, cfg.HealthPort, armCertPool),
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 10 * time.Second,
+	}
+
+	errCh := make(chan error, 5)
 	go func() {
 		if err := healthSrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			errCh <- fmt.Errorf("health server: %w", err)
@@ -235,6 +273,11 @@ func runServe(args []string) error {
 	go func() {
 		if err := adoSrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			errCh <- fmt.Errorf("ado server: %w", err)
+		}
+	}()
+	go func() {
+		if err := consoleSrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			errCh <- fmt.Errorf("console server: %w", err)
 		}
 	}()
 
@@ -262,8 +305,41 @@ func runServe(args []string) error {
 	if err := adoSrv.Shutdown(ctx); err != nil {
 		log.Warn().Err(err).Msg("ado server shutdown")
 	}
+	if err := consoleSrv.Shutdown(ctx); err != nil {
+		log.Warn().Err(err).Msg("console server shutdown")
+	}
 
 	return nil
+}
+
+// armCertPoolFromTLS builds a cert pool containing the server's own leaf so the
+// console's loopback ARM reverse proxy can verify TLS instead of skipping it.
+// Returns nil if the certificate cannot be parsed, in which case the console
+// handler falls back to skipping verification on the loopback-only hop.
+func armCertPoolFromTLS(cert tls.Certificate) *x509.CertPool {
+	if len(cert.Certificate) == 0 {
+		return nil
+	}
+	leaf, err := x509.ParseCertificate(cert.Certificate[0])
+	if err != nil {
+		return nil
+	}
+	pool := x509.NewCertPool()
+	pool.AddCert(leaf)
+	return pool
+}
+
+// cdnHostMux dispatches CDN content hosts ({endpoint}.azureedge.net) to the CDN
+// data plane and every other host to the ARM control plane. Extracted from the
+// server wiring so the routing decision is unit-testable.
+func cdnHostMux(armRouter *arm.Router, next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		if arm.IsCDNContentHost(req.Host) {
+			armRouter.ServeCDNContent(w, req)
+			return
+		}
+		next.ServeHTTP(w, req)
+	})
 }
 
 func printBanner(w *os.File, cfg *config.Config, certPath string) {
@@ -272,6 +348,7 @@ func printBanner(w *os.File, cfg *config.Config, certPath string) {
 	fmt.Fprintf(w, "  metadata (HTTPS)   https://localhost:%d\n", cfg.HTTPSPort)
 	fmt.Fprintf(w, "  health (HTTP)      http://localhost:%d/health\n", cfg.HealthPort)
 	fmt.Fprintf(w, "  ADO OIDC (HTTP)    http://localhost:%d/ado\n", cfg.ADOPort)
+	fmt.Fprintf(w, "  console (HTTP)     http://localhost:%d\n", cfg.ConsolePort)
 	fmt.Fprintf(w, "  cert bundle        %s\n", certPath)
 	if cfg.PersistPath != "" {
 		fmt.Fprintf(w, "  persist            %s\n", cfg.PersistPath)
@@ -295,10 +372,12 @@ func printServeUsage(w *os.File) {
 	fmt.Fprintf(w, "  AZEMU_TENANT_ID           Mock tenant ID (default 00000000-...)\n")
 	fmt.Fprintf(w, "  AZEMU_AZURITE_ENDPOINT    Azurite blob base URL for storage endpoints (default http://azurite:10000)\n")
 	fmt.Fprintf(w, "  AZEMU_KV_ENDPOINT         Key Vault data-plane base URL embedded in vaultUri (default https://localhost:4566)\n")
-	fmt.Fprintf(w, "  AZEMU_ADO_PORT            Plain-HTTP port for ADO OIDC and service connection emulation (default 4569)\n\n")
+	fmt.Fprintf(w, "  AZEMU_ADO_PORT            Plain-HTTP port for ADO OIDC and service connection emulation (default 4569)\n")
+	fmt.Fprintf(w, "  AZEMU_CONSOLE_PORT        Plain-HTTP port for the web console SPA (default 4570)\n\n")
 	fmt.Fprintf(w, "Ports:\n")
 	fmt.Fprintf(w, "  :4566   ARM API (HTTPS)\n")
 	fmt.Fprintf(w, "  :4567   Metadata / OAuth2 / OIDC (HTTPS)\n")
 	fmt.Fprintf(w, "  :4568   Health check (plain HTTP)\n")
-	fmt.Fprintf(w, "  :4569   ADO OIDC / service connections (plain HTTP)\n\n")
+	fmt.Fprintf(w, "  :4569   ADO OIDC / service connections (plain HTTP)\n")
+	fmt.Fprintf(w, "  :4570   Web console (plain HTTP)\n\n")
 }

@@ -19,6 +19,170 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.3.0] - 2026-06-28
+
+### Added
+
+- CDN content data plane. The CDN was control-plane only: azemu stored the
+  endpoint and computed its `{name}.azureedge.net` host but served nothing
+  through it, so any scenario asserting a CDN read path had to fetch the Blob
+  origin directly. A request to the endpoint host `{name}.azureedge.net` (on the
+  ARM port) is now reverse-proxied to the endpoint's Blob origin (Azurite,
+  path-style), streaming the body back with the origin's `Content-Type` and
+  `Cache-Control` passed through unchanged, which is how Azure CDN honours origin
+  metadata by default. `GET` and `HEAD` only. The host is multiplexed on the ARM
+  port behind a new `*.azureedge.net` cert SAN, mirroring the Key Vault
+  `{vault}.vault.localhost` data-plane pattern. The capability is generic (it
+  serves any blob path, unaware of content) so it upgrades the `static-site`
+  scenario and any future CDN-fronted design. Delivery-rule TTL overrides are a
+  tracked follow-up.
+- `ota-delivery` scenario: a server-less, static-file OTA delivery design
+  validated end to end against azemu (Phase 8.7.1). A build step signs an Expo
+  Updates Protocol v1 manifest with a Key Vault key and writes immutable
+  artefacts to Blob; a release step promotes a version by a server-side blob
+  copy and writes `rollout.json`; the CDN content data plane serves the signed
+  manifest and assets. The scenario's own `fixturegen` tool (written from the
+  public protocol shape, not a port of any pipeline) drives publish, promote,
+  and a read-path verify that checks the multipart `Content-Type`, the cache
+  TTLs, and the manifest signature. CI runs the ARM-half `terraform test`;
+  `make ota-delivery` runs the full local loop against Azurite.
+- Documentation site: a "License & Forking" page covering the MIT licence,
+  responsible forking (rebrand, keep attribution, register derived providers
+  under your own namespace), and the Terraform BUSL vs OpenTofu MPL licensing
+  difference. Linked from the home page, README, and contributing guide.
+- OpenTofu is documented as a supported drop-in alongside Terraform across
+  the install guide, "How It Works", the home page, and the README.
+
+### Changed
+
+- Documentation site is production-ready and contribution-focused: per-page
+  "edit on GitHub" links, social/community links, a footer, a copyright
+  notice, and badges. The home page and contributing guide now open with a
+  clear invitation to contribute and point at good first issues and
+  Discussions.
+- Reframed the project narrative (README, ROADMAP, site home and roadmap) to
+  be tool-first and demand-driven: azemu emulates plain Azure (ARM, metadata,
+  OIDC) and drives multiple toolchains (`tf`/`pulumi`/`kubectl`/`python`
+  subcommands), and coverage grows from user feature requests rather than a
+  published master plan. Added a clear "tell us what you need" feedback path
+  (feature requests + discussions) anchored on the parity matrix. The
+  fidelity-first engineering bar and the existing non-goals are unchanged.
+- Redesigned the docs site home page for clarity: a clean "what azemu
+  emulates today" table, an "examples that solve real use cases" section
+  linking the six working scenarios, a short "what we are aiming for", and a
+  single "get involved" call to action with a GitHub-star nudge.
+
+### Fixed
+
+- Docs site no longer references the removed `scripts/aztf` wrapper. The
+  home-page quick start uses `terraform -chdir`, and the install guide
+  documents the `azemu tf` subcommand that replaced it.
+- `terraform destroy` no longer hangs. The metadata `resourceManager`
+  endpoint dropped its trailing slash (`https://localhost:<port>`). With the
+  trailing slash, the azurerm provider built DELETE URIs as
+  `//subscriptions/...`; the hashicorp/go-azure-sdk delete poller GETs the
+  resource and waits for a `404`, but its URI parser treats the leading `//`
+  host-relatively, drops the resource name, and polled the parent list
+  (`200`) until the 30-minute delete timeout. Removing the trailing slash
+  makes the poller GET the real resource, which returns `404` immediately
+  (azemu deletes synchronously), so destroy completes at once. Verified
+  end-to-end against the real azurerm provider. See TODO.md M9.
+- Load balancer probes and load balancing rules now round-trip. They have no
+  standalone ARM create operation, so the azurerm provider (`azurerm_lb_probe`,
+  `azurerm_lb_rule`) writes them inline via the parent Load Balancer PUT, but
+  `putLB` dropped those inline arrays, so the provider saw the probe vanish
+  after apply (`Provider produced inconsistent result after apply: ... Root
+  object was present, but now absent`). `putLB` now persists inline
+  `probes`/`loadBalancingRules` as child entries that `getLB` embeds, writing
+  them only after the parent LB store write succeeds so a failed PUT cannot
+  orphan children. The arrays are reconciled, not just appended: a PUT that
+  includes the array with an element removed (an `azurerm_lb_probe` /
+  `azurerm_lb_rule` destroy, which is a read-modify-write on the parent LB)
+  deletes the stale child, while a PUT that omits the array entirely (a plain
+  `azurerm_lb` apply) leaves existing children untouched. See TODO.md M8.
+- Async DELETE polling now resolves instead of hanging. Every resource's
+  `202 Accepted` DELETE set a `Location: /subscriptions/{sub}/operationresults/{id}`
+  header, but nothing served that path, so the azurerm provider polled a dead
+  URL until its 30-minute delete timeout (`polling after Delete: context
+  deadline exceeded`) and the relative URL also failed the older go-autorest
+  CDN poller outright (`StatusCode=0`). New `internal/arm/operations.go` adds
+  the `operationresults` endpoint (returns `{"status":"Succeeded"}`; azemu
+  deletes synchronously) and builds an absolute `Location` carrying the
+  request's `api-version`. Each DELETE advertises the operation via both
+  `Azure-AsyncOperation` (which the azurerm poller prefers and which expects
+  the `{"status":"Succeeded"}` body the endpoint returns) and `Location`. This
+  affected every async-delete resource (NSG, LB and children, CDN, subnet,
+  DNS zone, VNet, AKS, Redis, App Gateway, Public IP, resource group). See
+  TODO.md M7.
+- AKS: `POST .../managedClusters/{name}/listClusterUserCredential` and
+  `listClusterAdminCredential` are now implemented, returning a kubeconfig
+  that the azurerm provider parses into `kube_config` /
+  `kube_admin_config`. Previously both fell through to the unhandled-route
+  handler and its 501 NotImplemented failed every
+  `azurerm_kubernetes_cluster` apply (aks-workload scenario).
+- static-site scenario: azurerm pinned to `>= 4.0, < 4.35`. From v4.35.0
+  the provider blocks creating classic CDN resources after the 2025-10-01
+  deprecation date (client-side wall-clock check, no opt-out), failing the
+  scenario before any request reaches azemu. Migration to Front Door is
+  tracked in TODO.md.
+- All Terraform scenarios (and the top-level `examples/terraform`) now pin
+  azurerm to `>= 4.0, < 4.35`, and `make tf-test*` no longer passes
+  `-upgrade`. Previously `init -upgrade` pulled the newest azurerm on every
+  run, so CI silently drifted onto provider versions azemu was never
+  validated against. azurerm 4.78+ added an `azurerm_storage_container`
+  account-ID check requiring a `core.windows.net` blob-endpoint suffix,
+  which azemu's Azurite path-style endpoints (per ADR 0001) do not satisfy;
+  that broke the ado-pipeline scenario. Pinning makes scenario CI
+  deterministic. See TODO.md M6.
+- CI: `make tf-test-scenarios` now runs every scenario and reports a
+  pass/fail summary instead of aborting on the first failure. The old
+  fail-fast loop hid the status of every scenario alphabetically after the
+  first broken one.
+
+### Added (Key Vault keys, sign-only RSA)
+
+- Key Vault keys data plane: create/import RSA keys (2048/3072/4096) with
+  versioning, public-JWK GET, list and list-versions, PATCH updates,
+  delete with cascade, and the `sign` operation (RS256, RSASSA-PKCS1-v1_5
+  over a SHA-256 digest), including the versionless form that resolves the
+  current key version. Signatures verify against the returned public JWK.
+  (`azurerm_key_vault_key`)
+- Host-based Key Vault data-plane routing: `vaultUri` is now
+  `https://{vault}.vault.localhost[:port]/` and root-level `/keys` and
+  `/secrets` routes resolve the vault from the Host header. The azurerm
+  provider requires both the `{name}.vault.**` host shape
+  (`KeyVaultIDFromBaseUrl`) and vault-less nested-item URLs
+  (`ParseNestedItemID`); the previous path-style ids broke
+  `azurerm_key_vault_secret` and `azurerm_key_vault_key` read-back.
+  Path-style routes under `/keyvault/{vault}/` remain for raw clients.
+- Subscription-wide Resources list (`GET /subscriptions/{sub}/resources`)
+  with `$filter=resourceType eq '...'` support; used by the provider to
+  map a vaultUri back to the vault ARM ID.
+- Key Vault soft-delete purge stubs: `POST .../deletedvaults/{name}/purge`
+  (the shape `vaults.VaultsClient#PurgeDeleted` actually sends) and
+  data-plane `DELETE /deleted{keys,secrets}/{name}` returning 204.
+- Storage `blobServices/default` PUT: the `blob_properties` block on
+  `azurerm_storage_account` no longer fails with 405; properties round-trip
+  on GET.
+- `AZURITE_ACCOUNTS` pre-registration in `docker-compose.yml`
+  (`devstoreaccount1`, `examplestorage001`, `azemuotasa`) plus a SETUP.md
+  section on registering Terraform-chosen storage account names.
+- `examples/terraform/scenarios/ota-updates/`: OTA update pipeline scenario
+  (storage account + key vault + RSA signing key) with a documented
+  publish-time sign call.
+- `azurerm_key_vault_key` example in `examples/terraform/keyvault.tf` with
+  a `key_vault_key_id` output and test assertion.
+
+### Changed (Key Vault keys, sign-only RSA)
+
+- The self-signed TLS certificate now carries a `*.vault.localhost` SAN.
+  Existing persisted bundles are regenerated automatically on startup and
+  must be trusted again (`security add-trusted-cert ...` on macOS; see
+  docs/TROUBLESHOOTING.md).
+- Key Vault nested-item ids (secret `id`, key `kid`) moved from
+  `{kvEndpoint}/keyvault/{vault}/...` to
+  `https://{vault}.vault.localhost[:port]/...`.
+
 ### Added (Phase 7.7: Azure Cache for Redis)
 
 - `Microsoft.Cache/Redis` CRUD + HEAD + list-by-RG + list-by-sub.
@@ -103,6 +267,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   rationale, alternatives, and consequences. Status: Implemented.
 - `docs/SETUP.md`: Storage and Azurite section; `AZEMU_AZURITE_ENDPOINT` in
   the env-var table; Azurite port table.
+
+### Added (Phase 8: identity, AKS, Azure DevOps bridge)
+
+- IMDS token endpoint at `/metadata/identity/oauth2/token`. Enforces the
+  `Metadata: true` header, returns `expires_in` as a string per the IMDS
+  spec, and signs an RS256 JWT with the same key as the OAuth2 service.
+- Workload identity federation: the token endpoint exchanges a matching
+  `client_assertion` for an azemu-signed access token using the issuer,
+  subject, and audience rules stored on a federated identity credential, and
+  Key Vault data-plane routes honour that bearer token.
+- Azure DevOps OIDC issuer on the ADO port (`:4569`, plain HTTP): its own
+  RSA-2048 signing key, `/.well-known/openid-configuration`,
+  `/discovery/keys`, and an OIDC token endpoint. The JWT `sub` is
+  `sc://{org}/{project}/azemu-service-connection`, matching the
+  `SYSTEM_OIDCREQUESTURI` surface a pipeline calls.
+- Azure DevOps Service Connections CRUD
+  (`/{org}/{project}/_apis/serviceendpoint/endpoints`): auto-assigned UUID,
+  `isReady: true`, name-filter on list, synchronous `204` delete.
+- `Microsoft.ContainerService/managedClusters` and node pools management
+  plane: computed `fqdn`, default Kubernetes version, SKU and identity at the
+  top level, cascade-delete node pools, parent-existence check on pool PUT,
+  and `listClusterUserCredential` / `listClusterAdminCredential` returning a
+  parseable kubeconfig. (`azurerm_kubernetes_cluster`,
+  `azurerm_kubernetes_cluster_node_pool`)
+- `Microsoft.ManagedIdentity/userAssignedIdentities` CRUD with deterministic
+  `principalId` / `clientId` (SHA-1 UUID) for stable plan/apply/refresh.
+  (`azurerm_user_assigned_identity`)
+- `federatedIdentityCredentials` child CRUD under user-assigned identities,
+  storing the issuer/subject/audience rules used by the workload-identity
+  token exchange. (`azurerm_federated_identity_credential`)
+- New scenarios under `examples/terraform/scenarios/`: `three-tier`,
+  `static-site`, `dns-with-records`, `aks-workload`, and `ado-pipeline`. Each
+  runs end to end against the real `azurerm` provider and doubles as a
+  `terraform test` in scenario CI.
+
+### Added (Phase 9: CLI subcommands)
+
+- `azemu serve` subcommand carrying the emulator server; subcommand dispatch
+  added to `cmd/azemu` so the binary fronts a toolchain wrapper.
+- `azemu tf` Terraform adapter: auto-starts azemu, injects `SSL_CERT_FILE`
+  and the `ARM_*` variables, and execs `terraform`. Replaces `scripts/aztf`,
+  which was removed.
+- `azemu pulumi`, `azemu kubectl`, and `azemu python` adapters that run the
+  same auto-start-and-inject flow for those toolchains.
+- `azemu status` health-check, `azemu parity` supported-resource listing, and
+  `azemu snapshot` state-management subcommands.
 
 ## [v0.1.0] - 2026-04-21
 
