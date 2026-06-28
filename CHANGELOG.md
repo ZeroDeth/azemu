@@ -19,6 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.3.0] - 2026-06-28
+
 ### Added
 
 - CDN content data plane. The CDN was control-plane only: azemu stored the
@@ -265,6 +267,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   rationale, alternatives, and consequences. Status: Implemented.
 - `docs/SETUP.md`: Storage and Azurite section; `AZEMU_AZURITE_ENDPOINT` in
   the env-var table; Azurite port table.
+
+### Added (Phase 8: identity, AKS, Azure DevOps bridge)
+
+- IMDS token endpoint at `/metadata/identity/oauth2/token`. Enforces the
+  `Metadata: true` header, returns `expires_in` as a string per the IMDS
+  spec, and signs an RS256 JWT with the same key as the OAuth2 service.
+- Workload identity federation: the token endpoint exchanges a matching
+  `client_assertion` for an azemu-signed access token using the issuer,
+  subject, and audience rules stored on a federated identity credential, and
+  Key Vault data-plane routes honour that bearer token.
+- Azure DevOps OIDC issuer on the ADO port (`:4569`, plain HTTP): its own
+  RSA-2048 signing key, `/.well-known/openid-configuration`,
+  `/discovery/keys`, and an OIDC token endpoint. The JWT `sub` is
+  `sc://{org}/{project}/azemu-service-connection`, matching the
+  `SYSTEM_OIDCREQUESTURI` surface a pipeline calls.
+- Azure DevOps Service Connections CRUD
+  (`/{org}/{project}/_apis/serviceendpoint/endpoints`): auto-assigned UUID,
+  `isReady: true`, name-filter on list, synchronous `204` delete.
+- `Microsoft.ContainerService/managedClusters` and node pools management
+  plane: computed `fqdn`, default Kubernetes version, SKU and identity at the
+  top level, cascade-delete node pools, parent-existence check on pool PUT,
+  and `listClusterUserCredential` / `listClusterAdminCredential` returning a
+  parseable kubeconfig. (`azurerm_kubernetes_cluster`,
+  `azurerm_kubernetes_cluster_node_pool`)
+- `Microsoft.ManagedIdentity/userAssignedIdentities` CRUD with deterministic
+  `principalId` / `clientId` (SHA-1 UUID) for stable plan/apply/refresh.
+  (`azurerm_user_assigned_identity`)
+- `federatedIdentityCredentials` child CRUD under user-assigned identities,
+  storing the issuer/subject/audience rules used by the workload-identity
+  token exchange. (`azurerm_federated_identity_credential`)
+- New scenarios under `examples/terraform/scenarios/`: `three-tier`,
+  `static-site`, `dns-with-records`, `aks-workload`, and `ado-pipeline`. Each
+  runs end to end against the real `azurerm` provider and doubles as a
+  `terraform test` in scenario CI.
+
+### Added (Phase 9: CLI subcommands)
+
+- `azemu serve` subcommand carrying the emulator server; subcommand dispatch
+  added to `cmd/azemu` so the binary fronts a toolchain wrapper.
+- `azemu tf` Terraform adapter: auto-starts azemu, injects `SSL_CERT_FILE`
+  and the `ARM_*` variables, and execs `terraform`. Replaces `scripts/aztf`,
+  which was removed.
+- `azemu pulumi`, `azemu kubectl`, and `azemu python` adapters that run the
+  same auto-start-and-inject flow for those toolchains.
+- `azemu status` health-check, `azemu parity` supported-resource listing, and
+  `azemu snapshot` state-management subcommands.
 
 ## [v0.1.0] - 2026-04-21
 
