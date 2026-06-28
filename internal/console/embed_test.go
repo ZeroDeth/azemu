@@ -25,7 +25,7 @@ func portOf(t *testing.T, serverURL string) int {
 }
 
 func TestHandler_servesStaticAssets(t *testing.T) {
-	h := Handler(4566, 4568)
+	h := Handler(4566, 4568, nil)
 
 	tests := []struct {
 		name        string
@@ -57,7 +57,7 @@ func TestHandler_servesStaticAssets(t *testing.T) {
 }
 
 func TestHandler_spaFallback(t *testing.T) {
-	h := Handler(4566, 4568)
+	h := Handler(4566, 4568, nil)
 
 	tests := []struct {
 		name       string
@@ -92,8 +92,9 @@ func TestHandler_spaFallback(t *testing.T) {
 }
 
 func TestHandler_proxiesAPIAndHealth(t *testing.T) {
-	// ARM backend is HTTPS (self-signed) in production; the proxy skips TLS
-	// verification, so a TLS test server stands in for it.
+	// ARM backend is HTTPS (self-signed) in production. This test passes a nil
+	// cert pool so the proxy skips verification (the httptest cert has no
+	// localhost SAN to match); it exercises proxy routing, not TLS trust.
 	arm := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("arm:" + r.URL.Path))
@@ -107,7 +108,7 @@ func TestHandler_proxiesAPIAndHealth(t *testing.T) {
 	}))
 	defer health.Close()
 
-	h := Handler(portOf(t, arm.URL), portOf(t, health.URL))
+	h := Handler(portOf(t, arm.URL), portOf(t, health.URL), nil)
 
 	tests := []struct {
 		name     string

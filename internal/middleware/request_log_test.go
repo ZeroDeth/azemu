@@ -3,6 +3,7 @@ package middleware
 import (
 	"bufio"
 	"context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -149,37 +150,57 @@ func TestRequestRecorder_SubscribeWithBackfill_futureEntriesOnChannel(t *testing
 // a connecting client lands in exactly one of {backfill, channel}, never both
 // and never neither.
 func TestRequestRecorder_SubscribeWithBackfill_noLossNoDuplication(t *testing.T) {
-	rr := NewRequestRecorder(100)
-	rr.record(RequestEntry{Timestamp: "seed", Method: "GET", Path: "/seed", Status: 200})
+	// n stays under the per-client channel buffer (64) so no entry is dropped
+	// by record's non-blocking fan-out. This test targets the subscribe/backfill
+	// transition (every entry lands in exactly one of backfill/channel), not the
+	// separate buffer-overflow backpressure behaviour.
+	const n = 50
+	rr := NewRequestRecorder(128)
 
-	ch, backfill := rr.subscribeWithBackfill(100)
-	defer rr.unsubscribe(ch)
-
-	const n = 20
+	// The writer races the subscribe/backfill transition: it starts before
+	// subscribeWithBackfill and records concurrently, so each entry may land in
+	// either the backfill snapshot or the live channel. Every unique id must
+	// appear in exactly one of them, never both (duplication) and never neither
+	// (loss). Unique ids per entry are what make both failure modes detectable;
+	// reusing one id would let a duplicate mask a drop.
 	go func() {
 		for i := 0; i < n; i++ {
-			rr.record(RequestEntry{Timestamp: "x", Method: "GET", Path: "/p", Status: 200})
+			rr.record(RequestEntry{Timestamp: fmt.Sprintf("id-%d", i), Method: "GET", Path: "/p", Status: 200})
 		}
 	}()
 
-	seen := make(map[string]int)
+	// Subscribe while records are still streaming in.
+	ch, backfill := rr.subscribeWithBackfill(128)
+	defer rr.unsubscribe(ch)
+
+	seen := make(map[string]int, n)
 	for _, e := range backfill {
 		seen[e.Timestamp]++
 	}
-	for i := 0; i < n; i++ {
+
+	// Drain the channel as entries arrive until every id is accounted for. The
+	// split between backfill and channel is nondeterministic, so read until the
+	// union is complete rather than assuming a fixed channel count.
+	timeout := time.After(5 * time.Second)
+	for len(seen) < n {
 		select {
 		case e := <-ch:
 			seen[e.Timestamp]++
-		case <-time.After(2 * time.Second):
-			t.Fatalf("only received %d of %d streamed entries", i, n)
+		case <-timeout:
+			t.Fatalf("only accounted for %d of %d ids before timeout", len(seen), n)
 		}
 	}
 
-	if seen["seed"] != 1 {
-		t.Fatalf("seed entry seen %d times, want exactly 1", seen["seed"])
-	}
-	if seen["x"] != n {
-		t.Fatalf("streamed entries seen %d times, want %d", seen["x"], n)
+	for i := 0; i < n; i++ {
+		id := fmt.Sprintf("id-%d", i)
+		switch seen[id] {
+		case 1:
+			// exactly once: correct
+		case 0:
+			t.Fatalf("%s was lost (in neither backfill nor channel)", id)
+		default:
+			t.Fatalf("%s was duplicated (seen %d times)", id, seen[id])
+		}
 	}
 }
 

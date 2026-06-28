@@ -2,6 +2,7 @@ package console
 
 import (
 	"crypto/tls"
+	"crypto/x509"
 	"embed"
 	"fmt"
 	"io/fs"
@@ -26,20 +27,30 @@ var distFS embed.FS
 // All other paths either serve embedded static assets or fall back to
 // index.html for client-side routing (only for navigation requests that
 // Accept text/html; asset 404s become plain 404 responses).
-func Handler(apiPort, healthPort int) http.Handler {
+//
+// armCertPool is the trust anchor for the ARM server's self-signed cert. When
+// non-nil the proxy verifies the loopback TLS connection against it instead of
+// skipping verification; the ARM cert carries a `localhost` SAN so the proxy's
+// `localhost` dial target validates. A nil pool falls back to skipping
+// verification (the loopback-only connection still never leaves the host).
+func Handler(apiPort, healthPort int, armCertPool *x509.CertPool) http.Handler {
 	sub, err := fs.Sub(distFS, "dist")
 	if err != nil {
 		panic("console: embedded dist not found: " + err.Error())
 	}
 	fileServer := http.FileServer(http.FS(sub))
 
-	// Proxy for ARM API calls. The ARM server uses a self-signed TLS cert so
-	// we skip verification on the loopback-only connection.
+	// Proxy for ARM API calls. The ARM server uses a self-signed TLS cert; trust
+	// it via the supplied pool rather than disabling verification.
+	armTLS := &tls.Config{MinVersion: tls.VersionTLS12}
+	if armCertPool != nil {
+		armTLS.RootCAs = armCertPool
+	} else {
+		armTLS.InsecureSkipVerify = true //nolint:gosec // loopback only; no cert pool supplied
+	}
 	armTarget, _ := url.Parse(fmt.Sprintf("https://localhost:%d", apiPort))
 	armProxy := httputil.NewSingleHostReverseProxy(armTarget)
-	armProxy.Transport = &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, //nolint:gosec // loopback only
-	}
+	armProxy.Transport = &http.Transport{TLSClientConfig: armTLS}
 
 	// Proxy for the plain-HTTP health server.
 	healthTarget, _ := url.Parse(fmt.Sprintf("http://localhost:%d", healthPort))

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -241,9 +242,14 @@ func runServe(args []string) error {
 		WriteTimeout: 30 * time.Second,
 	}
 
+	// Trust anchor for the console's ARM reverse proxy: the server's own
+	// self-signed leaf, so the loopback proxy verifies TLS instead of skipping
+	// it. nil if the cert cannot be parsed; Handler then falls back to skipping
+	// verification on the loopback-only hop.
+	armCertPool := armCertPoolFromTLS(tlsCfg)
 	consoleSrv := &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.ConsolePort),
-		Handler:      console.Handler(cfg.HTTPPort, cfg.HealthPort),
+		Handler:      console.Handler(cfg.HTTPPort, cfg.HealthPort, armCertPool),
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 10 * time.Second,
 	}
@@ -304,6 +310,23 @@ func runServe(args []string) error {
 	}
 
 	return nil
+}
+
+// armCertPoolFromTLS builds a cert pool containing the server's own leaf so the
+// console's loopback ARM reverse proxy can verify TLS instead of skipping it.
+// Returns nil if the certificate cannot be parsed, in which case the console
+// handler falls back to skipping verification on the loopback-only hop.
+func armCertPoolFromTLS(cert tls.Certificate) *x509.CertPool {
+	if len(cert.Certificate) == 0 {
+		return nil
+	}
+	leaf, err := x509.ParseCertificate(cert.Certificate[0])
+	if err != nil {
+		return nil
+	}
+	pool := x509.NewCertPool()
+	pool.AddCert(leaf)
+	return pool
 }
 
 // cdnHostMux dispatches CDN content hosts ({endpoint}.azureedge.net) to the CDN
