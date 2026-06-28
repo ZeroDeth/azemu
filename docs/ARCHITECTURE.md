@@ -26,6 +26,7 @@ flowchart LR
     store --> persist["File persistence<br/>(AZEMU_PERSIST_PATH)"]
     store --> api["State API<br/>/api/state/{export,import,reset}"]
     ops["Ops / tests"] -->|"HTTP :4568"| health["Health endpoint<br/>GET /health"]
+    ops -->|"HTTP :4570"| console["Web Console<br/>SPA + SSE request log"]
 ```
 
 ```text
@@ -56,6 +57,9 @@ Azurite sidecar (HTTP :10000-10002)
     ^
     |  path-style endpoints returned in primaryEndpoints block
     +-- ARM Storage handlers (AZEMU_AZURITE_ENDPOINT)
+
+Ops / tests ----------> HTTP :4570 -------> Web Console (embedded SPA)
+                                              +-- SSE request log (GET /api/requests/stream)
 ```
 
 Both ports serve HTTPS using the same self-signed ECDSA P-256 certificate.
@@ -137,7 +141,9 @@ internal/
   middleware/azure.go          Azure headers, api-version enforcement
   middleware/pathcase.go       NormalizePath: lowercase canonical ARM literals, collapse `//`
   middleware/logging.go        request/response logging with zerolog
+  middleware/request_log.go    RequestRecorder: ring buffer + SSE fan-out for web console
   middleware/unhandled.go      catch-all for unrouted paths (log + 501)
+  console/embed.go             embed.FS SPA handler for the web console (port 4570)
 pkg/
   config/config.go             env-based config (ports, CertPath, AzuriteEndpoint, ...)
   armtypes/types.go            shared ARM request/response structs

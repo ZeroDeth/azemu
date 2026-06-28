@@ -78,6 +78,7 @@ nav:
       - Architecture: concepts/architecture.md
       - ARM Fidelity: concepts/arm-fidelity.md
       - Parity Matrix: concepts/parity-matrix.md
+      - Web Console: concepts/web-console.md
   - Resources:
       - Troubleshooting: resources/troubleshooting.md
       - Design Decisions:

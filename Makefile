@@ -1,4 +1,4 @@
-.PHONY: build run test docker docker-run docker-compose docker-compose-down clean smoke tf-test tf-test-scenarios coverage ota-delivery
+.PHONY: build run test docker docker-run docker-compose docker-compose-down clean smoke tf-test tf-test-scenarios coverage ota-delivery console-build console-dev
 
 BINARY  := azemu
 MODULE  := github.com/zerodeth/azemu
@@ -58,6 +58,14 @@ tf-test-scenarios:
 	echo "passed:$$passed"; \
 	echo "failed:$$failed"; \
 	if [ -n "$$failed" ]; then exit 1; fi
+
+console-build:
+	cd console && npm ci && npm run build
+	rm -rf internal/console/dist
+	cp -r console/dist internal/console/dist
+
+console-dev:
+	cd console && npm run dev
 
 clean:
 	rm -rf bin/ coverage.out coverage.html
