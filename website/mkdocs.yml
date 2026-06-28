@@ -81,10 +81,11 @@ nav:
       - Web Console: concepts/web-console.md
   - Resources:
       - Troubleshooting: resources/troubleshooting.md
-      - Design Decisions:
-          - resources/design-decisions/0001-delegate-storage-data-plane-to-azurite.md
-          - resources/design-decisions/0002-azemu-plus-kind-for-aks-workload-deployments.md
-          - resources/design-decisions/0003-add-azure-cache-for-redis.md
+      - Design notes:
+          - resources/design-notes/0001-delegate-storage-data-plane-to-azurite.md
+          - resources/design-notes/0002-azemu-plus-kind-for-aks-workload-deployments.md
+          - resources/design-notes/0003-add-azure-cache-for-redis.md
+          - resources/design-notes/0004-azure-devops-pipelines-scope.md
   - Community:
       - Contributing: community/contributing.md
       - Roadmap: community/roadmap.md

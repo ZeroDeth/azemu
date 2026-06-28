@@ -1,10 +1,7 @@
-# ADR 0001: Delegate Storage data plane to Azurite
+# Design note 1: Delegate Storage data plane to Azurite
 
 - Status: Implemented
 - Date: 2026-04-21
-- Implemented: 2026-04-22
-- Deciders: @ZeroDeth
-- Supersedes: none
 
 ## Context
 
@@ -82,7 +79,7 @@ In concrete terms:
    states: "Storage data-plane goes exactly deep enough that the azurerm
    provider's container creation and blob-metadata writes round-trip."
    The positioning table also credits Azurite as "data-plane fidelity for
-   one service" and hints at deferral. This ADR promotes that hint to a
+   one service" and hints at deferral. This design note promotes that hint to a
    decision.
 
 4. **User experience stays one command.** `docker compose up -d` now
@@ -174,14 +171,14 @@ The following was built and shipped on branch `feat/phase7-storage-account`:
 - `docs/PARITY.md`: Storage Accounts row updated; data plane column now
   reads "Delegated to Azurite".
 
-**Note on URL style:** the ADR described "IP-style URLs
+**Note on URL style:** the design note described "IP-style URLs
 (`http://localhost:10000/<account>`)" as the default. What shipped uses the
 same path-style layout but derives the host from `AZEMU_AZURITE_ENDPOINT`,
 so the hostname inside Docker is `azurite` rather than `localhost`. This
 is strictly compatible with the decision; the docker-compose hostname is
 what users actually see inside Docker networks.
 
-**Deferred items** (not blocked by this ADR but not yet implemented):
+**Deferred items** (not blocked by this design note but not yet implemented):
 
 - `regenerateKey` action endpoint.
 - `.../fileServices/shares` ARM sub-resources.

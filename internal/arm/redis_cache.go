@@ -18,7 +18,7 @@ const redisCacheTypeString = "Microsoft.Cache/Redis"
 // redisDevPrimaryKey and redisDevSecondaryKey are deterministic development
 // keys returned by listKeys. The primary value MUST match the Redis sidecar's
 // --requirepass directive so SDK clients authenticated by these keys succeed
-// against the real Redis data plane. See ADR 0003.
+// against the real Redis data plane. See design note 3.
 const (
 	redisDevPrimaryKey   = "azemu-dev-primary-key"
 	redisDevSecondaryKey = "azemu-dev-secondary-key"

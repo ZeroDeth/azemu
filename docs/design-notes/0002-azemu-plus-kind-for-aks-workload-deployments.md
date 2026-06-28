@@ -1,9 +1,7 @@
-# ADR 0002: azemu + kind hybrid for AKS workload deployments
+# Design note 2: azemu + kind hybrid for AKS workload deployments
 
 - Status: Proposed
 - Date: 2026-04-28
-- Deciders: @ZeroDeth
-- Supersedes: none
 
 ## Context
 
@@ -26,8 +24,8 @@ signing key, and Blob storage for assets) needs:
    runs liveness probes, and mounts CSI volumes (azemu does **not**
    serve this).
 3. Data-plane backends the workload reads and writes: Blob via Azurite
-   (already delegated in ADR 0001), Key Vault secrets via the azemu
-   secrets data plane, Redis (proposed separately in ADR 0003).
+   (already delegated in design note 1), Key Vault secrets via the azemu
+   secrets data plane, Redis (proposed separately in design note 3).
 4. Workload-identity federation so a pod's projected service-account
    token is exchanged for an Azure access token tied to a Managed
    Identity (Federated Identity Credential, Phase 8.2 in TASKS.md).
@@ -60,7 +58,7 @@ In concrete terms:
 - The `kind` cluster is configured to trust azemu's TLS cert and resolve
   azemu hostnames inside the cluster network so a pod can reach the
   Azure data planes (Blob via Azurite, Key Vault via azemu, Redis via
-  the sidecar from ADR 0003) over the same `metadata_host` intercept
+  the sidecar from design note 3) over the same `metadata_host` intercept
   pattern.
 - Workload identity wiring uses the OIDC issuer azemu already serves
   (Phase 8.5) plus the Federated Identity Credential resource (Phase
@@ -75,7 +73,7 @@ In concrete terms:
    resource in the roster combined and would compete with `kind`/`k3d`,
    which already do this job well. Rebuilding it inside azemu would
    violate the "do not reimplement what upstream already ships"
-   principle that drove ADR 0001.
+   principle that drove design note 1.
 
 2. **Separation of concerns matches the cloud.** Real Azure separates
    the AKS control plane (Microsoft's responsibility) from the workload
@@ -144,7 +142,7 @@ In concrete terms:
 3. **Embed `kind` as a subprocess inside the azemu binary.** Rejected.
    Mixes runtimes inside one image, complicates the Dockerfile, and
    loses the clean "optional second runtime" on/off switch that
-   sibling-process composition gives us. Same reasoning as ADR 0001's
+   sibling-process composition gives us. Same reasoning as design note 1's
    alternative 2.
 
 4. **Document the hybrid in a wiki or external blog post.** Rejected.
@@ -160,7 +158,7 @@ The following is the planned scope when `scenarios/aks-workload/` lands:
 - `examples/terraform/scenarios/aks-workload/`: Terraform config covering
   RG, VNet, Subnet, AKS stub, Storage Account, Blob container, Key Vault,
   Managed Identity, and Federated Identity Credential. Optional Redis
-  cache (per ADR 0003) for scenarios that require it.
+  cache (per design note 3) for scenarios that require it.
 - `examples/terraform/scenarios/aks-workload/manifests/`: a deployment
   YAML the `kind` cluster receives. Kept minimal; demonstrates Key Vault
   CSI mount and Blob read.
@@ -179,7 +177,7 @@ The following is the planned scope when `scenarios/aks-workload/` lands:
 
 - **kind vs k3d.** Both are credible. `kind` is more widely deployed in
   Microsoft and CNCF examples; `k3d` starts faster. Phase 8.7 picks one
-  on first implementation; the ADR does not bind us.
+  on first implementation; the design note does not bind us.
 - **Reuse of `:4566`/`:4567` from inside the `kind` network.** The
   scenario can either expose azemu via host networking or via a
   Kubernetes Service of type ExternalName. The first is simpler; the
@@ -192,10 +190,10 @@ The following is the planned scope when `scenarios/aks-workload/` lands:
 - TASKS.md Phase 8.4 (`azurerm_kubernetes_cluster` management stub),
   Phase 8.7 (`scenarios/aks-workload/`), Phase 8.2 (Federated Identity
   Credential).
-- ADR 0001 (delegate Storage data plane to Azurite): same pattern at
+- design note 1 (delegate Storage data plane to Azurite): same pattern at
   the Storage layer.
-- ADR 0003 (add Azure Cache for Redis): companion proposal for the
+- design note 3 (add Azure Cache for Redis): companion proposal for the
   Redis backend the multi-replica scenario needs.
 - [kind](https://kind.sigs.k8s.io/), [k3d](https://k3d.io/).
 - [expo-open-ota](https://github.com/expo/expo-open-ota): the public
-  reference workload used to motivate this ADR's example shape.
+  reference workload used to motivate this design note's example shape.

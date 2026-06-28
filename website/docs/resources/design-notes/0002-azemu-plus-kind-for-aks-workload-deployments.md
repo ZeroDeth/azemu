@@ -1,15 +1,14 @@
-# Design Decision 0002: azemu + kind hybrid for AKS workload deployments
+# Design note 2: azemu + kind hybrid for AKS workload deployments
 
-<div class="adr-meta">
-<span class="adr-meta-item"><span class="adr-status adr-status--proposed">Proposed</span></span>
-<span class="adr-meta-item"><strong>Date</strong> 2026-04-28</span>
-<span class="adr-meta-item"><strong>Decider</strong> @ZeroDeth</span>
-<a href="https://github.com/ZeroDeth/azemu/blob/main/docs/adr/0002-azemu-plus-kind-for-aks-workload-deployments.md" class="adr-github-link">Full text on GitHub →</a>
+<div class="designnote-meta">
+<span class="designnote-meta-item"><span class="designnote-status designnote-status--proposed">Proposed</span></span>
+<span class="designnote-meta-item"><strong>Date</strong> 2026-04-28</span>
+<a href="https://github.com/ZeroDeth/azemu/blob/main/docs/design-notes/0002-azemu-plus-kind-for-aks-workload-deployments.md" class="designnote-github-link">Full text on GitHub →</a>
 </div>
 
-<div class="adr-decision" markdown>
+<div class="designnote-decision" markdown>
 
-<span class="adr-decision-label">▸ DECISION</span>
+<span class="designnote-decision-label">▸ DECISION</span>
 
 **Adopt `azemu + kind` as the supported pattern for AKS workload deployment
 scenarios. Document it as a first-class hybrid and ship a reference scenario
@@ -23,7 +22,7 @@ under `examples/terraform/scenarios/aks-workload/`.**
   against azemu; a `kubectl apply` step deploys the workload to `kind`.
 - The `kind` cluster trusts azemu's TLS cert and resolves azemu hostnames
   inside the cluster network, so pods reach Blob (Azurite), Key Vault, and
-  Redis (ADR 0003) over the same `metadata_host` intercept.
+  Redis (design note 3) over the same `metadata_host` intercept.
 - Workload identity uses azemu's OIDC issuer (Phase 8.5) and Federated
   Identity Credential resource (Phase 8.2).
 

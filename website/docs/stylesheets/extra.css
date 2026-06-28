@@ -478,11 +478,11 @@
 }
 
 /* =========================================================
-   ADR (Design Decision) pages
+   Design note pages
    ========================================================= */
 
 /* Status badge */
-.adr-status {
+.designnote-status {
   display: inline-block;
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.7rem;
@@ -493,32 +493,32 @@
   border-radius: 20px;
 }
 
-.adr-status--implemented {
+.designnote-status--implemented {
   background: rgba(0, 255, 65, 0.1);
   color: var(--azemu-green);
   border: 1px solid var(--azemu-green-dim);
 }
 
-[data-md-color-scheme="default"] .adr-status--implemented {
+[data-md-color-scheme="default"] .designnote-status--implemented {
   background: rgba(26, 127, 55, 0.1);
   color: var(--azemu-green);
   border: 1px solid var(--azemu-green-dim);
 }
 
-.adr-status--proposed {
+.designnote-status--proposed {
   background: rgba(210, 153, 34, 0.12);
   color: var(--azemu-amber);
   border: 1px solid var(--azemu-amber);
 }
 
-.adr-status--deprecated {
+.designnote-status--deprecated {
   background: rgba(248, 81, 73, 0.1);
   color: #f85149;
   border: 1px solid rgba(248, 81, 73, 0.4);
 }
 
 /* Meta strip */
-.adr-meta {
+.designnote-meta {
   display: flex;
   gap: 0.6rem 1.6rem;
   flex-wrap: wrap;
@@ -532,17 +532,17 @@
   font-family: 'JetBrains Mono', monospace;
 }
 
-.adr-meta-item {
+.designnote-meta-item {
   color: var(--md-default-fg-color--light);
   white-space: nowrap;
 }
 
-.adr-meta-item strong {
+.designnote-meta-item strong {
   color: var(--md-default-fg-color);
   margin-right: 0.3rem;
 }
 
-.adr-github-link {
+.designnote-github-link {
   margin-left: auto;
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.75rem;
@@ -556,28 +556,28 @@
   white-space: nowrap;
 }
 
-.adr-github-link:hover {
+.designnote-github-link:hover {
   border-color: var(--azemu-green);
   color: var(--azemu-green) !important;
 }
 
 /* Decision callout */
-.adr-decision {
+.designnote-decision {
   border-left: 3px solid var(--azemu-green);
   padding: 1rem 1.5rem;
   margin: 1.5rem 0;
   border-radius: 0 6px 6px 0;
 }
 
-[data-md-color-scheme="slate"] .adr-decision {
+[data-md-color-scheme="slate"] .designnote-decision {
   background: rgba(0, 255, 65, 0.04);
 }
 
-[data-md-color-scheme="default"] .adr-decision {
+[data-md-color-scheme="default"] .designnote-decision {
   background: rgba(26, 127, 55, 0.05);
 }
 
-.adr-decision-label {
+.designnote-decision-label {
   display: block;
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.68rem;
@@ -587,7 +587,7 @@
   margin-bottom: 0.6rem;
 }
 
-/* Suppress permalink on ADR section headings (reduce visual noise) */
-.adr-meta ~ * .headerlink {
+/* Suppress permalink on design note section headings (reduce visual noise) */
+.designnote-meta ~ * .headerlink {
   opacity: 0.4;
 }

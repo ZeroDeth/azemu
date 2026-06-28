@@ -1,16 +1,14 @@
-# Design Decision 0001: Delegate Storage data plane to Azurite
+# Design note 1: Delegate Storage data plane to Azurite
 
-<div class="adr-meta">
-<span class="adr-meta-item"><span class="adr-status adr-status--implemented">Implemented</span></span>
-<span class="adr-meta-item"><strong>Date</strong> 2026-04-21</span>
-<span class="adr-meta-item"><strong>Implemented</strong> 2026-04-22</span>
-<span class="adr-meta-item"><strong>Decider</strong> @ZeroDeth</span>
-<a href="https://github.com/ZeroDeth/azemu/blob/main/docs/adr/0001-delegate-storage-data-plane-to-azurite.md" class="adr-github-link">Full text on GitHub →</a>
+<div class="designnote-meta">
+<span class="designnote-meta-item"><span class="designnote-status designnote-status--implemented">Implemented</span></span>
+<span class="designnote-meta-item"><strong>Date</strong> 2026-04-21</span>
+<a href="https://github.com/ZeroDeth/azemu/blob/main/docs/design-notes/0001-delegate-storage-data-plane-to-azurite.md" class="designnote-github-link">Full text on GitHub →</a>
 </div>
 
-<div class="adr-decision" markdown>
+<div class="designnote-decision" markdown>
 
-<span class="adr-decision-label">▸ DECISION</span>
+<span class="designnote-decision-label">▸ DECISION</span>
 
 **azemu implements the Storage management plane (ARM) and delegates the
 Storage data plane to Azurite, shipped as a sidecar in `docker-compose.yml`.**
