@@ -39,6 +39,7 @@ func newTestServer(t *testing.T) *httptest.Server {
 	r.Use(mw.RequireAPIVersion)
 	r.Route("/subscriptions", ar.Routes)
 	r.Route("/keyvault", ar.KeyVaultDataPlaneRoutes)
+	ar.KeyVaultNestedItemRoutes(r)
 	srv := httptest.NewServer(r)
 	t.Cleanup(srv.Close)
 	return srv
@@ -119,6 +120,20 @@ func httpPost(t *testing.T, url, body string) *http.Response {
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		t.Fatalf("do POST %s: %v", url, err)
+	}
+	return resp
+}
+
+func httpPatch(t *testing.T, url, body string) *http.Response {
+	t.Helper()
+	req, err := http.NewRequest(http.MethodPatch, withAPIVersion(url), bytes.NewBufferString(body))
+	if err != nil {
+		t.Fatalf("new request: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("do PATCH %s: %v", url, err)
 	}
 	return resp
 }

@@ -1,9 +1,31 @@
 # Contributing to azemu
 
-Thanks for your interest in azemu. This document covers how to add a
-resource, the test bar every change has to clear, and the PR checklist.
+azemu is an open-source project and contributions of every size are
+welcome. You do not need to be an Azure or Go expert to help; a clear bug
+report or a docs fix moves the project forward as much as a new resource
+handler does.
 
-If you are new here, start with:
+## Ways to contribute
+
+- **Report a compatibility gap.** If `terraform apply` or `tofu apply` fails
+  against azemu, open an [issue](https://github.com/zerodeth/azemu/issues)
+  with the config and the error. These are the most useful reports we get.
+- **Add a resource.** The most common code contribution. See
+  [Adding a new ARM resource](#adding-a-new-arm-resource) below.
+- **Improve the docs.** Every page on this site has an edit pencil in the
+  top-right corner that opens it directly on GitHub. Typos, clarifications,
+  and new troubleshooting entries are all fair game.
+- **Ask and answer questions.** Join
+  [Discussions](https://github.com/zerodeth/azemu/discussions) to share what
+  you are building or to help another contributor.
+
+New contributors: look for issues labelled
+[`good first issue`](https://github.com/zerodeth/azemu/labels/good%20first%20issue).
+If none are open, ask in Discussions and we will help you find a starting
+point.
+
+This document covers how to add a resource, the test bar every change has to
+clear, and the PR checklist. If you are new here, start with:
 
 - The [home page](../index.md) for the project pitch and the Docker quick-start.
 - [Setup Guide](../reference/setup.md) for the flox contributor workflow.

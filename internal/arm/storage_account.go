@@ -332,23 +332,83 @@ func storageAccountResponse(s *store.Resource) map[string]interface{} {
 // azurerm v4 reads after creating a storage account to encode/check blob
 // service settings. azemu does not manage blob service properties; returning a
 // minimal Succeeded response allows the provider to proceed.
+func blobServicePropertiesID(subID, rgName, accountName string) string {
+	return fmt.Sprintf(
+		"/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Storage/storageAccounts/%s/blobServices/default",
+		subID, rgName, accountName,
+	)
+}
+
+func blobServicePropertiesResponse(id string, stored map[string]interface{}) map[string]interface{} {
+	props := map[string]interface{}{}
+	for k, v := range stored {
+		props[k] = v
+	}
+	props["provisioningState"] = "Succeeded"
+	return map[string]interface{}{
+		"id":         id,
+		"name":       "default",
+		"type":       "Microsoft.Storage/storageAccounts/blobServices",
+		"properties": props,
+	}
+}
+
 func (a *Router) getBlobServiceProperties(w http.ResponseWriter, r *http.Request) {
 	subID := chi.URLParam(r, "subscriptionID")
 	rgName := chi.URLParam(r, "resourceGroupName")
 	accountName := chi.URLParam(r, "accountName")
 
-	id := fmt.Sprintf(
-		"/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Storage/storageAccounts/%s/blobServices/default",
-		subID, rgName, accountName,
-	)
-	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"id":   id,
-		"name": "default",
-		"type": "Microsoft.Storage/storageAccounts/blobServices",
-		"properties": map[string]interface{}{
-			"provisioningState": "Succeeded",
-		},
-	})
+	id := blobServicePropertiesID(subID, rgName, accountName)
+	// Echo properties written via PUT so terraform's blob_properties block
+	// round-trips on refresh instead of showing a perpetual diff.
+	stored := map[string]interface{}{}
+	if res, ok := a.store.Get(id); ok {
+		stored = res.Properties
+	}
+	writeJSON(w, http.StatusOK, blobServicePropertiesResponse(id, stored))
+}
+
+// putBlobServiceProperties handles the `blob_properties` block on
+// azurerm_storage_account (versioning, CORS, delete-retention, ...).
+// The properties are stored as-is and echoed back by GET.
+func (a *Router) putBlobServiceProperties(w http.ResponseWriter, r *http.Request) {
+	subID := chi.URLParam(r, "subscriptionID")
+	rgName := chi.URLParam(r, "resourceGroupName")
+	accountName := chi.URLParam(r, "accountName")
+
+	// Parent existence check: 404 if the storage account does not exist.
+	parentID := storageAccountID(subID, rgName, accountName)
+	if _, ok := a.store.Get(parentID); !ok {
+		writeAzureError(w, http.StatusNotFound, "ParentResourceNotFound",
+			fmt.Sprintf("Storage account '%s' could not be found.", accountName))
+		return
+	}
+
+	var body struct {
+		Properties map[string]interface{} `json:"properties"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeAzureError(w, http.StatusBadRequest, "InvalidRequestContent", err.Error())
+		return
+	}
+	if body.Properties == nil {
+		body.Properties = map[string]interface{}{}
+	}
+
+	id := blobServicePropertiesID(subID, rgName, accountName)
+	if err := a.store.Put(id, &store.Resource{
+		ID:         id,
+		Name:       "default",
+		Type:       "Microsoft.Storage/storageAccounts/blobServices",
+		Properties: body.Properties,
+	}); err != nil {
+		writeAzureError(w, http.StatusInternalServerError, "InternalServerError",
+			fmt.Sprintf("put blob service properties for %q: %s", accountName, err))
+		return
+	}
+
+	log.Info().Str("resource_id", id).Msg("blob service properties upsert")
+	writeJSON(w, http.StatusOK, blobServicePropertiesResponse(id, body.Properties))
 }
 
 // getStorageFileService stubs the file service endpoint that azurerm v4 polls

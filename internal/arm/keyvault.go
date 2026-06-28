@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
@@ -13,6 +14,28 @@ import (
 )
 
 const keyVaultTypeString = "Microsoft.KeyVault/vaults"
+
+// vaultBaseURL builds the per-vault data-plane base URL. The azurerm
+// provider requires the vaultUri host to look like {name}.vault.{suffix}
+// (its KeyVaultIDFromBaseUrl extracts the vault name from the first host
+// label and rejects anything else with "expected a URI in the format
+// `the-keyvault-name.vault.**`"). {name}.vault.localhost resolves to
+// loopback on macOS and on Linux with systemd-resolved, and the TLS cert
+// carries a *.vault.localhost SAN. The scheme and port come from
+// AZEMU_KV_ENDPOINT.
+func (a *Router) vaultBaseURL(vaultName string) string {
+	scheme := "https"
+	port := ""
+	if u, err := url.Parse(a.kvEndpoint); err == nil {
+		if u.Scheme != "" {
+			scheme = u.Scheme
+		}
+		if p := u.Port(); p != "" {
+			port = ":" + p
+		}
+	}
+	return fmt.Sprintf("%s://%s.vault.localhost%s", scheme, vaultName, port)
+}
 
 func keyVaultID(subID, rgName, name string) string {
 	return fmt.Sprintf(
@@ -50,10 +73,11 @@ func (a *Router) putKeyVault(w http.ResponseWriter, r *http.Request) {
 		body.Properties = map[string]interface{}{}
 	}
 	body.Properties["provisioningState"] = "Succeeded"
-	// vaultUri points at azemu's own HTTPS endpoint so that the azurerm
-	// provider's subsequent azurerm_key_vault_secret requests land on the
-	// Key Vault data-plane routes mounted at /keyvault/{name}/.
-	body.Properties["vaultUri"] = fmt.Sprintf("%s/keyvault/%s/", a.kvEndpoint, name)
+	// vaultUri points at azemu's own HTTPS endpoint (host-based per-vault
+	// URL) so the azurerm provider's nested-item requests land on the
+	// root-level data-plane routes (KeyVaultNestedItemRoutes), which resolve
+	// the vault from the Host header.
+	body.Properties["vaultUri"] = a.vaultBaseURL(name) + "/"
 
 	// Default SKU to standard if not supplied.
 	if _, ok := body.Properties["sku"]; !ok {
@@ -136,11 +160,12 @@ func (a *Router) deleteKeyVault(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Cascade-delete all Key Vault data-plane secrets stored under this vault.
-	// Secrets are stored at /keyvault/{name}/secrets/... and must be cleaned up
-	// independently because they use a different key prefix than the ARM resource.
-	secretsPrefix := fmt.Sprintf("/keyvault/%s/", name)
-	for _, res := range a.store.List(secretsPrefix) {
+	// Cascade-delete all Key Vault data-plane entries stored under this vault.
+	// Secrets live at /keyvault/{name}/secrets/... and keys at
+	// /keyvault/{name}/keys/...; both must be cleaned up independently because
+	// they use a different key prefix than the ARM resource.
+	dataPlanePrefix := fmt.Sprintf("/keyvault/%s/", name)
+	for _, res := range a.store.List(dataPlanePrefix) {
 		a.store.Delete(res.ID)
 	}
 
@@ -187,6 +212,31 @@ func (a *Router) getDeletedKeyVault(w http.ResponseWriter, r *http.Request) {
 	location := chi.URLParam(r, "location")
 	writeAzureError(w, http.StatusNotFound, "ResourceNotFound",
 		fmt.Sprintf("The deleted vault '%s' in location '%s' was not found.", name, location))
+}
+
+// getKeyVaultDataPlaneRoot answers GET {vaultUri}. The azurerm provider polls
+// the vault root as a data-plane availability check before nested-item
+// operations; a 404 makes it retry for minutes. 200 with an empty object
+// signals the vault is reachable. Unknown vaults still return 404.
+func (a *Router) getKeyVaultDataPlaneRoot(w http.ResponseWriter, r *http.Request) {
+	name := chi.URLParam(r, "vaultName")
+	if !a.vaultExists(name) {
+		writeAzureError(w, http.StatusNotFound, "VaultNotFound",
+			fmt.Sprintf("Vault '%s' was not found.", name))
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{})
+}
+
+// vaultExists reports whether a Key Vault ARM resource with this name exists
+// in any resource group.
+func (a *Router) vaultExists(name string) bool {
+	for _, res := range a.store.List("/subscriptions/") {
+		if res.Type == "Microsoft.KeyVault/vaults" && res.Name == name {
+			return true
+		}
+	}
+	return false
 }
 
 // purgeDeletedKeyVault stubs the purge-deleted-vault endpoint that azurerm v4

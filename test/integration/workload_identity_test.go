@@ -105,8 +105,10 @@ func TestWorkloadIdentity_FederatedCredentialTokenHonouredByKeyVault(t *testing.
 	accessToken := tokenBody["access_token"].(string)
 
 	secretURL := base + "/keyvault/myvault/secrets/bundle-signing-key" + apiVersionQ
+	// SetSecret returns 200 OK on both create and update (autorest SDK
+	// requirement; see putKeyVaultSecret in internal/arm/keyvault_secret.go).
 	resp = doJSONWithBearer(t, client, http.MethodPut, secretURL, `{"value":"secret-value"}`, accessToken)
-	mustStatus(t, resp, http.StatusCreated)
+	mustStatus(t, resp, http.StatusOK)
 	resp.Body.Close()
 
 	resp = doJSONWithBearer(t, client, http.MethodGet, secretURL, "", accessToken)

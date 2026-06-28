@@ -111,6 +111,42 @@ endpoint returns Azurite's well-known development key. SDK clients that are
 pointed at these endpoints can authenticate against Azurite without any
 extra configuration.
 
+### Storage account names and AZURITE_ACCOUNTS
+
+Azurite only serves accounts it knows about; by default that is
+`devstoreaccount1`, and any other account name is rejected even with the
+correct key. azemu hands out endpoints of the form
+`http://azurite:10000/{accountName}` for whatever account name your
+Terraform chooses, so each Terraform-created account name must be
+registered with Azurite via the `AZURITE_ACCOUNTS` environment variable on
+the `azurite` service:
+
+```yaml
+environment:
+  AZURITE_ACCOUNTS: "devstoreaccount1:<dev-key>;examplestorage001:<dev-key>"
+```
+
+Rules:
+
+- Reuse the well-known development key for every entry. azemu's `listKeys`
+  returns that key for any account, so SDK clients authenticate without
+  extra configuration.
+- Keep `devstoreaccount1` in the list. Setting `AZURITE_ACCOUNTS` disables
+  the built-in default account unless it is listed explicitly.
+- Append one `;{name}:{key}` entry per Terraform storage account. Azurite
+  re-reads the variable about once a minute; `docker compose restart
+  azurite` applies it immediately.
+
+`docker-compose.yml` ships with `devstoreaccount1`, `examplestorage001`
+(used by `examples/terraform/`), and `azemuotasa` (used by the
+`ota-updates` scenario) pre-registered.
+
+Note on containers: `azurerm_storage_container` resources exist in azemu's
+ARM store only and are not mirrored into Azurite. Create the container in
+Azurite from your upload script before the first blob write (one Create
+Container call, optionally with `x-ms-blob-public-access: blob` for
+anonymous read access).
+
 When running azemu directly on the host (outside Docker):
 
 1. Start Azurite:

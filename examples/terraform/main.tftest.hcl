@@ -28,4 +28,9 @@ run "full_lifecycle" {
     condition     = output.redis_cache_id != ""
     error_message = "redis_cache_id must not be empty"
   }
+
+  assert {
+    condition     = output.key_vault_key_id != ""
+    error_message = "key_vault_key_id must not be empty"
+  }
 }
