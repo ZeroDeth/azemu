@@ -48,6 +48,14 @@ Which Azure resources are supported and at what depth. Full transparency, no sur
 
 </div>
 
+<div class="azemu-feature" markdown>
+
+[**Web Console**{ .azemu-feature-title }](concepts/web-console.md)
+
+A local Azure Portal for your emulator. Three views, live request streaming, embedded in the binary.
+
+</div>
+
 </div>
 
 ## Quick start
