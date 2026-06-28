@@ -125,12 +125,12 @@ State these up-front so scope creep has a clear wall to hit.
   [Azurite](https://learn.microsoft.com/en-us/azure/storage/common/storage-use-azurite),
   shipped as a sidecar in `docker-compose.yml`. azemu owns the Storage
   management plane (ARM) and points `primaryEndpoints` at Azurite. See
-  [ADR 0001](docs/adr/0001-delegate-storage-data-plane-to-azurite.md).
+  [design note 1](docs/design-notes/0001-delegate-storage-data-plane-to-azurite.md).
   Uploading multi-GB blobs is Azurite's job, not ours.
 - **Not a real Kubernetes control plane.** AKS is a management-plane
   stub. If you need pods, run `kind` or `k3d` alongside azemu. The
   hybrid pattern (Terraform against azemu, `kubectl` against `kind`) is
-  documented in [ADR 0002](docs/adr/0002-azemu-plus-kind-for-aks-workload-deployments.md)
+  documented in [design note 2](docs/design-notes/0002-azemu-plus-kind-for-aks-workload-deployments.md)
   and shipped as a reference scenario in Phase 8.7.1.
 - **Not a LocalStack clone.** No AWS, no Alibaba, no GCP. Azure only.
 - **Not an Azure CLI replacement.** `az login`, `az group list`, and
@@ -174,12 +174,12 @@ Priority order inside v0.2 is top-down; ship the first row first.
 | `azurerm_lb` (+ backend pool, rule) | `Microsoft.Network/loadBalancers` | Full | The "Load Balancer" item from the roster |
 | `azurerm_application_gateway` | `Microsoft.Network/applicationGateways` | Full | The Azure equivalent of "ingress" |
 | `azurerm_dns_zone` + record sets | `Microsoft.Network/dnsZones` | Full | Auto-SOA and NS generation on zone create |
-| `azurerm_storage_account` | `Microsoft.Storage/storageAccounts` | Full | ARM management plane, `listKeys`, `primaryEndpoints` rewrite. Data plane delegated to Azurite. See [ADR 0001](docs/adr/0001-delegate-storage-data-plane-to-azurite.md). |
+| `azurerm_storage_account` | `Microsoft.Storage/storageAccounts` | Full | ARM management plane, `listKeys`, `primaryEndpoints` rewrite. Data plane delegated to Azurite. See [design note 1](docs/design-notes/0001-delegate-storage-data-plane-to-azurite.md). |
 | `azurerm_storage_container` | `Microsoft.Storage/storageAccounts/blobServices/containers` | Full | ARM sub-resource CRUD. Blob data plane served by the Azurite sidecar. |
 | `azurerm_key_vault` | `Microsoft.KeyVault/vaults` | Full | Management plane plus secrets data plane |
 | `azurerm_key_vault_secret` | `...vaults/secrets` | Full | Secrets CRUD |
 | `azurerm_cdn_profile` + endpoint | `Microsoft.Cdn/profiles` + `.../endpoints` | Full | The "CDN" item from the roster |
-| `azurerm_redis_cache` | `Microsoft.Cache/Redis` | Full (Standard tier) | Management plane in azemu, data plane delegated to `redis:7-alpine` sidecar. Premium-tier clustering and persistence are follow-ups. See [ADR 0003](docs/adr/0003-add-azure-cache-for-redis.md). |
+| `azurerm_redis_cache` | `Microsoft.Cache/Redis` | Full (Standard tier) | Management plane in azemu, data plane delegated to `redis:7-alpine` sidecar. Premium-tier clustering and persistence are follow-ups. See [design note 3](docs/design-notes/0003-add-azure-cache-for-redis.md). |
 
 ### v0.3 (identity, AKS, Azure DevOps bridge)
 
@@ -253,7 +253,7 @@ Managed Identity. Entire loop runs against azemu with zero cloud cost.
   Federated Identity Credentials.
 - New scenarios in `examples/terraform/scenarios/`:
   `aks-workload/` (with the multi-replica + secrets + shared-cache
-  variant from [ADR 0002](docs/adr/0002-azemu-plus-kind-for-aks-workload-deployments.md)),
+  variant from [design note 2](docs/design-notes/0002-azemu-plus-kind-for-aks-workload-deployments.md)),
   `ado-pipeline/`.
 
 ## Positioning vs existing projects
@@ -266,7 +266,7 @@ Managed Identity. Entire loop runs against azemu with zero cloud cost.
 |---|---|---|---|
 | LocalStack | AWS-first, Azure experimental | Breadth across clouds | azemu is Azure-only and fidelity-first, with multiple IaC toolchains driving one emulated ARM surface |
 | miniblue | Azure, 20+ services | Breadth-first, stub-heavy | azemu is depth-first; every resource round-trips real `terraform apply` |
-| Azurite | Storage only (official Microsoft) | Data-plane fidelity for one service | azemu covers the management plane across many services and delegates the Storage data plane to Azurite as a docker-compose sidecar. See [ADR 0001](docs/adr/0001-delegate-storage-data-plane-to-azurite.md). |
+| Azurite | Storage only (official Microsoft) | Data-plane fidelity for one service | azemu covers the management plane across many services and delegates the Storage data plane to Azurite as a docker-compose sidecar. See [design note 1](docs/design-notes/0001-delegate-storage-data-plane-to-azurite.md). |
 | Terraform mocks (hand-rolled) | Scenario-specific | Fast but brittle | azemu is reusable, maintained, and documented |
 
 ---
@@ -285,7 +285,7 @@ TODO.md                       known gaps, unimplemented endpoints, bug post-mort
     v
 docs/PARITY.md                per-resource Full/Stub/None matrix with test links
 
-docs/adr/*.md                 architecture decision records (immutable, superseded not edited)
+docs/design-notes/*.md        design notes (a notable choice and why; a new note supersedes an old one)
 ```
 
 If a change breaks the ROADMAP, update this file first. Otherwise,

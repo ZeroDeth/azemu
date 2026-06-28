@@ -1,10 +1,7 @@
-# ADR 0003: Add Azure Cache for Redis
+# Design note 3: Add Azure Cache for Redis
 
 - Status: Implemented
 - Date: 2026-04-28
-- Implemented: 2026-04-28
-- Deciders: @ZeroDeth
-- Supersedes: none
 
 ## Context
 
@@ -39,7 +36,7 @@ under the hood.
 **Add `azurerm_redis_cache` (Microsoft.Cache/Redis) to the v0.2
 resource roster. azemu serves the ARM management plane; the data plane
 is delegated to a standard `redis` sidecar in `docker-compose.yml`,
-mirroring the Azurite pattern from ADR 0001.**
+mirroring the Azurite pattern from design note 1.**
 
 In concrete terms:
 
@@ -65,14 +62,14 @@ In concrete terms:
 
 ## Rationale
 
-1. **Same pattern as ADR 0001.** Storage delegates to Azurite, Redis
+1. **Same pattern as design note 1.** Storage delegates to Azurite, Redis
    delegates to upstream `redis`. azemu's job is the ARM surface; the
    data planes belong to their canonical emulators.
 
 2. **Multi-replica deployment scenarios need it.** The expo-open-ota
    example above is one instance; any multi-replica AKS workload with
    shared state lands in the same shape. Without Redis, the
-   `aks-workload/` scenario from ADR 0002 cannot fully express what
+   `aks-workload/` scenario from design note 2 cannot fully express what
    production deployments do.
 
 3. **Negligible footprint.** `redis:7-alpine` is under 30 MB. Optional
@@ -87,7 +84,7 @@ In concrete terms:
 
 ### Positive
 
-- The multi-replica scenario in ADR 0002 becomes fully expressible
+- The multi-replica scenario in design note 2 becomes fully expressible
   without extra infrastructure beyond what compose already orchestrates.
 - The pattern generalises: future "real backend" data-plane work
   (Cosmos DB Mongo API, PostgreSQL flexible server) follows the same
@@ -119,11 +116,11 @@ In concrete terms:
 1. **Hand-roll a Redis-compatible server in Go inside azemu.**
    Rejected. RESP is small, but full command coverage is large, drifts
    per Redis version, and competes with `redis-server` itself. Same
-   reasoning as ADR 0001 alternative 1.
+   reasoning as design note 1 alternative 1.
 
 2. **Skip Redis entirely; tell users to wire their own outside
-   `docker-compose.yml`.** Rejected. The multi-replica scenario in ADR
-   0002 needs a wired-in Redis to be reproducible, and "wire your own"
+   `docker-compose.yml`.** Rejected. The multi-replica scenario in design
+   note 2 needs a wired-in Redis to be reproducible, and "wire your own"
    moves friction from azemu to every scenario author.
 
 3. **Use a Redis-compatible alternative (KeyDB, Dragonfly).**
@@ -159,7 +156,7 @@ The following is the planned scope when `azurerm_redis_cache` lands:
   `redis:7-alpine`, port 6379, `--requirepass azemu-dev-primary-key`,
   a healthcheck. Behind a `redis` compose profile so users opt in.
 - `examples/terraform/scenarios/aks-workload/`: integrates the Redis
-  cache into the multi-replica scenario from ADR 0002.
+  cache into the multi-replica scenario from design note 2.
 - `docs/SETUP.md`: Redis section added; `AZEMU_REDIS_ENDPOINT`
   documented in the env-var table.
 - `docs/PARITY.md`: new row for `azurerm_redis_cache` with data plane
@@ -178,10 +175,10 @@ The following is the planned scope when `azurerm_redis_cache` lands:
 
 ## References
 
-- ROADMAP.md v0.2 resource roster (this ADR adds a row).
-- ADR 0001 (delegate Storage data plane to Azurite): the precedent for
+- ROADMAP.md v0.2 resource roster (this design note adds a row).
+- design note 1 (delegate Storage data plane to Azurite): the precedent for
   upstream-emulator delegation.
-- ADR 0002 (azemu + kind hybrid for AKS workload deployments): the
+- design note 2 (azemu + kind hybrid for AKS workload deployments): the
   consumer scenario for this resource.
 - [Redis](https://redis.io/), [Azure Cache for
   Redis](https://learn.microsoft.com/en-us/azure/azure-cache-for-redis/).

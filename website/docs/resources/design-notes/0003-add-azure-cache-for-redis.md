@@ -1,21 +1,19 @@
-# Design Decision 0003: Add Azure Cache for Redis
+# Design note 3: Add Azure Cache for Redis
 
-<div class="adr-meta">
-<span class="adr-meta-item"><span class="adr-status adr-status--implemented">Implemented</span></span>
-<span class="adr-meta-item"><strong>Date</strong> 2026-04-28</span>
-<span class="adr-meta-item"><strong>Implemented</strong> 2026-04-28</span>
-<span class="adr-meta-item"><strong>Decider</strong> @ZeroDeth</span>
-<a href="https://github.com/ZeroDeth/azemu/blob/main/docs/adr/0003-add-azure-cache-for-redis.md" class="adr-github-link">Full text on GitHub →</a>
+<div class="designnote-meta">
+<span class="designnote-meta-item"><span class="designnote-status designnote-status--implemented">Implemented</span></span>
+<span class="designnote-meta-item"><strong>Date</strong> 2026-04-28</span>
+<a href="https://github.com/ZeroDeth/azemu/blob/main/docs/design-notes/0003-add-azure-cache-for-redis.md" class="designnote-github-link">Full text on GitHub →</a>
 </div>
 
-<div class="adr-decision" markdown>
+<div class="designnote-decision" markdown>
 
-<span class="adr-decision-label">▸ DECISION</span>
+<span class="designnote-decision-label">▸ DECISION</span>
 
 **Add `azurerm_redis_cache` (`Microsoft.Cache/Redis`) to the v0.2 resource
 roster. azemu serves the ARM management plane; the data plane is delegated to
 a standard `redis` sidecar in `docker-compose.yml`, mirroring the Azurite
-pattern from ADR 0001.**
+pattern from design note 1.**
 
 - azemu serves `Microsoft.Cache/Redis` CRUD, `POST .../listKeys`, capacity and
   family validation, and the SKU shape the azurerm provider expects.
@@ -32,7 +30,7 @@ pattern from ADR 0001.**
 
 ### Positive
 
-- The multi-replica scenario in ADR 0002 becomes fully expressible without
+- The multi-replica scenario in design note 2 becomes fully expressible without
   extra infrastructure beyond what compose already orchestrates.
 - The pattern generalises: future "real backend" data-plane work follows the
   same recipe.

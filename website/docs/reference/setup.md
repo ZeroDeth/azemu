@@ -176,7 +176,7 @@ Azurite ports:
 
 azemu owns the ARM management plane for `Microsoft.Cache/Redis`. The Redis
 data plane (RESP protocol on port 6379) is delegated to the upstream
-[redis](https://hub.docker.com/_/redis) container. Per ADR 0003, this
+[redis](https://hub.docker.com/_/redis) container. Per design note 3, this
 mirrors the Azurite delegation pattern, azemu serves the management surface
 and the canonical implementation handles the data plane.
 
@@ -210,7 +210,7 @@ export AZEMU_REDIS_ENDPOINT=redis://localhost:6379
 ```
 
 The deterministic `listKeys` contract is documented in
-[ADR 0003](https://github.com/zerodeth/azemu/blob/main/docs/adr/0003-add-azure-cache-for-redis.md).
+[design note 3](https://github.com/zerodeth/azemu/blob/main/docs/design-notes/0003-add-azure-cache-for-redis.md).
 Premium-tier features (clustering, persistence, geo-replication,
 `regenerateKey`) are out of scope for the initial implementation, see the
 [Parity Matrix](../concepts/parity-matrix.md) for the follow-up list.
