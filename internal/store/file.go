@@ -79,7 +79,7 @@ func (f *FileStore) Reset() {
 // and renames the temp file to the target path. This prevents partial writes
 // from corrupting the store on crash.
 func (f *FileStore) persist() error {
-	data, err := f.MemoryStore.Export()
+	data, err := f.Export()
 	if err != nil {
 		return fmt.Errorf("export: %w", err)
 	}

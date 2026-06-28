@@ -98,7 +98,9 @@ func runServe(args []string) error {
 
 	r := chi.NewRouter()
 	r.Use(chimw.RequestID)
-	r.Use(chimw.RealIP)
+	// chi 5.3.0 deprecated middleware.RealIP (SA1019) for IP-spoofing safety
+	// per GHSA-3fxj-6jh8-hvhx. azemu binds locally, so the real TCP peer
+	// address is what we want; dropped rather than reintroduced.
 	r.Use(mw.NormalizePath)
 	r.Use(mw.AzureHeaders)
 	r.Use(mw.RequireAPIVersion)
