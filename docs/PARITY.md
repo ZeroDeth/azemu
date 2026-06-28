@@ -50,6 +50,7 @@ and should read Scaffold or Planned instead.
 | Workload identity (OIDC federation) | Full | `azurerm_federated_identity_credential` stores issuer/subject/audience rules. The token endpoint exchanges a matching `client_assertion` for an azemu-signed access token, and Key Vault data-plane routes honour that bearer token. Proof: [federated_identity_credential_test.go](../internal/arm/federated_identity_credential_test.go), [token_test.go](../internal/auth/token_test.go), [workload_identity_test.go](../test/integration/workload_identity_test.go) |
 | Azure DevOps OIDC (`SYSTEM_OIDCREQUESTURI`) | Full | Plain HTTP on `:4569`; own RSA-2048 signing key; `/.well-known/openid-configuration` + `/discovery/keys` + OIDC token endpoint; JWT `sub` = `sc://{org}/{project}/azemu-service-connection`. Proof: [oidc_test.go](../internal/ado/oidc_test.go) |
 | ADO Service Connections CRUD | Full | `/{org}/{project}/_apis/serviceendpoint/endpoints`; auto-assigns UUID; `isReady: true`, `owner: "Library"`; name-filter on list; DELETE is sync 204 (not ARM-style async). Proof: [serviceconnection_test.go](../internal/ado/serviceconnection_test.go) |
+| ADO Pipeline Runs | Full | POST `/{org}/{project}/_apis/pipelines/{id}/runs` queues a run; GET `/_apis/build/builds/{id}` returns status derived from elapsed time (notStarted, inProgress, completed/succeeded); GET `/_apis/build/builds/{id}/logs` returns mock log metadata list. Runs are in-memory with sequential int IDs; no real execution. Proof: [pipeline_test.go](../internal/ado/pipeline_test.go) |
 
 ## Developer Tooling
 
