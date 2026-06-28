@@ -73,6 +73,7 @@ func buildProductionLikeServer(t *testing.T) *httptest.Server {
 	r.Route("/{tenantID}", tokenSvc.TenantRoutes)
 	r.Route("/subscriptions", armRouter.Routes)
 	r.Route("/keyvault", armRouter.KeyVaultDataPlaneRoutes)
+	armRouter.KeyVaultNestedItemRoutes(r)
 
 	srv := httptest.NewTLSServer(r)
 	t.Cleanup(srv.Close)

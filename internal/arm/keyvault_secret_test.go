@@ -64,10 +64,11 @@ func TestKVSecret_PUT_Creates_Returns201(t *testing.T) {
 	if body["value"] != "super-secret" {
 		t.Errorf("value = %v, want super-secret", body["value"])
 	}
-	// id must contain the vault name, secret name, and a version UUID.
+	// Root-form id: the azurerm provider's ParseNestedItemID requires
+	// /secrets/{name}/{version} with no vault path segment.
 	id, _ := body["id"].(string)
-	if !strings.Contains(id, "myvault") || !strings.Contains(id, "mysecret") {
-		t.Errorf("id = %v, want to contain vault/secret name", id)
+	if !strings.HasPrefix(id, "https://myvault.vault.localhost/secrets/mysecret/") {
+		t.Errorf("id = %v, want prefix https://myvault.vault.localhost/secrets/mysecret/", id)
 	}
 }
 

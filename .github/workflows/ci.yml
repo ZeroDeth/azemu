@@ -69,6 +69,30 @@ jobs:
       - name: Verify binary runs
         run: ./bin/azemu --version
 
+  cross-build:
+    name: Cross-compile (${{ matrix.goos }}/${{ matrix.goarch }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Mirror the goreleaser builds matrix (.goreleaser.yml) so a
+        # platform-specific compile break is caught here, not at release time.
+        goos: [linux, darwin, windows]
+        goarch: [amd64, arm64]
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - name: go build
+        env:
+          CGO_ENABLED: 0
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: go build ./cmd/azemu
+
   terraform-test:
     name: Terraform Scenarios
     runs-on: ubuntu-latest

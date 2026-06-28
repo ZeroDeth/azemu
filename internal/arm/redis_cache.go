@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 
 	"github.com/zerodeth/azemu/internal/store"
@@ -312,9 +311,7 @@ func (a *Router) deleteRedisCache(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Info().Str("resource_id", id).Msg("redis cache deleted")
-	w.Header().Set("Location",
-		fmt.Sprintf("/subscriptions/%s/operationresults/%s", subID, uuid.New().String()))
-	w.WriteHeader(http.StatusAccepted)
+	a.acceptAsyncDelete(w, r, subID)
 }
 
 func (a *Router) listRedisCachesByRG(w http.ResponseWriter, r *http.Request) {

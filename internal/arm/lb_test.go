@@ -864,3 +864,73 @@ func TestLBProbe_LIST_ReturnsValueWrapper(t *testing.T) {
 		t.Errorf("len(items) = %d, want 2", len(items))
 	}
 }
+
+// TestLB_PUT_InlineProbe_PersistsAndEmbeds pins M8: azurerm_lb_probe and
+// azurerm_lb_rule have no standalone ARM create operation, so the provider
+// manages them by read-modify-write on the parent LB, writing the full desired
+// array inline via this PUT. putLB must persist them and getLB must embed them.
+// Reconciliation has two halves: a PUT that omits the array entirely (an
+// azurerm_lb apply) must not disturb existing children, while a PUT that
+// includes the array with an element dropped (an azurerm_lb_probe destroy) must
+// remove the corresponding child.
+func TestLB_PUT_InlineProbe_PersistsAndEmbeds(t *testing.T) {
+	srv := newTestServer(t)
+	url := lbURL(srv.URL, "sub1", "rg1", "lb1")
+
+	body := `{"location":"uksouth","sku":{"name":"Standard"},"properties":{` +
+		`"probes":[{"name":"http","properties":{"protocol":"Http","port":80,"requestPath":"/"}}],` +
+		`"loadBalancingRules":[{"name":"rule1","properties":{"protocol":"Tcp","frontendPort":80,"backendPort":80}}]}}`
+	resp := httpPut(t, url, body)
+	assertStatus(t, resp, http.StatusCreated)
+	resp.Body.Close()
+
+	if probes := lbChildNames(t, url, "probes"); len(probes) != 1 || probes[0] != "http" {
+		t.Fatalf("probe not embedded after inline PUT: %v", probes)
+	}
+	if rules := lbChildNames(t, url, "loadBalancingRules"); len(rules) != 1 || rules[0] != "rule1" {
+		t.Fatalf("rule not embedded after inline PUT: %v", rules)
+	}
+
+	// A later azurerm_lb PUT omits the arrays; the existing children must survive.
+	resp = httpPut(t, url, `{"location":"uksouth","properties":{}}`)
+	assertStatus(t, resp, http.StatusOK)
+	resp.Body.Close()
+	if probes := lbChildNames(t, url, "probes"); len(probes) != 1 || probes[0] != "http" {
+		t.Fatalf("probe wiped by array-less LB PUT: %v", probes)
+	}
+	if rules := lbChildNames(t, url, "loadBalancingRules"); len(rules) != 1 || rules[0] != "rule1" {
+		t.Fatalf("rule wiped by array-less LB PUT: %v", rules)
+	}
+
+	// An azurerm_lb_probe destroy PUTs the parent LB with the probe dropped from
+	// the (present) probes array; reconciliation must delete the stale child.
+	resp = httpPut(t, url, `{"location":"uksouth","properties":{"probes":[]}}`)
+	assertStatus(t, resp, http.StatusOK)
+	resp.Body.Close()
+	if probes := lbChildNames(t, url, "probes"); len(probes) != 0 {
+		t.Fatalf("probe not reconciled away by empty-array PUT: %v", probes)
+	}
+	// The rule array was omitted in that PUT, so the rule must still survive.
+	if rules := lbChildNames(t, url, "loadBalancingRules"); len(rules) != 1 || rules[0] != "rule1" {
+		t.Fatalf("rule wiped by probe-only PUT: %v", rules)
+	}
+}
+
+// lbChildNames GETs the LB and returns the names embedded under the given
+// properties key (e.g. "probes" or "loadBalancingRules").
+func lbChildNames(t *testing.T, lbURL, key string) []string {
+	t.Helper()
+	resp := httpGet(t, lbURL)
+	defer resp.Body.Close()
+	props, _ := decodeJSON(t, resp)["properties"].(map[string]interface{})
+	raw, _ := props[key].([]interface{})
+	names := []string{}
+	for _, p := range raw {
+		if m, ok := p.(map[string]interface{}); ok {
+			if n, ok := m["name"].(string); ok {
+				names = append(names, n)
+			}
+		}
+	}
+	return names
+}

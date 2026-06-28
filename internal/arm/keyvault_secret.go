@@ -41,9 +41,12 @@ type kvSecretPutBody struct {
 }
 
 // kvSecretID builds the canonical Key Vault secret ID including version.
-// The format matches real Azure: {vaultUri}secrets/{name}/{version}
+// The azurerm provider parses nested-item IDs with ParseNestedItemID, which
+// requires exactly /secrets/{name}/{version} in the URL path; the vault is
+// identified by the host ({vault}.vault.localhost), mirroring real Azure's
+// {vault}.vault.azure.net.
 func (a *Router) kvSecretID(vaultName, secretName, version string) string {
-	return fmt.Sprintf("%s/keyvault/%s/secrets/%s/%s", a.kvEndpoint, vaultName, secretName, version)
+	return fmt.Sprintf("%s/secrets/%s/%s", a.vaultBaseURL(vaultName), secretName, version)
 }
 
 // kvSecretResponse builds the Key Vault data-plane response for a secret.
@@ -239,7 +242,7 @@ func (a *Router) listKeyVaultSecrets(w http.ResponseWriter, r *http.Request) {
 		secretName := res.Name
 		// Build a minimal list entry (no value exposed in list, matching real Azure).
 		items = append(items, map[string]interface{}{
-			"id": fmt.Sprintf("%s/keyvault/%s/secrets/%s", a.kvEndpoint, vaultName, secretName),
+			"id": fmt.Sprintf("%s/secrets/%s", a.vaultBaseURL(vaultName), secretName),
 			"attributes": map[string]interface{}{
 				"enabled":       true,
 				"recoveryLevel": "Purgeable",

@@ -1,9 +1,11 @@
 package arm
 
 import (
+	"encoding/base64"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -200,6 +202,66 @@ func TestAKSCluster_ListBySub(t *testing.T) {
 	if body["value"] == nil {
 		t.Error("value missing")
 	}
+}
+
+// --- AKS Cluster credential tests ---
+
+func TestAKSCluster_ListClusterUserCredential_ResponseShape(t *testing.T) {
+	srv := newTestServer(t)
+	httpPut(t, aksClusterURL(srv, "my-cluster"), `{"location":"uksouth"}`)
+
+	resp := httpPost(t, aksClusterURL(srv, "my-cluster")+"/listclusterusercredential", `{}`)
+	assertStatus(t, resp, http.StatusOK)
+	body := decodeJSON(t, resp)
+
+	kubeconfigs, ok := body["kubeconfigs"].([]interface{})
+	if !ok || len(kubeconfigs) != 1 {
+		t.Fatalf("kubeconfigs = %v, want array of 1", body["kubeconfigs"])
+	}
+	entry := kubeconfigs[0].(map[string]interface{})
+	if entry["name"] != "clusterUser" {
+		t.Errorf("name = %v, want clusterUser", entry["name"])
+	}
+
+	raw, err := base64.StdEncoding.DecodeString(entry["value"].(string))
+	if err != nil {
+		t.Fatalf("value is not base64: %v", err)
+	}
+	kubeconfig := string(raw)
+	for _, want := range []string{"apiVersion: v1", "clusters:", "users:", "contexts:", "current-context:", "server: https://", "client-certificate-data:", "token:"} {
+		if !strings.Contains(kubeconfig, want) {
+			t.Errorf("kubeconfig missing %q:\n%s", want, kubeconfig)
+		}
+	}
+}
+
+func TestAKSCluster_ListClusterAdminCredential_Returns200(t *testing.T) {
+	srv := newTestServer(t)
+	httpPut(t, aksClusterURL(srv, "my-cluster"), `{"location":"uksouth"}`)
+
+	resp := httpPost(t, aksClusterURL(srv, "my-cluster")+"/listclusteradmincredential", `{}`)
+	assertStatus(t, resp, http.StatusOK)
+	body := decodeJSON(t, resp)
+	kubeconfigs := body["kubeconfigs"].([]interface{})
+	entry := kubeconfigs[0].(map[string]interface{})
+	if entry["name"] != "clusterAdmin" {
+		t.Errorf("name = %v, want clusterAdmin", entry["name"])
+	}
+}
+
+func TestAKSCluster_ListClusterUserCredential_NotFound_Returns404(t *testing.T) {
+	srv := newTestServer(t)
+	resp := httpPost(t, aksClusterURL(srv, "nonexistent")+"/listclusterusercredential", `{}`)
+	assertStatus(t, resp, http.StatusNotFound)
+}
+
+// azurerm sends the action segment camelCase; NormalizePath must lowercase it.
+func TestAKSCluster_ListClusterUserCredential_CamelCasePath(t *testing.T) {
+	srv := newTestServer(t)
+	httpPut(t, aksClusterURL(srv, "my-cluster"), `{"location":"uksouth"}`)
+
+	resp := httpPost(t, aksClusterURL(srv, "my-cluster")+"/listClusterUserCredential", `{}`)
+	assertStatus(t, resp, http.StatusOK)
 }
 
 // --- AKS Node Pool tests ---

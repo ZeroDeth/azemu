@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"syscall"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -60,7 +59,7 @@ func execBinary(name string, args []string) error {
 	log.Info().Str("binary", bin).Strs("args", args).Msg("exec")
 
 	argv := append([]string{name}, args...)
-	return syscall.Exec(bin, argv, os.Environ())
+	return execProcess(bin, argv, os.Environ())
 }
 
 // probeHealth sends a single GET to the health endpoint and returns true if
@@ -111,9 +110,7 @@ func startAzemuBackground() (*os.Process, error) {
 	proc, err := os.StartProcess(self, []string{"azemu", "serve"}, &os.ProcAttr{
 		Env:   os.Environ(),
 		Files: []*os.File{os.Stdin, logFile, logFile},
-		Sys: &syscall.SysProcAttr{
-			Setsid: true,
-		},
+		Sys:   detachSysProcAttr(),
 	})
 	logFile.Close()
 	if err != nil {

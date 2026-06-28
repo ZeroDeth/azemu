@@ -7,7 +7,12 @@ terraform {
   required_providers {
     azurerm = {
       source  = "hashicorp/azurerm"
-      version = "~> 4.0"
+      # Pinned below 4.35: from v4.35.0 the provider refuses to create
+      # classic CDN resources after the 2025-10-01 deprecation date
+      # (wall-clock check, no opt-out), failing this scenario before any
+      # request reaches azemu. Migrate the scenario to Front Door
+      # (cdn_frontdoor_*) to lift the pin; tracked in TODO.md.
+      version = ">= 4.0, < 4.35"
     }
   }
 }
