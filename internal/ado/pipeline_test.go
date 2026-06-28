@@ -96,7 +96,9 @@ func TestStatusFor_Progression(t *testing.T) {
 	}{
 		{0, "notStarted", ""},
 		{1 * time.Second, "notStarted", ""},
+		{2 * time.Second, "inProgress", ""}, // exact lower boundary
 		{3 * time.Second, "inProgress", ""},
+		{5 * time.Second, "completed", "succeeded"}, // exact upper boundary
 		{10 * time.Second, "completed", "succeeded"},
 	}
 
@@ -121,6 +123,7 @@ func TestStateFor_Progression(t *testing.T) {
 	}{
 		{0, "inProgress", ""},
 		{3 * time.Second, "inProgress", ""},
+		{5 * time.Second, "completed", "succeeded"}, // exact transition boundary
 		{10 * time.Second, "completed", "succeeded"},
 	}
 
@@ -224,6 +227,74 @@ func TestGetBuildLogs_NotFound(t *testing.T) {
 
 	if resp.StatusCode != http.StatusNotFound {
 		t.Fatalf("expected 404, got %d", resp.StatusCode)
+	}
+}
+
+// TestGetBuild_CrossProjectReturns404 verifies a run created under one
+// org/project is invisible under another even when the numeric id is known.
+func TestGetBuild_CrossProjectReturns404(t *testing.T) {
+	srv, _ := newPipelineTestServer(t)
+	defer srv.Close()
+
+	resp, err := http.Post(srv.URL+"/orgA/projA/_apis/pipelines/1/runs", "application/json", strings.NewReader("{}"))
+	if err != nil {
+		t.Fatalf("POST failed: %v", err)
+	}
+	resp.Body.Close()
+
+	cases := []struct {
+		name string
+		url  string
+	}{
+		{"build wrong org", "/orgB/projA/_apis/build/builds/1"},
+		{"build wrong project", "/orgA/projB/_apis/build/builds/1"},
+		{"logs wrong org", "/orgB/projA/_apis/build/builds/1/logs"},
+		{"logs wrong project", "/orgA/projB/_apis/build/builds/1/logs"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			resp, err := http.Get(srv.URL + tc.url)
+			if err != nil {
+				t.Fatalf("GET failed: %v", err)
+			}
+			defer resp.Body.Close()
+			if resp.StatusCode != http.StatusNotFound {
+				t.Fatalf("expected 404, got %d", resp.StatusCode)
+			}
+		})
+	}
+
+	// Sanity: the owning project still resolves.
+	resp, err = http.Get(srv.URL + "/orgA/projA/_apis/build/builds/1")
+	if err != nil {
+		t.Fatalf("GET failed: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200 for owning project, got %d", resp.StatusCode)
+	}
+}
+
+// TestGetBuild_InvalidBuildID verifies the 400 contract for non-numeric ids on
+// both build endpoints.
+func TestGetBuild_InvalidBuildID(t *testing.T) {
+	srv, _ := newPipelineTestServer(t)
+	defer srv.Close()
+
+	for _, url := range []string{
+		"/o/p/_apis/build/builds/abc",
+		"/o/p/_apis/build/builds/abc/logs",
+	} {
+		t.Run(url, func(t *testing.T) {
+			resp, err := http.Get(srv.URL + url)
+			if err != nil {
+				t.Fatalf("GET failed: %v", err)
+			}
+			defer resp.Body.Close()
+			if resp.StatusCode != http.StatusBadRequest {
+				t.Fatalf("expected 400, got %d", resp.StatusCode)
+			}
+		})
 	}
 }
 

@@ -107,6 +107,11 @@ func (s *PipelineRunService) queueRun(w http.ResponseWriter, r *http.Request) {
 // the current clock. On any failure it writes the ADO error response and
 // returns ok=false. The clock is read under the same lock as the map so a
 // test mutating nowFn never races a concurrent handler.
+//
+// Builds are scoped to their org/project: a run created under one project is
+// invisible under another even if the numeric id is guessed, matching how ADO
+// isolates builds per project. A mismatch is reported as the same 404 as a
+// missing build so the id space is not enumerable across projects.
 func (s *PipelineRunService) lookupBuild(w http.ResponseWriter, r *http.Request) (run *pipelineRun, now time.Time, ok bool) {
 	org := chi.URLParam(r, "organization")
 	project := chi.URLParam(r, "project")
@@ -124,7 +129,7 @@ func (s *PipelineRunService) lookupBuild(w http.ResponseWriter, r *http.Request)
 	now = s.nowFn()
 	s.mu.RUnlock()
 
-	if !found {
+	if !found || run.Org != org || run.Project != project {
 		writeADOError(w, http.StatusNotFound,
 			fmt.Sprintf("build %d not found in %s/%s", buildID, org, project))
 		return nil, time.Time{}, false
