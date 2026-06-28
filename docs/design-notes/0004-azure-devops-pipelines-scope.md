@@ -1,9 +1,7 @@
-# ADR 0004: How far azemu emulates Azure DevOps Pipelines
+# Design note 4: How far azemu emulates Azure DevOps Pipelines
 
 - Status: Proposed
 - Date: 2026-06-27
-- Deciders: @ZeroDeth
-- Supersedes: none
 
 ## Context
 
@@ -30,7 +28,7 @@ agent) can federate into azemu and provision and use Azure resources, but
 azemu cannot stand in for the pipeline service itself: you cannot point a tool
 at azemu and say "queue build 42 and give me its logs".
 
-The question this ADR settles: should azemu grow a pipeline run API, or a
+The question this design note settles: should azemu grow a pipeline run API, or a
 runner, or stay at the auth-and-provisioning boundary it has now?
 
 ## The options
@@ -49,7 +47,7 @@ Three honest choices, from least to most work.
 the run API only when a real scenario needs to read pipeline or build state.
 Do not build Option C.**
 
-This is the same call ADR 0002 made for Kubernetes: azemu is a management and
+This is the same call design note 2 made for Kubernetes: azemu is a management and
 data-plane emulator for Azure, not a re-implementation of the compute runtimes
 that sit on top of it. There, "azemu does not run pods, use `kind`". Here,
 "azemu does not run pipeline steps, use the real Azure Pipelines agent, or
@@ -76,7 +74,7 @@ Concretely:
    security surface, task ecosystem, and agent protocol. Microsoft open-sources
    the agent; rebuilding it inside azemu would be the single biggest component
    in the project and would compete with the thing it copies. Same reasoning as
-   ADR 0001 (delegate Blob to Azurite) and ADR 0002 (delegate pods to `kind`).
+   design note 1 (delegate Blob to Azurite) and design note 2 (delegate pods to `kind`).
 
 2. **The auth boundary is the part that actually blocks people.** The genuinely
    awkward thing to do without a cloud is the OIDC federation handshake: minting
@@ -108,7 +106,7 @@ Concretely:
 
 - You cannot, today, point a Pipelines-API client at azemu and get run or build
   state back. If that turns out to be a common ask, Option B is the answer, and
-  this ADR is the place that said so.
+  this design note is the place that said so.
 - "Run my whole pipeline locally against azemu" is not a single command. The
   honest substitute is to run the pipeline's steps directly, or to point a real
   agent at azemu. The `ota-delivery` scenario shows the shape.
@@ -116,7 +114,7 @@ Concretely:
 ### Neutral
 
 - Contributors who only need ARM and the OIDC federation install nothing new.
-- The existing ADO files (`internal/ado/`) are unaffected; this ADR documents a
+- The existing ADO files (`internal/ado/`) are unaffected; this design note documents a
   boundary, it does not change code.
 
 ## Alternatives considered
@@ -138,14 +136,14 @@ Concretely:
 ## References
 
 - ROADMAP.md non-goals and the tool-first, demand-driven framing.
-- ADR 0001 (delegate the Storage data plane to Azurite): same "do not rebuild
+- design note 1 (delegate the Storage data plane to Azurite): same "do not rebuild
   what upstream ships" principle at the storage layer.
-- ADR 0002 (azemu + `kind` for AKS workloads): the same boundary for the
-  Kubernetes runtime; this ADR is its Azure DevOps analogue.
+- design note 2 (azemu + `kind` for AKS workloads): the same boundary for the
+  Kubernetes runtime; this design note is its Azure DevOps analogue.
 - `internal/ado/oidc.go`, `internal/ado/serviceconnection.go`: the ADO surface
   azemu serves today.
 - `examples/terraform/scenarios/ado-pipeline/`,
   `examples/terraform/scenarios/ota-delivery/`: pipeline-shaped scenarios that
   run the work directly against azemu.
-- Azure Pipelines agent (open source): the runner this ADR declines to
+- Azure Pipelines agent (open source): the runner this design note declines to
   re-implement.

@@ -150,7 +150,7 @@ pkg/
 test/
   integration/arm_test.go      in-process httptest CRUD across all implemented resources
 docs/
-  adr/                         Architecture Decision Records (ADR 0001: Azurite delegation)
+  design-notes/                design notes (design note 1: Azurite delegation)
   ARCHITECTURE.md              this file
   CONVENTIONS.md               Go style, ARM contracts, auth contracts, testing strategy
   PARITY.md                    Full/Stub/None matrix per resource
