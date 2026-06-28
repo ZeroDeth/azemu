@@ -121,6 +121,7 @@ stay local.
 | Subnets (CRUD + HEAD, parent-aware) | Full |
 | Health check (`GET /health` on `:4568`) | Full |
 | State export/import (file-backed) | Full |
+| Web console (`:4570`) | Full |
 
 See [docs/PARITY.md](docs/PARITY.md) for the full compatibility matrix.
 
@@ -131,6 +132,8 @@ See [docs/PARITY.md](docs/PARITY.md) for the full compatibility matrix.
 | 4566 | HTTPS | ARM API |
 | 4567 | HTTPS | Metadata, OAuth2, OIDC |
 | 4568 | HTTP | Health check (container probes, no TLS) |
+| 4569 | HTTP | ADO OIDC, service connections |
+| 4570 | HTTP | Web console |
 
 ## Project structure
 
