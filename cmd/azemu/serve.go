@@ -101,14 +101,13 @@ func runServe(args []string) error {
 	r.Use(mw.NormalizePath)
 	r.Use(mw.AzureHeaders)
 	r.Use(mw.RequireAPIVersion)
-	r.Use(reqLog.Middleware)
 	r.Use(chimw.Recoverer)
 
 	unhandled := mw.NewUnhandledTracker()
 	r.NotFound(mw.LogUnhandledRequests(unhandled))
 	r.HandleFunc("/api/unhandled", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		_ = json.NewEncoder(w).Encode(map[string]any{
 			"unhandled_routes": unhandled.List(),
 		})
 	})
@@ -145,9 +144,16 @@ func runServe(args []string) error {
 	r.Route("/metadata/identity", imdsSvc.Routes)
 	r.Route("/metadata", metaSvc.Routes)
 	r.Route("/{tenantID}", tokenSvc.TenantRoutes)
-	r.Route("/subscriptions", armRouter.Routes)
-	r.Route("/keyvault", armRouter.KeyVaultDataPlaneRoutes)
-	armRouter.KeyVaultNestedItemRoutes(r)
+
+	// ARM routes are wrapped with the request recorder so only ARM traffic
+	// appears in the request log – not health, metadata, state API, or ADO.
+	r.Group(func(r chi.Router) {
+		r.Use(reqLog.Middleware)
+		r.Route("/subscriptions", armRouter.Routes)
+		r.Route("/keyvault", armRouter.KeyVaultDataPlaneRoutes)
+		armRouter.KeyVaultNestedItemRoutes(r)
+	})
+
 	r.Route("/ado", func(r chi.Router) {
 		adoOIDC.Routes(r)
 		adoSC.ServiceConnectionRoutes(r)
@@ -192,7 +198,7 @@ func runServe(args []string) error {
 	healthMux := http.NewServeMux()
 	healthMux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		_ = json.NewEncoder(w).Encode(map[string]any{
 			"status":         "ok",
 			"version":        Version,
 			"uptime_seconds": int(time.Since(startTime).Seconds()),
@@ -237,7 +243,7 @@ func runServe(args []string) error {
 
 	consoleSrv := &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.ConsolePort),
-		Handler:      console.Handler(),
+		Handler:      console.Handler(cfg.HTTPPort, cfg.HealthPort),
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 10 * time.Second,
 	}

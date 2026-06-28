@@ -79,6 +79,25 @@ func (rr *RequestRecorder) subscribe() chan RequestEntry {
 	return ch
 }
 
+// subscribeWithBackfill atomically registers the client and captures the
+// backfill snapshot under a single lock. This guarantees every entry is
+// either in the snapshot or in the channel – never both, never neither.
+func (rr *RequestRecorder) subscribeWithBackfill(n int) (chan RequestEntry, []RequestEntry) {
+	ch := make(chan RequestEntry, 64)
+	rr.mu.Lock()
+	rr.clients[ch] = struct{}{}
+	if n > rr.count {
+		n = rr.count
+	}
+	recent := make([]RequestEntry, n)
+	start := (rr.head - n + len(rr.buf)) % len(rr.buf)
+	for i := 0; i < n; i++ {
+		recent[i] = rr.buf[(start+i)%len(rr.buf)]
+	}
+	rr.mu.Unlock()
+	return ch, recent
+}
+
 func (rr *RequestRecorder) unsubscribe(ch chan RequestEntry) {
 	rr.mu.Lock()
 	delete(rr.clients, ch)
@@ -114,9 +133,10 @@ func (rr *RequestRecorder) SSEHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 
-	recent := rr.Recent(500)
+	ch, recent := rr.subscribeWithBackfill(500)
+	defer rr.unsubscribe(ch)
+
 	for _, entry := range recent {
 		data, err := json.Marshal(entry)
 		if err != nil {
@@ -125,9 +145,6 @@ func (rr *RequestRecorder) SSEHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "data: %s\n\n", data)
 	}
 	flusher.Flush()
-
-	ch := rr.subscribe()
-	defer rr.unsubscribe(ch)
 
 	ctx := r.Context()
 	for {

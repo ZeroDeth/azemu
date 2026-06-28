@@ -23,14 +23,18 @@ export function CockpitView() {
   const { entries: logEntries } = useRequestLog();
 
   const handleExport = async () => {
-    const data = await fetchResources();
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'azemu-state.json';
-    a.click();
-    URL.revokeObjectURL(url);
+    try {
+      const data = await fetchResources();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'azemu-state.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Export failed:', err);
+    }
   };
 
   const handleImport = () => {
@@ -38,20 +42,28 @@ export function CockpitView() {
     input.type = 'file';
     input.accept = '.json';
     input.onchange = async () => {
-      const file = input.files?.[0];
-      if (!file) return;
-      const text = await file.text();
-      const data = JSON.parse(text) as Record<string, Resource>;
-      await importState(data);
-      refresh();
+      try {
+        const file = input.files?.[0];
+        if (!file) return;
+        const text = await file.text();
+        const data = JSON.parse(text) as Record<string, Resource>;
+        await importState(data);
+        refresh();
+      } catch (err) {
+        console.error('Import failed:', err);
+      }
     };
     input.click();
   };
 
   const handleReset = async () => {
     if (!confirm('Reset all resources? This cannot be undone.')) return;
-    await resetState();
-    refresh();
+    try {
+      await resetState();
+      refresh();
+    } catch (err) {
+      console.error('Reset failed:', err);
+    }
   };
 
   const startTime = health
@@ -83,7 +95,7 @@ export function CockpitView() {
             onImport={handleImport}
             onReset={handleReset}
           />
-          <RequestLog entries={logEntries.length > 0 ? logEntries : undefined} />
+          <RequestLog entries={logEntries} />
         </div>
       </div>
     </>

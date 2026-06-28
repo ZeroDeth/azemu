@@ -1,9 +1,13 @@
 package console
 
 import (
+	"crypto/tls"
 	"embed"
+	"fmt"
 	"io/fs"
 	"net/http"
+	"net/http/httputil"
+	"net/url"
 	"strings"
 )
 
@@ -11,23 +15,56 @@ import (
 var distFS embed.FS
 
 // Handler returns an http.Handler that serves the console SPA.
-// It serves static files from the embedded dist/ directory and falls back
-// to index.html for client-side routing.
-func Handler() http.Handler {
+//
+// apiPort is the HTTPS ARM port (e.g. 4566) and healthPort is the plain-HTTP
+// health port (e.g. 4568). The handler proxies:
+//
+//   - /api/*        → https://localhost:<apiPort>/api/*
+//   - /health       → http://localhost:<healthPort>/health
+//
+// so the browser can reach both endpoints same-origin without CORS headers.
+// All other paths either serve embedded static assets or fall back to
+// index.html for client-side routing (only for navigation requests that
+// Accept text/html; asset 404s become plain 404 responses).
+func Handler(apiPort, healthPort int) http.Handler {
 	sub, err := fs.Sub(distFS, "dist")
 	if err != nil {
 		panic("console: embedded dist not found: " + err.Error())
 	}
 	fileServer := http.FileServer(http.FS(sub))
 
+	// Proxy for ARM API calls. The ARM server uses a self-signed TLS cert so
+	// we skip verification on the loopback-only connection.
+	armTarget, _ := url.Parse(fmt.Sprintf("https://localhost:%d", apiPort))
+	armProxy := httputil.NewSingleHostReverseProxy(armTarget)
+	armProxy.Transport = &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, //nolint:gosec // loopback only
+	}
+
+	// Proxy for the plain-HTTP health server.
+	healthTarget, _ := url.Parse(fmt.Sprintf("http://localhost:%d", healthPort))
+	healthProxy := httputil.NewSingleHostReverseProxy(healthTarget)
+
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		path := r.URL.Path
+
+		// Proxy /api/* and /health to the appropriate backend servers so the
+		// browser can reach them same-origin (no CORS required).
+		if strings.HasPrefix(path, "/api/") || path == "/api" {
+			armProxy.ServeHTTP(w, r)
+			return
+		}
+		if path == "/health" {
+			healthProxy.ServeHTTP(w, r)
+			return
+		}
+
 		if path == "/" {
 			fileServer.ServeHTTP(w, r)
 			return
 		}
 
-		// Try serving the file directly
+		// Try serving the file directly.
 		clean := strings.TrimPrefix(path, "/")
 		if f, err := sub.Open(clean); err == nil {
 			f.Close()
@@ -35,8 +72,15 @@ func Handler() http.Handler {
 			return
 		}
 
-		// SPA fallback: serve index.html for unmatched routes
-		r.URL.Path = "/"
-		fileServer.ServeHTTP(w, r)
+		// SPA fallback: only serve index.html for navigation requests
+		// (those that Accept text/html). Asset requests that 404 get a plain
+		// 404 so the browser doesn't try to parse HTML as JavaScript/CSS.
+		if strings.Contains(r.Header.Get("Accept"), "text/html") {
+			r.URL.Path = "/"
+			fileServer.ServeHTTP(w, r)
+			return
+		}
+
+		http.NotFound(w, r)
 	})
 }

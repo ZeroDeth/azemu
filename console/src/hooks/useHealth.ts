@@ -8,6 +8,7 @@ export function useHealth(intervalMs = 5000) {
 
   useEffect(() => {
     let mounted = true;
+    let timerId: ReturnType<typeof setTimeout>;
 
     async function poll() {
       try {
@@ -19,11 +20,15 @@ export function useHealth(intervalMs = 5000) {
       } catch (err) {
         if (mounted) setError(err instanceof Error ? err.message : 'unreachable');
       }
+      // Schedule the next poll only after the current one completes so
+      // slow fetches don't cause overlapping concurrent requests.
+      if (mounted) {
+        timerId = setTimeout(poll, intervalMs);
+      }
     }
 
     poll();
-    const id = setInterval(poll, intervalMs);
-    return () => { mounted = false; clearInterval(id); };
+    return () => { mounted = false; clearTimeout(timerId); };
   }, [intervalMs]);
 
   return { health, error };

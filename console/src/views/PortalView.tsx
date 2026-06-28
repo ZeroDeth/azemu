@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { SideNav } from '../components/SideNav';
 import { CategoryBadge } from '../components/CategoryBadge';
 import { StatusDot } from '../components/StatusDot';
@@ -30,9 +31,9 @@ export function PortalView({ resourceGroupName = 'rg-platform' }: Props) {
       <div className={styles.main}>
         {/* Breadcrumb */}
         <div className={styles.breadcrumb}>
-          <span className={styles.breadcrumbLink}>Home</span>
+          <Link to="/" className={styles.breadcrumbLink}>Home</Link>
           <span className={styles.breadcrumbSep}>/</span>
-          <span className={styles.breadcrumbLink}>Resource groups</span>
+          <Link to="/" className={styles.breadcrumbLink}>Resource groups</Link>
           <span className={styles.breadcrumbSep}>/</span>
           <span className={styles.breadcrumbCurrent}>{resourceGroupName}</span>
         </div>
@@ -51,7 +52,7 @@ export function PortalView({ resourceGroupName = 'rg-platform' }: Props) {
 
         {/* Command bar */}
         <div className={styles.commandBar}>
-          <button className={styles.primaryBtn}>
+          <button className={styles.primaryBtn} disabled title="Not yet implemented">
             <Plus size={13} strokeWidth={2} />
             Create
           </button>
@@ -59,11 +60,11 @@ export function PortalView({ resourceGroupName = 'rg-platform' }: Props) {
             <RefreshCw size={13} strokeWidth={1.6} />
             Refresh
           </button>
-          <button className={styles.secondaryBtn}>
+          <button className={styles.secondaryBtn} disabled title="Not yet implemented">
             <Download size={13} strokeWidth={1.6} />
             Export template
           </button>
-          <button className={styles.deleteBtn}>
+          <button className={styles.deleteBtn} disabled title="Not yet implemented">
             <Trash2 size={13} strokeWidth={1.6} />
             Delete
           </button>

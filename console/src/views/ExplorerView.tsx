@@ -30,7 +30,7 @@ export function ExplorerView() {
           </div>
         )}
       </div>
-      <DockedLog entries={logEntries.length > 0 ? logEntries : undefined} />
+      <DockedLog entries={logEntries} />
     </div>
   );
 }

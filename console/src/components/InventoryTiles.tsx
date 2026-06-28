@@ -24,11 +24,17 @@ function computeTiles(resources: Resource[]): Tile[] {
   }
 
   const tiles: Tile[] = [];
-  for (const [type, entry] of Object.entries(TYPE_TO_CATEGORY)) {
-    const count = counts.get(type) ?? 0;
-    if (count > 0) {
+  let otherCount = 0;
+  for (const [type, count] of counts) {
+    const entry = TYPE_TO_CATEGORY[type];
+    if (entry) {
       tiles.push({ code: entry.code, name: entry.label, count });
+    } else {
+      otherCount += count;
     }
+  }
+  if (otherCount > 0) {
+    tiles.push({ code: 'OT', name: 'Other', count: otherCount });
   }
   return tiles;
 }

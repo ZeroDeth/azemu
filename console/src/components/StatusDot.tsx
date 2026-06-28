@@ -8,6 +8,7 @@ export function StatusDot({ color = '#3fb950', size = 7, glow = false }: Props) 
   return (
     <span
       style={{
+        display: 'inline-block',
         width: size,
         height: size,
         borderRadius: '50%',

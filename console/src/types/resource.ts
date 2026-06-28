@@ -25,7 +25,7 @@ export interface RequestLogEntry {
 
 export type CategoryCode =
   | 'RG' | 'VN' | 'SN' | 'NS' | 'PI' | 'LB' | 'AG'
-  | 'KV' | 'DN' | 'AK' | 'ST' | 'RC' | 'CD';
+  | 'KV' | 'DN' | 'AK' | 'ST' | 'RC' | 'CD' | 'OT';
 
 export const CATEGORY_COLORS: Record<CategoryCode, string> = {
   RG: '#f0883e',
@@ -41,6 +41,7 @@ export const CATEGORY_COLORS: Record<CategoryCode, string> = {
   ST: '#a371f7',
   RC: '#db61a2',
   CD: '#f0883e',
+  OT: '#8b949e',
 };
 
 export const TYPE_TO_CATEGORY: Record<string, { code: CategoryCode; label: string }> = {
@@ -76,6 +77,7 @@ export const METHOD_COLORS: Record<string, string> = {
   POST: '#e3b341',
   DELETE: '#f85149',
   HEAD: '#8b949e',
+  PATCH: '#d29922',
 };
 
 export function statusColor(code: number): string {

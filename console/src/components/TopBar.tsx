@@ -10,13 +10,13 @@ export function TopBar() {
 
   return (
     <header className={styles.bar}>
-      <div className={styles.logo} onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
+      <button className={styles.logo} onClick={() => navigate('/')} aria-label="Go to overview">
         <div className={styles.logoIcon}>az</div>
         <div className={styles.logoText}>
           <span className={styles.wordmark}>azemu</span>
           <span className={styles.kicker}>CONSOLE</span>
         </div>
-      </div>
+      </button>
 
       <div className={styles.search}>
         <Search size={14} color="#484f58" strokeWidth={1.6} />
