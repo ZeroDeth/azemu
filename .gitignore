@@ -7,6 +7,8 @@ bin/
 
 # goreleaser output
 dist/
+# But keep the embedded console SPA assets
+!internal/console/dist/
 
 # Terraform
 .terraform/

@@ -23,6 +23,7 @@ flowchart TD
     store --> persist[File persistence\nAZEMU_PERSIST_PATH]
     store --> api[State API\n/api/state/export,import,reset]
     ops[Ops / tests] -->|HTTP :4568| health[Health endpoint\nGET /health]
+    ops -->|HTTP :4570| console[Web Console\nSPA + SSE request log]
 ```
 
 Both ports serve HTTPS using the same self-signed ECDSA P-256 certificate.

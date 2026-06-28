@@ -58,6 +58,7 @@ and should read Scaffold or Planned instead.
 | Docker image | Full | [Dockerfile](../Dockerfile), [docker-compose.yml](../docker-compose.yml) | Multi-stage Go build, alpine runtime, `VOLUME /azemu`, healthcheck on `:4568` |
 | Docker Compose | Full | [examples/terraform/README.md](../examples/terraform/README.md) | `docker compose up -d --build` is the default quick-start path |
 | CLI `azemu tf` | Full | [tf.go](../cmd/azemu/tf.go) | Auto-starts azemu, injects `SSL_CERT_FILE` + `ARM_*`, execs terraform. Replaces `scripts/aztf`. |
+| Web console | Full | [embed.go](../internal/console/embed.go), [request\_log\_test.go](../internal/middleware/request_log_test.go) | React SPA on `:4570` (`AZEMU_CONSOLE_PORT`); three views (Cockpit dashboard, Portal Classic blade, IDE Explorer); live ARM request streaming via SSE (`GET /api/requests/stream`); embedded in binary via `embed.FS` |
 | State export/import | Full | [file_test.go](../internal/store/file_test.go) | `GET /api/state/export`, `POST /api/state/import`, `POST /api/state/reset`; file-backed via `--persist` |
 | `terraform test` example | Full | [main.tftest.hcl](../examples/terraform/main.tftest.hcl) | Native Terraform 1.6+ test; one `run "full_lifecycle"` block |
 | Nix flake | Full | [flake.nix](../flake.nix) | `buildGoModule` for `cmd/azemu`; `devShells.default` with go + terraform |

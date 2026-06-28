@@ -2,7 +2,8 @@
 
 ## Docker (recommended)
 
-Requires Docker, Docker Compose, and Terraform 1.6+.
+Requires Docker, Docker Compose, and Terraform 1.6+ or
+[OpenTofu](https://opentofu.org) 1.6+.
 
 ```bash
 # Start azemu (ARM emulator + Azurite sidecar)
@@ -26,18 +27,37 @@ The `SSL_CERT_FILE` export is needed because azemu serves HTTPS with a self-sign
 certificate. The cert is generated at first start and persisted at
 `.azemu/cert-bundle.pem` (gitignored), so later starts reuse it.
 
-## aztf wrapper
+### Prefer OpenTofu?
 
-The `scripts/aztf` wrapper automates the env-var exports and starts azemu if it
-is not already running. It is the fastest path for repeated local iteration.
+azemu serves the standard Azure endpoints used by the `azurerm` provider, so
+[OpenTofu](https://opentofu.org) is a drop-in replacement. Swap `terraform` for `tofu`:
 
 ```bash
-./scripts/aztf -chdir=examples/terraform init
-./scripts/aztf -chdir=examples/terraform apply -auto-approve
-./scripts/aztf -chdir=examples/terraform destroy -auto-approve
+cd examples/terraform
+tofu init
+tofu apply -auto-approve
+tofu destroy -auto-approve
 ```
 
-No manual `export SSL_CERT_FILE` needed; `aztf` sets it before every invocation.
+OpenTofu keeps the whole toolchain open source. See
+[License & Forking](../community/license.md) for why we recommend it.
+
+## azemu tf wrapper
+
+If you have the `azemu` binary (via `go build` or flox), the `azemu tf`
+subcommand starts the emulator if it is not already running, injects the
+env vars, and execs Terraform. It is the fastest path for repeated local
+iteration.
+
+```bash
+azemu tf -chdir=examples/terraform init
+azemu tf -chdir=examples/terraform apply -auto-approve
+azemu tf -chdir=examples/terraform destroy -auto-approve
+```
+
+No manual `export SSL_CERT_FILE` needed; `azemu tf` sets it before every
+invocation. The same wrapper exists for other toolchains: `azemu pulumi`,
+`azemu kubectl`, and `azemu python`.
 
 ## flox (contributor workflow)
 

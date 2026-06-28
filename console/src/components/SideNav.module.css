@@ -1,0 +1,41 @@
+.nav {
+  background: var(--surface-canvas);
+  border-right: 1px solid var(--border-subtle);
+  padding: 10px 0;
+  overflow-y: auto;
+}
+
+.section {
+  padding: 15px 16px 6px;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.16em;
+  color: var(--text-faintest);
+  text-transform: uppercase;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  padding: 8px 16px;
+  border: none;
+  background: transparent;
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  cursor: pointer;
+  border-left: 2px solid transparent;
+  text-align: left;
+}
+
+.item:hover {
+  color: var(--text-secondary);
+}
+
+.active {
+  color: var(--text-primary);
+  border-left-color: var(--brand-green);
+  background: rgba(0, 255, 65, 0.06);
+}

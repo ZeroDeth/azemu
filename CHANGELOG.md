@@ -19,6 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.3.0] - 2026-06-28
+
 ### Added
 
 - CDN content data plane. The CDN was control-plane only: azemu stored the
@@ -44,9 +46,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and a read-path verify that checks the multipart `Content-Type`, the cache
   TTLs, and the manifest signature. CI runs the ARM-half `terraform test`;
   `make ota-delivery` runs the full local loop against Azurite.
+- Documentation site: a "License & Forking" page covering the MIT licence,
+  responsible forking (rebrand, keep attribution, register derived providers
+  under your own namespace), and the Terraform BUSL vs OpenTofu MPL licensing
+  difference. Linked from the home page, README, and contributing guide.
+- OpenTofu is documented as a supported drop-in alongside Terraform across
+  the install guide, "How It Works", the home page, and the README.
+
+### Changed
+
+- Documentation site is production-ready and contribution-focused: per-page
+  "edit on GitHub" links, social/community links, a footer, a copyright
+  notice, and badges. The home page and contributing guide now open with a
+  clear invitation to contribute and point at good first issues and
+  Discussions.
+- Reframed the project narrative (README, ROADMAP, site home and roadmap) to
+  be tool-first and demand-driven: azemu emulates plain Azure (ARM, metadata,
+  OIDC) and drives multiple toolchains (`tf`/`pulumi`/`kubectl`/`python`
+  subcommands), and coverage grows from user feature requests rather than a
+  published master plan. Added a clear "tell us what you need" feedback path
+  (feature requests + discussions) anchored on the parity matrix. The
+  fidelity-first engineering bar and the existing non-goals are unchanged.
+- Redesigned the docs site home page for clarity: a clean "what azemu
+  emulates today" table, an "examples that solve real use cases" section
+  linking the six working scenarios, a short "what we are aiming for", and a
+  single "get involved" call to action with a GitHub-star nudge.
 
 ### Fixed
 
+- Docs site no longer references the removed `scripts/aztf` wrapper. The
+  home-page quick start uses `terraform -chdir`, and the install guide
+  documents the `azemu tf` subcommand that replaced it.
 - `terraform destroy` no longer hangs. The metadata `resourceManager`
   endpoint dropped its trailing slash (`https://localhost:<port>`). With the
   trailing slash, the azurerm provider built DELETE URIs as
@@ -237,6 +267,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   rationale, alternatives, and consequences. Status: Implemented.
 - `docs/SETUP.md`: Storage and Azurite section; `AZEMU_AZURITE_ENDPOINT` in
   the env-var table; Azurite port table.
+
+### Added (Phase 8: identity, AKS, Azure DevOps bridge)
+
+- IMDS token endpoint at `/metadata/identity/oauth2/token`. Enforces the
+  `Metadata: true` header, returns `expires_in` as a string per the IMDS
+  spec, and signs an RS256 JWT with the same key as the OAuth2 service.
+- Workload identity federation: the token endpoint exchanges a matching
+  `client_assertion` for an azemu-signed access token using the issuer,
+  subject, and audience rules stored on a federated identity credential, and
+  Key Vault data-plane routes honour that bearer token.
+- Azure DevOps OIDC issuer on the ADO port (`:4569`, plain HTTP): its own
+  RSA-2048 signing key, `/.well-known/openid-configuration`,
+  `/discovery/keys`, and an OIDC token endpoint. The JWT `sub` is
+  `sc://{org}/{project}/azemu-service-connection`, matching the
+  `SYSTEM_OIDCREQUESTURI` surface a pipeline calls.
+- Azure DevOps Service Connections CRUD
+  (`/{org}/{project}/_apis/serviceendpoint/endpoints`): auto-assigned UUID,
+  `isReady: true`, name-filter on list, synchronous `204` delete.
+- `Microsoft.ContainerService/managedClusters` and node pools management
+  plane: computed `fqdn`, default Kubernetes version, SKU and identity at the
+  top level, cascade-delete node pools, parent-existence check on pool PUT,
+  and `listClusterUserCredential` / `listClusterAdminCredential` returning a
+  parseable kubeconfig. (`azurerm_kubernetes_cluster`,
+  `azurerm_kubernetes_cluster_node_pool`)
+- `Microsoft.ManagedIdentity/userAssignedIdentities` CRUD with deterministic
+  `principalId` / `clientId` (SHA-1 UUID) for stable plan/apply/refresh.
+  (`azurerm_user_assigned_identity`)
+- `federatedIdentityCredentials` child CRUD under user-assigned identities,
+  storing the issuer/subject/audience rules used by the workload-identity
+  token exchange. (`azurerm_federated_identity_credential`)
+- New scenarios under `examples/terraform/scenarios/`: `three-tier`,
+  `static-site`, `dns-with-records`, `aks-workload`, and `ado-pipeline`. Each
+  runs end to end against the real `azurerm` provider and doubles as a
+  `terraform test` in scenario CI.
+
+### Added (Phase 9: CLI subcommands)
+
+- `azemu serve` subcommand carrying the emulator server; subcommand dispatch
+  added to `cmd/azemu` so the binary fronts a toolchain wrapper.
+- `azemu tf` Terraform adapter: auto-starts azemu, injects `SSL_CERT_FILE`
+  and the `ARM_*` variables, and execs `terraform`. Replaces `scripts/aztf`,
+  which was removed.
+- `azemu pulumi`, `azemu kubectl`, and `azemu python` adapters that run the
+  same auto-start-and-inject flow for those toolchains.
+- `azemu status` health-check, `azemu parity` supported-resource listing, and
+  `azemu snapshot` state-management subcommands.
 
 ## [v0.1.0] - 2026-04-21
 
