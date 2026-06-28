@@ -1,0 +1,1834 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="An open-source, local Azure emulator for Terraform, OpenTofu, and other Azure tooling">
+      
+      
+        <meta name="author" content="azemu contributors">
+      
+      
+        <link rel="canonical" href="https://zerodeth.github.io/azemu/concepts/parity-matrix/">
+      
+      
+        <link rel="prev" href="../arm-fidelity/">
+      
+      
+        <link rel="next" href="../web-console/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Parity Matrix - azemu</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="custom" data-md-color-accent="custom">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#parity-matrix-azemu" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="azemu" class="md-header__button md-logo" aria-label="azemu" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            azemu
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Parity Matrix
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/zerodeth/azemu" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    zerodeth/azemu
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="azemu" class="md-nav__button md-logo" aria-label="azemu" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    azemu
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/zerodeth/azemu" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    zerodeth/azemu
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/install/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Install
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/first-apply/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Your First Apply
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/how-it-works/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How It Works
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Concepts
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Concepts
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../arm-fidelity/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ARM Fidelity
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Parity Matrix
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Parity Matrix
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#infrastructure-services" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Infrastructure Services
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#arm-resources" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ARM Resources
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#identity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Identity
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#developer-tooling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Developer Tooling
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../web-console/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Web Console
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Resources
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Resources
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../resources/troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_2" id="__nav_4_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design notes
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Design notes
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../resources/design-notes/0001-delegate-storage-data-plane-to-azurite/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design note 1: Delegate Storage data plane to Azurite
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../resources/design-notes/0002-azemu-plus-kind-for-aks-workload-deployments/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design note 2: azemu + kind hybrid for AKS workload deployments
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../resources/design-notes/0003-add-azure-cache-for-redis/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design note 3: Add Azure Cache for Redis
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../resources/design-notes/0004-azure-devops-pipelines-scope/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design note 4: How far azemu emulates Azure DevOps Pipelines
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Community
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Community
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../community/contributing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../community/roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Roadmap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../community/code-of-conduct/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Code of Conduct
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../community/license/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    License & Forking
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Setup (Dev Env)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/changelog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#infrastructure-services" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Infrastructure Services
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#arm-resources" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ARM Resources
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#identity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Identity
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#developer-tooling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Developer Tooling
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+    <a href="https://github.com/zerodeth/azemu/edit/main/website/docs/concepts/parity-matrix.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75z"/></svg>
+    </a>
+  
+  
+    
+      
+    
+    <a href="https://github.com/zerodeth/azemu/raw/main/website/docs/concepts/parity-matrix.md" title="View source of this page" class="md-content__button md-icon">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0 8a5 5 0 0 1-5-5 5 5 0 0 1 5-5 5 5 0 0 1 5 5 5 5 0 0 1-5 5m0-12.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5"/></svg>
+    </a>
+  
+
+
+<h1 id="parity-matrix-azemu">Parity Matrix -- azemu<a class="headerlink" href="#parity-matrix-azemu" title="Permanent link">&para;</a></h1>
+<p>What azemu implements. Updated whenever a resource handler changes.</p>
+<p>Every "Full" claim links to the test file that proves it. If a row says
+Full, a reviewer should be able to open the linked test and see a passing
+assertion for the behaviour. If the link is missing, the row is aspirational
+and should read Scaffold or Planned instead.</p>
+<h2 id="infrastructure-services">Infrastructure Services<a class="headerlink" href="#infrastructure-services" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Capability</th>
+<th>Status</th>
+<th>Proof</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Metadata service (<code>/metadata/endpoints</code>)</td>
+<td>Full</td>
+<td><a href="../internal/metadata/service_test.go">service_test.go</a>, <a href="../test/integration/metadata_test.go">metadata_test.go</a></td>
+<td>Canonical Azure schema; pinned by <code>TestMetadata_CanonicalFieldNames</code>, <code>TestMetadata_NotClassifiedAsAzureStack</code></td>
+</tr>
+<tr>
+<td>OAuth2 token endpoint (mock JWT)</td>
+<td>Full</td>
+<td><a href="../internal/auth/token_test.go">token_test.go</a>, <a href="../test/integration/auth_test.go">auth_test.go</a></td>
+<td>RS256 JWT, end-to-end JWKS signature verification in the integration suite</td>
+</tr>
+<tr>
+<td>OIDC discovery (<code>/.well-known/openid-configuration</code>)</td>
+<td>Full</td>
+<td><a href="../internal/auth/token_test.go">token_test.go</a></td>
+<td>Standard discovery document; mounted under <code>/{tenantID}</code> via <code>TokenService.TenantRoutes</code></td>
+</tr>
+<tr>
+<td>JWKS (<code>/discovery/v2.0/keys</code>)</td>
+<td>Full</td>
+<td><a href="../internal/auth/token_test.go">token_test.go</a>, <a href="../test/integration/auth_test.go">auth_test.go</a></td>
+<td>RSA public key matches signing key; <code>kid</code> in token header matches JWKS key</td>
+</tr>
+<tr>
+<td>Self-signed TLS (ECDSA P-256)</td>
+<td>Full</td>
+<td><a href="../internal/auth/tls_test.go">tls_test.go</a></td>
+<td>Auto-generated at startup; persistent across restarts when <code>AZEMU_CERT_PATH</code> is set</td>
+</tr>
+<tr>
+<td>Health check (<code>GET /health</code> on <code>:4568</code>)</td>
+<td>Full</td>
+<td>covered by <code>make smoke</code></td>
+<td>Plain HTTP, no TLS, no middleware; returns <code>{"status":"ok","version":"...","uptime_seconds":N}</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="arm-resources">ARM Resources<a class="headerlink" href="#arm-resources" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Resource</th>
+<th>ARM CRUD</th>
+<th>Data Plane</th>
+<th>Terraform Resource</th>
+<th>Status</th>
+<th>Proof</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Subscriptions</td>
+<td>Read-only</td>
+<td>N/A</td>
+<td>N/A</td>
+<td>Full (mock)</td>
+<td><a href="../internal/arm/rg_test.go">rg_test.go</a> (indirect: every RG path is scoped under a subscription)</td>
+</tr>
+<tr>
+<td>Tenants</td>
+<td>Read-only</td>
+<td>N/A</td>
+<td>N/A</td>
+<td>Full (mock)</td>
+<td><a href="../internal/auth/token_test.go">token_test.go</a> (tenant-scoped routes)</td>
+</tr>
+<tr>
+<td>Provider Registration</td>
+<td>Always succeeds</td>
+<td>N/A</td>
+<td>N/A</td>
+<td>Full</td>
+<td>covered by the Terraform round-trip in <code>make smoke</code></td>
+</tr>
+<tr>
+<td>Resource Groups</td>
+<td>Full</td>
+<td>N/A</td>
+<td><code>azurerm_resource_group</code></td>
+<td>Full</td>
+<td><a href="../internal/arm/rg_test.go">rg_test.go</a>, <a href="../internal/arm/rg_resources_test.go">rg_resources_test.go</a>, <a href="../test/integration/arm_test.go">arm_test.go</a></td>
+</tr>
+<tr>
+<td>Virtual Networks</td>
+<td>Full</td>
+<td>N/A</td>
+<td><code>azurerm_virtual_network</code></td>
+<td>Full (invalid/overlapping <code>addressPrefixes</code> rejected with 400; inline subnets in PUT body are dropped — use <code>azurerm_subnet</code> instead)</td>
+<td><a href="../internal/arm/vnet_test.go">vnet_test.go</a>, <a href="../test/integration/arm_test.go">arm_test.go</a></td>
+</tr>
+<tr>
+<td>Subnets</td>
+<td>Full</td>
+<td>N/A</td>
+<td><code>azurerm_subnet</code></td>
+<td>Full (404 <code>ParentResourceNotFound</code> if vnet missing; cascades with parent)</td>
+<td><a href="../internal/arm/subnet_test.go">subnet_test.go</a>, <a href="../test/integration/arm_test.go">arm_test.go</a></td>
+</tr>
+<tr>
+<td>Public IP Addresses</td>
+<td>Full</td>
+<td>N/A</td>
+<td><code>azurerm_public_ip</code></td>
+<td>Full (Static/Dynamic alloc, SKU, fake <code>ipAddress</code> assigned on creation, preserved on update)</td>
+<td><a href="../internal/arm/public_ip_test.go">public_ip_test.go</a>, <a href="../test/integration/arm_test.go">arm_test.go</a></td>
+</tr>
+<tr>
+<td>Network Security Groups</td>
+<td>Full</td>
+<td>N/A</td>
+<td><code>azurerm_network_security_group</code></td>
+<td>Full (security rules as child resources, cascade delete, embedded in NSG GET)</td>
+<td><a href="../internal/arm/nsg_test.go">nsg_test.go</a>, <a href="../test/integration/arm_test.go">arm_test.go</a></td>
+</tr>
+<tr>
+<td>Load Balancers</td>
+<td>Full</td>
+<td>N/A</td>
+<td><code>azurerm_lb</code>, <code>azurerm_lb_backend_address_pool</code>, <code>azurerm_lb_rule</code>, <code>azurerm_lb_probe</code></td>
+<td>Full (backend pools, rules, probes as child resources; cascade delete; embedded in LB GET; SKU at top level)</td>
+<td><a href="../internal/arm/lb_test.go">lb_test.go</a>, <a href="../test/integration/arm_test.go">arm_test.go</a></td>
+</tr>
+<tr>
+<td>Application Gateways</td>
+<td>Full</td>
+<td>N/A</td>
+<td><code>azurerm_application_gateway</code></td>
+<td>Full (monolithic PUT; SKU at top level with name/tier/capacity; all inline sub-config preserved; operationalState: Running)</td>
+<td><a href="../internal/arm/appgw_test.go">appgw_test.go</a>, <a href="../test/integration/arm_test.go">arm_test.go</a></td>
+</tr>
+<tr>
+<td>DNS Zones</td>
+<td>Full</td>
+<td>N/A</td>
+<td><code>azurerm_dns_zone</code>, <code>azurerm_dns_a_record</code>, <code>azurerm_dns_aaaa_record</code>, <code>azurerm_dns_cname_record</code>, <code>azurerm_dns_txt_record</code>, <code>azurerm_dns_mx_record</code>, <code>azurerm_dns_srv_record</code>, <code>azurerm_dns_ns_record</code></td>
+<td>Full (auto-SOA + auto-NS on zone create; A, AAAA, CNAME, TXT, MX, SRV, NS, SOA record sets as children; cascade delete)</td>
+<td><a href="../internal/arm/dns_test.go">dns_test.go</a>, <a href="../test/integration/arm_test.go">arm_test.go</a></td>
+</tr>
+<tr>
+<td>Storage Accounts</td>
+<td>Full</td>
+<td>Delegated to Azurite</td>
+<td><code>azurerm_storage_account</code>, <code>azurerm_storage_container</code></td>
+<td>Full (management plane; Azurite path-style endpoints; <code>listKeys</code> returns Azurite dev key; name uniqueness check; blob containers as child resources with cascade delete)</td>
+<td><a href="../internal/arm/storage_account_test.go">storage_account_test.go</a>, <a href="../internal/arm/storage_container_test.go">storage_container_test.go</a>, <a href="../test/integration/arm_test.go">arm_test.go</a></td>
+</tr>
+<tr>
+<td>Key Vault</td>
+<td>Full</td>
+<td>Full</td>
+<td><code>azurerm_key_vault</code>, <code>azurerm_key_vault_secret</code>, <code>azurerm_key_vault_key</code></td>
+<td>Full (management plane; <code>vaultUri</code> rewritten to azemu's per-vault host <code>https://{name}.vault.localhost[:port]/</code>; root-level <code>/keys</code> and <code>/secrets</code> routes resolve the vault from the Host header; SKU/soft-delete defaults; secrets with versioning, list, and cascade delete on vault destroy; RSA keys with versioning, import, RS256 sign verified against the returned public JWK, versionless sign via current pointer; no key export, wrap/unwrap, EC keys, or rotation policy; protected routes honour azemu-issued bearer tokens)</td>
+<td><a href="../internal/arm/keyvault_test.go">keyvault_test.go</a>, <a href="../internal/arm/keyvault_secret_test.go">keyvault_secret_test.go</a>, <a href="../internal/arm/keyvault_key_test.go">keyvault_key_test.go</a>, <a href="../test/integration/arm_test.go">arm_test.go</a>, <a href="../test/integration/workload_identity_test.go">workload_identity_test.go</a></td>
+</tr>
+<tr>
+<td>CDN</td>
+<td>Full</td>
+<td>Full</td>
+<td><code>azurerm_cdn_profile</code>, <code>azurerm_cdn_endpoint</code></td>
+<td>Full (profile SKU at top level; endpoint <code>hostName</code> computed as <code>{name}.azureedge.net</code>; cascade delete; parent-existence check on endpoint PUT). Content data plane: a request to the endpoint host <code>{name}.azureedge.net</code> is reverse-proxied to the endpoint's Blob origin (Azurite, path-style) with the origin's <code>Content-Type</code> and <code>Cache-Control</code> passed through, matching Azure CDN's default origin-honouring behaviour; <code>GET</code>/<code>HEAD</code> only; delivery-rule TTL overrides are a follow-up.</td>
+<td><a href="../internal/arm/cdn_test.go">cdn_test.go</a>, <a href="../internal/arm/cdn_dataplane_test.go">cdn_dataplane_test.go</a>, <a href="../test/integration/arm_test.go">arm_test.go</a></td>
+</tr>
+<tr>
+<td>User Assigned Identity</td>
+<td>Full</td>
+<td>N/A</td>
+<td><code>azurerm_user_assigned_identity</code></td>
+<td>Full (deterministic <code>principalId</code>/<code>clientId</code> via SHA-1 UUID for stable plan/apply/refresh; DELETE async 202)</td>
+<td><a href="../internal/arm/identity_test.go">identity_test.go</a></td>
+</tr>
+<tr>
+<td>Federated Identity Credential</td>
+<td>Full</td>
+<td>N/A</td>
+<td><code>azurerm_federated_identity_credential</code></td>
+<td>Full (child CRUD under user-assigned identities; issuer/subject/audience rules used by workload identity token exchange)</td>
+<td><a href="../internal/arm/federated_identity_credential_test.go">federated_identity_credential_test.go</a>, <a href="../internal/auth/token_test.go">token_test.go</a>, <a href="../test/integration/workload_identity_test.go">workload_identity_test.go</a></td>
+</tr>
+<tr>
+<td>AKS Managed Cluster</td>
+<td>Full (stub)</td>
+<td>N/A</td>
+<td><code>azurerm_kubernetes_cluster</code>, <code>azurerm_kubernetes_cluster_node_pool</code></td>
+<td>Full management plane (computed fqdn, default k8s version 1.29.0, SKU + identity at top level, cascade-delete node pools, parent-existence check on pool PUT, listClusterUserCredential / listClusterAdminCredential returning a parseable kubeconfig for the kube_config attribute)</td>
+<td><a href="../internal/arm/aks_test.go">aks_test.go</a></td>
+</tr>
+<tr>
+<td>Azure Cache for Redis</td>
+<td>Full</td>
+<td>Delegated to <code>redis:7-alpine</code> sidecar</td>
+<td><code>azurerm_redis_cache</code></td>
+<td>Full (Standard tier scope; SKU validated inside <code>properties.sku</code> with name/family/capacity ranges; <code>hostName</code> derived from <code>AZEMU_REDIS_ENDPOINT</code>; <code>port: 6379</code>, <code>sslPort: 6380</code>; <code>listKeys</code> returns deterministic dev keys whose primary value matches the sidecar <code>--requirepass</code>; Premium-only properties rejected on Basic/Standard; Premium clustering, persistence, geo-replication, <code>regenerateKey</code>, and TLS-wrapped 6380 are tracked as follow-ups)</td>
+<td><a href="../internal/arm/redis_cache_test.go">redis_cache_test.go</a>, <a href="../test/integration/arm_test.go">arm_test.go</a></td>
+</tr>
+</tbody>
+</table>
+<h2 id="identity">Identity<a class="headerlink" href="#identity" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Capability</th>
+<th>Status</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Service principal (client_id/secret)</td>
+<td>Full</td>
+<td>Accepts any credentials</td>
+</tr>
+<tr>
+<td>Managed identity (IMDS)</td>
+<td>Full</td>
+<td>IMDS token endpoint at <code>/metadata/identity/oauth2/token</code>; <code>Metadata: true</code> header enforced; <code>expires_in</code> as string per IMDS spec; RS256 JWT signed with same key as OAuth2 service. Proof: <a href="../internal/auth/imds_test.go">imds_test.go</a></td>
+</tr>
+<tr>
+<td>Workload identity (OIDC federation)</td>
+<td>Full</td>
+<td><code>azurerm_federated_identity_credential</code> stores issuer/subject/audience rules. The token endpoint exchanges a matching <code>client_assertion</code> for an azemu-signed access token, and Key Vault data-plane routes honour that bearer token. Proof: <a href="../internal/arm/federated_identity_credential_test.go">federated_identity_credential_test.go</a>, <a href="../internal/auth/token_test.go">token_test.go</a>, <a href="../test/integration/workload_identity_test.go">workload_identity_test.go</a></td>
+</tr>
+<tr>
+<td>Azure DevOps OIDC (<code>SYSTEM_OIDCREQUESTURI</code>)</td>
+<td>Full</td>
+<td>Plain HTTP on <code>:4569</code>; own RSA-2048 signing key; <code>/.well-known/openid-configuration</code> + <code>/discovery/keys</code> + OIDC token endpoint; JWT <code>sub</code> = <code>sc://{org}/{project}/azemu-service-connection</code>. Proof: <a href="../internal/ado/oidc_test.go">oidc_test.go</a></td>
+</tr>
+<tr>
+<td>ADO Service Connections CRUD</td>
+<td>Full</td>
+<td><code>/{org}/{project}/_apis/serviceendpoint/endpoints</code>; auto-assigns UUID; <code>isReady: true</code>, <code>owner: "Library"</code>; name-filter on list; DELETE is sync 204 (not ARM-style async). Proof: <a href="../internal/ado/serviceconnection_test.go">serviceconnection_test.go</a></td>
+</tr>
+<tr>
+<td>ADO Pipeline Runs</td>
+<td>Full</td>
+<td>POST <code>/{org}/{project}/_apis/pipelines/{id}/runs</code> queues a run; GET <code>/_apis/build/builds/{id}</code> returns status derived from elapsed time (notStarted, inProgress, completed/succeeded); GET <code>/_apis/build/builds/{id}/logs</code> returns mock log metadata list. Runs are in-memory with sequential int IDs; no real execution. Proof: <a href="../internal/ado/pipeline_test.go">pipeline_test.go</a></td>
+</tr>
+</tbody>
+</table>
+<h2 id="developer-tooling">Developer Tooling<a class="headerlink" href="#developer-tooling" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Capability</th>
+<th>Status</th>
+<th>Proof</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Docker image</td>
+<td>Full</td>
+<td><a href="../Dockerfile">Dockerfile</a>, <a href="../docker-compose.yml">docker-compose.yml</a></td>
+<td>Multi-stage Go build, alpine runtime, <code>VOLUME /azemu</code>, healthcheck on <code>:4568</code></td>
+</tr>
+<tr>
+<td>Docker Compose</td>
+<td>Full</td>
+<td><a href="../examples/terraform/README.md">examples/terraform/README.md</a></td>
+<td><code>docker compose up -d --build</code> is the default quick-start path</td>
+</tr>
+<tr>
+<td>CLI <code>azemu tf</code></td>
+<td>Full</td>
+<td><a href="../cmd/azemu/tf.go">tf.go</a></td>
+<td>Auto-starts azemu, injects <code>SSL_CERT_FILE</code> + <code>ARM_*</code>, execs terraform. Replaces <code>scripts/aztf</code>.</td>
+</tr>
+<tr>
+<td>Web console</td>
+<td>Full</td>
+<td><a href="../internal/console/embed.go">embed.go</a>, <a href="../internal/middleware/request_log_test.go">request_log_test.go</a></td>
+<td>React SPA on <code>:4570</code> (<code>AZEMU_CONSOLE_PORT</code>); three views (Cockpit dashboard, Portal Classic blade, IDE Explorer); live ARM request streaming via SSE (<code>GET /api/requests/stream</code>); embedded in binary via <code>embed.FS</code></td>
+</tr>
+<tr>
+<td>State export/import</td>
+<td>Full</td>
+<td><a href="../internal/store/file_test.go">file_test.go</a></td>
+<td><code>GET /api/state/export</code>, <code>POST /api/state/import</code>, <code>POST /api/state/reset</code>; file-backed via <code>--persist</code></td>
+</tr>
+<tr>
+<td><code>terraform test</code> example</td>
+<td>Full</td>
+<td><a href="../examples/terraform/main.tftest.hcl">main.tftest.hcl</a></td>
+<td>Native Terraform 1.6+ test; one <code>run "full_lifecycle"</code> block</td>
+</tr>
+<tr>
+<td>Nix flake</td>
+<td>Full</td>
+<td><a href="../flake.nix">flake.nix</a></td>
+<td><code>buildGoModule</code> for <code>cmd/azemu</code>; <code>devShells.default</code> with go + terraform</td>
+</tr>
+<tr>
+<td>Binary releases</td>
+<td>None</td>
+<td>--</td>
+<td>Planned (goreleaser, Phase 5.9)</td>
+</tr>
+<tr>
+<td>Fixtures/snapshots</td>
+<td>None</td>
+<td>--</td>
+<td>Planned (v0.2+)</td>
+</tr>
+<tr>
+<td>Helm chart</td>
+<td>None</td>
+<td>--</td>
+<td>Planned (v0.3+)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p>Status key:</p>
+<ul>
+<li><strong>Full</strong>: implemented, tested, and the Proof column points at the test(s) that prove it.</li>
+<li><strong>Scaffold</strong>: code exists but not validated or tested (no Proof link yet).</li>
+<li><strong>Stub</strong>: endpoint returns 200 but no real logic.</li>
+<li><strong>None</strong>: not implemented.</li>
+<li><strong>Planned</strong>: on roadmap with target version; see <code>ROADMAP.md</code>.</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../arm-fidelity/" class="md-footer__link md-footer__link--prev" aria-label="Previous: ARM Fidelity">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                ARM Fidelity
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../web-console/" class="md-footer__link md-footer__link--next" aria-label="Next: Web Console">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Web Console
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; 2026 azemu contributors. Released under the <a href="https://github.com/zerodeth/azemu/blob/main/LICENSE">MIT License</a>. azemu is a community project and is not affiliated with or endorsed by Microsoft, HashiCorp, or the OpenTofu project.
+
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+    <a href="https://github.com/zerodeth/azemu" target="_blank" rel="noopener" title="azemu on GitHub" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+    
+    
+    
+    
+    <a href="https://github.com/zerodeth/azemu/discussions" target="_blank" rel="noopener" title="Discussions" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M384 144c0 97.2-86 176-192 176-26.7 0-52.1-5-75.2-14l-81.6 43.2c-9.3 4.9-20.7 3.2-28.2-4.2s-9.2-18.9-4.2-28.2l35.6-67.2C14.3 220.2 0 183.6 0 144 0 46.8 86-32 192-32s192 78.8 192 176m0 368c-94.1 0-172.4-62.1-188.8-144 120-1.5 224.3-86.9 235.8-202.7 83.3 19.2 145 88.3 145 170.7 0 39.6-14.3 76.2-38.4 105.6l35.6 67.2c4.9 9.3 3.2 20.7-4.2 28.2s-18.9 9.2-28.2 4.2L459.2 498c-23.1 9-48.5 14-75.2 14"/></svg>
+    </a>
+  
+    
+    
+    
+    
+    <a href="https://github.com/zerodeth/azemu/issues" target="_blank" rel="noopener" title="Issue tracker" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M192 96c0-53 43-96 96-96s96 43 96 96v3.6c0 15.7-12.7 28.4-28.4 28.4H220.5c-15.7 0-28.4-12.7-28.4-28.4V96zm345.6 12.8c10.6 14.1 7.7 34.2-6.4 44.8l-97.8 73.3c5.3 8.9 9.3 18.7 11.8 29.1H544c17.7 0 32 14.3 32 32s-14.3 32-32 32h-96v32c0 2.6-.1 5.3-.2 7.9l83.4 62.5c14.1 10.6 17 30.7 6.4 44.8s-30.7 17-44.8 6.4l-63.1-47.3c-23.2 44.2-66.5 76.2-117.7 83.9V280c0-13.3-10.7-24-24-24s-24 10.7-24 24v230.2c-51.2-7.7-94.5-39.7-117.7-83.9l-63.1 47.3c-14.1 10.6-34.2 7.7-44.8-6.4s-7.7-34.2 6.4-44.8l83.4-62.5c-.1-2.6-.2-5.2-.2-7.9v-32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32h98.8c2.5-10.4 6.5-20.2 11.8-29.1l-97.8-73.3c-14.1-10.6-17-30.7-6.4-44.8s30.7-17 44.8-6.4L192 184c12.3-5.1 25.8-8 40-8h112c14.2 0 27.7 2.8 40 8l108.8-81.6c14.1-10.6 34.2-7.7 44.8 6.4"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.sections", "navigation.expand", "navigation.top", "navigation.tracking", "navigation.footer", "toc.follow", "search.suggest", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.action.edit", "content.action.view"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+      
+        <script src="../../javascripts/mermaid-init.js"></script>
+      
+    
+  </body>
+</html>

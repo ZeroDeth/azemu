@@ -1,0 +1,593 @@
+/* =========================================================
+   azemu -- Industrial Terminal theme
+   ========================================================= */
+
+/* --- Google Fonts import (monospace for headings) --- */
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+/* =========================================================
+   Dark mode (default) -- slate scheme
+   ========================================================= */
+[data-md-color-scheme="slate"] {
+  --md-default-bg-color:        #0d1117;
+  --md-default-fg-color:        #e6edf3;
+  --md-default-fg-color--light: #8b949e;
+  --md-default-fg-color--lightest: #484f58;
+
+  --md-primary-fg-color:        #00ff41;
+  --md-primary-fg-color--light: #33ff5c;
+  --md-primary-fg-color--dark:  #00cc34;
+  --md-primary-bg-color:        #0d1117;
+  --md-primary-bg-color--light: #161b22;
+
+  --md-accent-fg-color:         #00ff41;
+  --md-accent-fg-color--transparent: rgba(0, 255, 65, 0.12);
+  --md-accent-bg-color:         #0d1117;
+
+  --md-typeset-color:           #e6edf3;
+  --md-typeset-a-color:         #58a6ff;
+
+  --md-code-bg-color:           #0a0e14;
+  --md-code-fg-color:           #e6edf3;
+  --md-code-hl-color:           rgba(0, 255, 65, 0.1);
+
+  --md-footer-bg-color:         #010409;
+  --md-footer-bg-color--dark:   #010409;
+  --md-footer-fg-color:         #8b949e;
+  --md-footer-fg-color--light:  #484f58;
+  --md-footer-fg-color--lighter:#30363d;
+
+  /* Admonition accents */
+  --md-admonition-bg-color:     #161b22;
+
+  /* Custom tokens */
+  --azemu-surface:              #161b22;
+  --azemu-border:               #30363d;
+  --azemu-green:                #00ff41;
+  --azemu-green-dim:            #238636;
+  --azemu-blue:                 #58a6ff;
+  --azemu-amber:                #d29922;
+}
+
+/* =========================================================
+   Light mode
+   ========================================================= */
+[data-md-color-scheme="default"] {
+  --md-primary-fg-color:        #1a7f37;
+  --md-primary-fg-color--light: #2ea043;
+  --md-primary-fg-color--dark:  #116329;
+  --md-primary-bg-color:        #ffffff;
+  --md-primary-bg-color--light: #f6f8fa;
+
+  --md-accent-fg-color:         #1a7f37;
+  --md-accent-fg-color--transparent: rgba(26, 127, 55, 0.1);
+
+  --md-typeset-a-color:         #0969da;
+
+  --md-code-bg-color:           #f0f2f4;
+  --md-code-fg-color:           #1f2328;
+
+  /* Custom tokens */
+  --azemu-surface:              #f6f8fa;
+  --azemu-border:               #d0d7de;
+  --azemu-green:                #1a7f37;
+  --azemu-green-dim:            #2ea043;
+  --azemu-blue:                 #0969da;
+  --azemu-amber:                #9a6700;
+}
+
+/* =========================================================
+   Typography -- monospace headings
+   ========================================================= */
+.md-typeset h1,
+.md-typeset h2,
+.md-typeset h3,
+.md-typeset h4,
+.md-typeset h5,
+.md-typeset h6 {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.md-typeset h1 {
+  font-size: 2rem;
+  border-bottom: 2px solid var(--azemu-green);
+  padding-bottom: 0.4rem;
+  margin-bottom: 1.2rem;
+}
+
+[data-md-color-scheme="slate"] .md-typeset h1 {
+  color: var(--azemu-green);
+}
+
+.md-typeset h2 {
+  font-size: 1.4rem;
+  margin-top: 2rem;
+}
+
+[data-md-color-scheme="slate"] .md-typeset h2 {
+  color: #e6edf3;
+}
+
+/* =========================================================
+   Navigation header bar
+   ========================================================= */
+[data-md-color-scheme="slate"] .md-header {
+  background-color: #010409;
+  border-bottom: 1px solid var(--azemu-border);
+}
+
+[data-md-color-scheme="slate"] .md-header .md-header__title {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+/* =========================================================
+   Sidebar navigation
+   ========================================================= */
+[data-md-color-scheme="slate"] .md-nav__link {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  letter-spacing: 0.02em;
+}
+
+[data-md-color-scheme="slate"] .md-nav__link--active,
+[data-md-color-scheme="slate"] .md-nav__link:hover {
+  color: var(--azemu-green);
+}
+
+[data-md-color-scheme="slate"] .md-nav__item--active > .md-nav__link {
+  color: var(--azemu-green);
+}
+
+/* =========================================================
+   Code blocks -- terminal feel
+   ========================================================= */
+.md-typeset pre {
+  border: 1px solid var(--azemu-border);
+  border-radius: 6px;
+  position: relative;
+}
+
+[data-md-color-scheme="slate"] .md-typeset pre {
+  background-color: #0a0e14;
+}
+
+/* Terminal dots on code blocks */
+[data-md-color-scheme="slate"] .md-typeset pre::before {
+  content: "";
+  display: block;
+  height: 12px;
+  margin-bottom: 8px;
+  background:
+    radial-gradient(circle at 8px 6px,  #ff5f56 4px, transparent 4px),
+    radial-gradient(circle at 24px 6px, #ffbd2e 4px, transparent 4px),
+    radial-gradient(circle at 40px 6px, #27c93f 4px, transparent 4px);
+  border-bottom: 1px solid var(--azemu-border);
+  padding-bottom: 8px;
+}
+
+/* Inline code */
+.md-typeset code {
+  border-radius: 4px;
+  font-size: 0.82em;
+}
+
+[data-md-color-scheme="slate"] .md-typeset :not(pre) > code {
+  background-color: rgba(110, 118, 129, 0.15);
+  border: 1px solid var(--azemu-border);
+  color: var(--azemu-green);
+}
+
+/* =========================================================
+   Links
+   ========================================================= */
+[data-md-color-scheme="slate"] .md-typeset a {
+  color: var(--azemu-blue);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.15s ease;
+}
+
+[data-md-color-scheme="slate"] .md-typeset a:hover {
+  border-bottom-color: var(--azemu-blue);
+}
+
+/* =========================================================
+   Tables
+   ========================================================= */
+[data-md-color-scheme="slate"] .md-typeset table:not([class]) {
+  border: 1px solid var(--azemu-border);
+  border-collapse: separate;
+  border-spacing: 0;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+[data-md-color-scheme="slate"] .md-typeset table:not([class]) th {
+  background-color: #161b22;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--azemu-green);
+  border-bottom: 1px solid var(--azemu-border);
+}
+
+[data-md-color-scheme="slate"] .md-typeset table:not([class]) td {
+  border-bottom: 1px solid var(--azemu-border);
+}
+
+[data-md-color-scheme="slate"] .md-typeset table:not([class]) tr:last-child td {
+  border-bottom: none;
+}
+
+[data-md-color-scheme="slate"] .md-typeset table:not([class]) tr:hover td {
+  background-color: rgba(0, 255, 65, 0.03);
+}
+
+/* =========================================================
+   Admonitions
+   ========================================================= */
+[data-md-color-scheme="slate"] .md-typeset .admonition,
+[data-md-color-scheme="slate"] .md-typeset details {
+  background-color: var(--azemu-surface);
+  border: 1px solid var(--azemu-border);
+  border-left: 3px solid;
+}
+
+/* =========================================================
+   Search
+   ========================================================= */
+[data-md-color-scheme="slate"] .md-search__form {
+  background-color: var(--azemu-surface);
+  border: 1px solid var(--azemu-border);
+}
+
+[data-md-color-scheme="slate"] .md-search__form:hover {
+  border-color: var(--azemu-green);
+}
+
+/* =========================================================
+   Footer
+   ========================================================= */
+[data-md-color-scheme="slate"] .md-footer {
+  border-top: 1px solid var(--azemu-border);
+}
+
+/* =========================================================
+   Scrollbar (webkit)
+   ========================================================= */
+[data-md-color-scheme="slate"] ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+[data-md-color-scheme="slate"] ::-webkit-scrollbar-track {
+  background: #0d1117;
+}
+
+[data-md-color-scheme="slate"] ::-webkit-scrollbar-thumb {
+  background: #30363d;
+  border-radius: 4px;
+}
+
+[data-md-color-scheme="slate"] ::-webkit-scrollbar-thumb:hover {
+  background: #484f58;
+}
+
+/* =========================================================
+   Home page hero (index.md)
+   ========================================================= */
+.azemu-hero {
+  text-align: center;
+  padding: 2rem 1rem 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.azemu-hero h1 {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 3rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  border-bottom: none;
+  padding-bottom: 0;
+  margin-bottom: 0.5rem;
+}
+
+[data-md-color-scheme="slate"] .azemu-hero h1 {
+  color: var(--azemu-green);
+  text-shadow: 0 0 30px rgba(0, 255, 65, 0.3);
+}
+
+.azemu-hero .azemu-tagline {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1.1rem;
+  color: var(--md-default-fg-color--light);
+  margin-bottom: 1.5rem;
+}
+
+/* Blinking cursor after tagline */
+.azemu-cursor::after {
+  content: "_";
+  animation: blink 1s step-end infinite;
+}
+
+@keyframes blink {
+  50% { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .azemu-cursor::after {
+    animation: none;
+  }
+}
+
+/* Badge row */
+.azemu-badges {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin: 0 0 1.5rem;
+}
+
+.azemu-badges a {
+  border-bottom: none !important;
+}
+
+.azemu-badges img {
+  height: 22px;
+}
+
+/* CTA buttons */
+.azemu-cta-group {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin-top: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.azemu-cta {
+  display: inline-block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  padding: 0.7rem 1.8rem;
+  border-radius: 6px;
+  text-decoration: none !important;
+  border-bottom: none !important;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+  cursor: pointer;
+  background-color: var(--azemu-green);
+  color: #0d1117 !important;
+  border: 2px solid var(--azemu-green);
+}
+
+.azemu-cta:hover {
+  background-color: var(--azemu-green-dim);
+  border-color: var(--azemu-green-dim);
+}
+
+.azemu-cta--secondary {
+  background-color: transparent;
+  color: var(--azemu-green) !important;
+}
+
+.azemu-cta--secondary:hover {
+  background-color: rgba(0, 255, 65, 0.08);
+  border-color: var(--azemu-green);
+}
+
+[data-md-color-scheme="default"] .azemu-cta {
+  color: #ffffff !important;
+}
+
+[data-md-color-scheme="default"] .azemu-cta--secondary {
+  color: var(--azemu-green) !important;
+  background-color: transparent;
+}
+
+/* Feature cards on home page */
+.azemu-features {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.2rem;
+  margin: 2rem 0;
+}
+
+.azemu-feature {
+  padding: 1.5rem;
+  border: 1px solid var(--azemu-border);
+  border-radius: 6px;
+  background: var(--azemu-surface);
+  transition: border-color 0.2s ease;
+  position: relative;
+}
+
+.azemu-feature:hover {
+  border-color: var(--azemu-green);
+  cursor: pointer;
+}
+
+/* Make the title link cover the entire card */
+.azemu-feature .azemu-feature-title a,
+.azemu-feature a:has(.azemu-feature-title) {
+  text-decoration: none !important;
+  border-bottom: none !important;
+  color: inherit !important;
+}
+
+.azemu-feature a:has(.azemu-feature-title)::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+.azemu-feature-title {
+  display: block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.5rem;
+}
+
+[data-md-color-scheme="slate"] .azemu-feature-title {
+  color: var(--azemu-green);
+}
+
+.azemu-feature p {
+  font-size: 0.9rem;
+  margin-bottom: 0;
+  color: var(--md-default-fg-color--light);
+}
+
+/* =========================================================
+   Responsive adjustments
+   ========================================================= */
+@media (max-width: 768px) {
+  .azemu-hero h1 {
+    font-size: 2rem;
+  }
+
+  .azemu-hero .azemu-tagline {
+    font-size: 0.9rem;
+  }
+
+  .azemu-cta-group {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .azemu-cta {
+    width: 100%;
+    max-width: 280px;
+    text-align: center;
+  }
+
+  .azemu-features {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* =========================================================
+   Design note pages
+   ========================================================= */
+
+/* Status badge */
+.designnote-status {
+  display: inline-block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 0.2rem 0.8rem;
+  border-radius: 20px;
+}
+
+.designnote-status--implemented {
+  background: rgba(0, 255, 65, 0.1);
+  color: var(--azemu-green);
+  border: 1px solid var(--azemu-green-dim);
+}
+
+[data-md-color-scheme="default"] .designnote-status--implemented {
+  background: rgba(26, 127, 55, 0.1);
+  color: var(--azemu-green);
+  border: 1px solid var(--azemu-green-dim);
+}
+
+.designnote-status--proposed {
+  background: rgba(210, 153, 34, 0.12);
+  color: var(--azemu-amber);
+  border: 1px solid var(--azemu-amber);
+}
+
+.designnote-status--deprecated {
+  background: rgba(248, 81, 73, 0.1);
+  color: #f85149;
+  border: 1px solid rgba(248, 81, 73, 0.4);
+}
+
+/* Meta strip */
+.designnote-meta {
+  display: flex;
+  gap: 0.6rem 1.6rem;
+  flex-wrap: wrap;
+  align-items: center;
+  padding: 0.8rem 1.2rem;
+  background: var(--azemu-surface);
+  border: 1px solid var(--azemu-border);
+  border-radius: 6px;
+  margin: 0.5rem 0 1.8rem;
+  font-size: 0.82rem;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.designnote-meta-item {
+  color: var(--md-default-fg-color--light);
+  white-space: nowrap;
+}
+
+.designnote-meta-item strong {
+  color: var(--md-default-fg-color);
+  margin-right: 0.3rem;
+}
+
+.designnote-github-link {
+  margin-left: auto;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  padding: 0.2rem 0.7rem;
+  border: 1px solid var(--azemu-border);
+  border-radius: 4px;
+  text-decoration: none !important;
+  border-bottom: none !important;
+  color: var(--md-default-fg-color--light) !important;
+  transition: border-color 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+
+.designnote-github-link:hover {
+  border-color: var(--azemu-green);
+  color: var(--azemu-green) !important;
+}
+
+/* Decision callout */
+.designnote-decision {
+  border-left: 3px solid var(--azemu-green);
+  padding: 1rem 1.5rem;
+  margin: 1.5rem 0;
+  border-radius: 0 6px 6px 0;
+}
+
+[data-md-color-scheme="slate"] .designnote-decision {
+  background: rgba(0, 255, 65, 0.04);
+}
+
+[data-md-color-scheme="default"] .designnote-decision {
+  background: rgba(26, 127, 55, 0.05);
+}
+
+.designnote-decision-label {
+  display: block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--azemu-green);
+  margin-bottom: 0.6rem;
+}
+
+/* Suppress permalink on design note section headings (reduce visual noise) */
+.designnote-meta ~ * .headerlink {
+  opacity: 0.4;
+}
