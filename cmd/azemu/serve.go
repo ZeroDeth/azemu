@@ -21,6 +21,7 @@ import (
 	"github.com/zerodeth/azemu/internal/ado"
 	"github.com/zerodeth/azemu/internal/arm"
 	"github.com/zerodeth/azemu/internal/auth"
+	"github.com/zerodeth/azemu/internal/console"
 	"github.com/zerodeth/azemu/internal/metadata"
 	mw "github.com/zerodeth/azemu/internal/middleware"
 	"github.com/zerodeth/azemu/internal/store"
@@ -92,12 +93,15 @@ func runServe(args []string) error {
 	}
 	adoSC := ado.NewServiceConnectionService()
 
+	reqLog := mw.NewRequestRecorder(500)
+
 	r := chi.NewRouter()
 	r.Use(chimw.RequestID)
 	r.Use(chimw.RealIP)
 	r.Use(mw.NormalizePath)
 	r.Use(mw.AzureHeaders)
 	r.Use(mw.RequireAPIVersion)
+	r.Use(reqLog.Middleware)
 	r.Use(chimw.Recoverer)
 
 	unhandled := mw.NewUnhandledTracker()
@@ -136,6 +140,7 @@ func runServe(args []string) error {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"status":"reset"}`))
 	})
+	r.Get("/api/requests/stream", reqLog.SSEHandler)
 
 	r.Route("/metadata/identity", imdsSvc.Routes)
 	r.Route("/metadata", metaSvc.Routes)
@@ -230,7 +235,14 @@ func runServe(args []string) error {
 		WriteTimeout: 30 * time.Second,
 	}
 
-	errCh := make(chan error, 4)
+	consoleSrv := &http.Server{
+		Addr:         fmt.Sprintf(":%d", cfg.ConsolePort),
+		Handler:      console.Handler(),
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 10 * time.Second,
+	}
+
+	errCh := make(chan error, 5)
 	go func() {
 		if err := healthSrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			errCh <- fmt.Errorf("health server: %w", err)
@@ -249,6 +261,11 @@ func runServe(args []string) error {
 	go func() {
 		if err := adoSrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			errCh <- fmt.Errorf("ado server: %w", err)
+		}
+	}()
+	go func() {
+		if err := consoleSrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			errCh <- fmt.Errorf("console server: %w", err)
 		}
 	}()
 
@@ -276,6 +293,9 @@ func runServe(args []string) error {
 	if err := adoSrv.Shutdown(ctx); err != nil {
 		log.Warn().Err(err).Msg("ado server shutdown")
 	}
+	if err := consoleSrv.Shutdown(ctx); err != nil {
+		log.Warn().Err(err).Msg("console server shutdown")
+	}
 
 	return nil
 }
@@ -299,6 +319,7 @@ func printBanner(w *os.File, cfg *config.Config, certPath string) {
 	fmt.Fprintf(w, "  metadata (HTTPS)   https://localhost:%d\n", cfg.HTTPSPort)
 	fmt.Fprintf(w, "  health (HTTP)      http://localhost:%d/health\n", cfg.HealthPort)
 	fmt.Fprintf(w, "  ADO OIDC (HTTP)    http://localhost:%d/ado\n", cfg.ADOPort)
+	fmt.Fprintf(w, "  console (HTTP)     http://localhost:%d\n", cfg.ConsolePort)
 	fmt.Fprintf(w, "  cert bundle        %s\n", certPath)
 	if cfg.PersistPath != "" {
 		fmt.Fprintf(w, "  persist            %s\n", cfg.PersistPath)
@@ -322,10 +343,12 @@ func printServeUsage(w *os.File) {
 	fmt.Fprintf(w, "  AZEMU_TENANT_ID           Mock tenant ID (default 00000000-...)\n")
 	fmt.Fprintf(w, "  AZEMU_AZURITE_ENDPOINT    Azurite blob base URL for storage endpoints (default http://azurite:10000)\n")
 	fmt.Fprintf(w, "  AZEMU_KV_ENDPOINT         Key Vault data-plane base URL embedded in vaultUri (default https://localhost:4566)\n")
-	fmt.Fprintf(w, "  AZEMU_ADO_PORT            Plain-HTTP port for ADO OIDC and service connection emulation (default 4569)\n\n")
+	fmt.Fprintf(w, "  AZEMU_ADO_PORT            Plain-HTTP port for ADO OIDC and service connection emulation (default 4569)\n")
+	fmt.Fprintf(w, "  AZEMU_CONSOLE_PORT        Plain-HTTP port for the web console SPA (default 4570)\n\n")
 	fmt.Fprintf(w, "Ports:\n")
 	fmt.Fprintf(w, "  :4566   ARM API (HTTPS)\n")
 	fmt.Fprintf(w, "  :4567   Metadata / OAuth2 / OIDC (HTTPS)\n")
 	fmt.Fprintf(w, "  :4568   Health check (plain HTTP)\n")
-	fmt.Fprintf(w, "  :4569   ADO OIDC / service connections (plain HTTP)\n\n")
+	fmt.Fprintf(w, "  :4569   ADO OIDC / service connections (plain HTTP)\n")
+	fmt.Fprintf(w, "  :4570   Web console (plain HTTP)\n\n")
 }
