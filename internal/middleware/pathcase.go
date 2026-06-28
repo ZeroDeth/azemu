@@ -67,6 +67,10 @@ var canonicalLiteralSegments = map[string]string{
 	"microsoft.containerservice":   "microsoft.containerservice",
 	"managedclusters":              "managedclusters",
 	"agentpools":                   "agentpools",
+	// POST .../managedClusters/{name}/listClusterUserCredential and
+	// .../listClusterAdminCredential (azurerm kube_config reads)
+	"listclusterusercredential":  "listclusterusercredential",
+	"listclusteradmincredential": "listclusteradmincredential",
 	// ARM action segments and subscription-scoped paths
 	"listkeys":      "listkeys",      // POST .../storageAccounts/{name}/listKeys or .../redis/{name}/listKeys
 	"deletedvaults": "deletedvaults", // GET .../providers/Microsoft.KeyVault/locations/{loc}/deletedVaults/{name}

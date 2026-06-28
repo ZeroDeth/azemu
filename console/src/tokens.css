@@ -1,0 +1,67 @@
+:root {
+  /* Surfaces & lines */
+  --surface-canvas: #0d1117;
+  --surface-deep: #010409;
+  --surface-raised: #161b22;
+  --border: #30363d;
+  --border-subtle: #21262d;
+  --border-row: #161b22;
+
+  /* Text */
+  --text-primary: #e6edf3;
+  --text-secondary: #c9d1d9;
+  --text-dim: #8b949e;
+  --text-faint: #6e7681;
+  --text-faintest: #484f58;
+
+  /* Accents */
+  --brand-green: #00ff41;
+  --status-green: #3fb950;
+  --link-blue: #58a6ff;
+  --amber: #d29922;
+  --amber-light: #e3b341;
+  --red: #f85149;
+  --purple: #a371f7;
+
+  /* Category colors */
+  --cat-rg: #f0883e;
+  --cat-network: #58a6ff;
+  --cat-kv: #e3b341;
+  --cat-dns: #56d364;
+  --cat-storage: #a371f7;
+  --cat-redis: #db61a2;
+  --cat-cdn: #f0883e;
+
+  /* Method colors */
+  --method-get: #58a6ff;
+  --method-put: #56d364;
+  --method-post: #e3b341;
+  --method-delete: #f85149;
+  --method-head: #8b949e;
+
+  /* Status colors */
+  --status-2xx: #3fb950;
+  --status-202: #d29922;
+  --status-4xx: #f85149;
+  --status-5xx: #f85149;
+
+  /* Typography */
+  --font-body: 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  /* Radius */
+  --radius-badge: 5px;
+  --radius-button: 7px;
+  --radius-card: 9px;
+  --radius-logo: 6px;
+  --radius-large-badge: 8px;
+
+  /* Spacing */
+  --pad-card: 14px;
+  --gap-section: 18px;
+  --pad-rail-item: 8px 16px;
+  --pad-table-row: 11px 16px;
+
+  /* Top bar */
+  --topbar-height: 52px;
+}

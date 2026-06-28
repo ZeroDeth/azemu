@@ -22,3 +22,8 @@ output "redis_cache_hostname" {
   description = "Redis cache hostname (derived from AZEMU_REDIS_ENDPOINT)"
   value       = azurerm_redis_cache.example.hostname
 }
+
+output "key_vault_key_id" {
+  description = "Key Vault signing key versioned ID (kid)"
+  value       = azurerm_key_vault_key.example.id
+}

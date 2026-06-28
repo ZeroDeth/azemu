@@ -1,9 +1,44 @@
 # TASKS.md -- azemu Implementation Plan
 
 Version: 0.1
-Last updated: 2026-05-23
-Status: Phase 1 through Phase 8 COMPLETE (minus scenario 8.7.1). v0.1.0 tagged 2026-04-21.
-Current focus: Phase 9 implementation.
+Last updated: 2026-06-27
+Status: Phases 0 through 9 are shipped except scenario 8.7.1, which is in
+progress. v0.1.0 tagged 2026-04-21. 8.7.1 was reframed from the kind/AKS-workload
+hybrid to a server-less OTA delivery design (no compute on the read path): an ADO pipeline
+signs an update manifest with a Key Vault key and writes immutable artefacts to
+Blob, a release pipeline promotes by a server-side blob copy, and a CDN serves
+the static files. This needed one generic azemu capability (a CDN content data
+plane); it ships with the `ota-delivery` scenario.
+Current focus: scenario 8.7.1, the last task before the v0.3 milestone closes.
+
+> **Ready-for-testing / scenario-CI health (2026-06-27, PR #74 merged).** The
+> Terraform Scenarios CI job had been red for weeks. The fail-fast loop in
+> `make tf-test-scenarios` masked it: only the first failing scenario ran.
+> Removing the masking exposed the systemic bugs, now all fixed and merged to
+> `main`:
+>
+> - **M9** (the real destroy-hang root cause): the metadata `resourceManager`
+>   endpoint carried a trailing slash, so the provider built DELETE URIs as
+>   `//subscriptions/...`; the hashicorp/go-azure-sdk delete poller then GETs
+>   the parent list (`200`) forever instead of the resource (`404`) and hung
+>   ~30 min per resource. Dropping the slash fixes it.
+> - **M7**: an `operationresults` endpoint plus absolute
+>   `Azure-AsyncOperation`/`Location` headers. These are ignored by the SDK for
+>   DELETE (it skips the async-operation poller), so M7 was a red herring for
+>   the hang; the endpoint remains for non-delete LRO polling.
+> - **M8**: inline `azurerm_lb_probe`/`lb_rule` management dropped by `putLB`;
+>   now persisted as child resources and reconciled (upsert listed, delete
+>   stale when the array key is present, untouched when omitted).
+> - **M6**: azurerm version drift broke `storage_container`; scenarios pinned
+>   `>= 4.0, < 4.35` with `init -upgrade` dropped.
+>
+> All six scenarios round-trip `terraform apply` + `destroy` against the real
+> `hashicorp/azurerm` provider, verified locally and by the Terraform Scenarios
+> CI job on the PR branch (Terraform cannot run in the dev container itself,
+> since the agent proxy blocks the provider registry). PR #74 squash-merged to
+> `main` as `114a333`, which re-runs the same green tree.
+
+<!-- MD028: HTML comment separates adjacent blockquotes. -->
 
 > **Strategy, non-goals, and the per-release resource roster live in
 > `ROADMAP.md`.** `TASKS.md` is the execution ledger and `ROADMAP.md` is
@@ -292,7 +327,7 @@ azemu with zero cloud cost. See ROADMAP v0.3 and the non-goals section.
 | 8.5 | Azure DevOps OIDC issuer endpoint | `SYSTEM_OIDCREQUESTURI` compatible; plain HTTP on `:4569` | DONE | New package `internal/ado/`. Own RSA-2048 key independent of TokenService. `/.well-known/openid-configuration` + `/discovery/keys` + OIDC token endpoint. 10 unit tests. |
 | 8.6 | ADO service connection CRUD | `/{org}/{project}/_apis/serviceendpoint/endpoints` | DONE | In-memory store with `sync.RWMutex`. Auto-assigns UUID. `isReady: true`, `owner: "Library"` on create/update. Name-filter on list. 14 unit tests. |
 | 8.7 | `scenarios/aks-workload/` | — | DONE | RG + VNet + Subnet + AKS (3-node) + User-Assigned Identity + Key Vault + Secret. |
-| 8.7.1 | `scenarios/aks-workload/` multi-replica with secrets and shared cache | — | TODO | Reference deployment scenario implementing the hybrid pattern from [ADR 0002](../docs/adr/0002-azemu-plus-kind-for-aks-workload-deployments.md). Adds Storage + Blob (Azurite), Federated Identity Credential (8.2), Redis (7.7), and a `kind` cluster running a 3-replica deployment with Key Vault CSI mount. Public reference workload: self-hosted [expo-open-ota](https://github.com/expo/expo-open-ota). Depends on 8.2 and 7.7. |
+| 8.7.1 | `scenarios/ota-delivery/` server-less OTA delivery (Blob + Key Vault sign + CDN) | `examples/terraform/scenarios/ota-delivery/`, `internal/arm/cdn_dataplane.go` | IN PROGRESS | Reframed from the kind/AKS-workload hybrid to a server-less, static-file delivery design with no compute on the read path: a build pipeline signs an Expo Updates Protocol v1 manifest with a Key Vault key (existing key data plane) and writes immutable artefacts to Blob; a release pipeline promotes by a server-side blob copy and writes `rollout.json`; a CDN fronts the Blob origin. Needed one generic azemu capability, a CDN content data plane (reverse-proxy to the Blob origin with origin-header passthrough on `{endpoint}.azureedge.net`), which also upgrades `static-site`. The kind/CSI/expo-open-ota path in [ADR 0002](../docs/adr/0002-azemu-plus-kind-for-aks-workload-deployments.md) is deferred; this design avoids a second runtime. CI runs the ARM-half tftest; `make ota-delivery` runs the full publish + serve-assert loop locally. |
 | 8.9 | Mirror ADR 0002 to `website/docs/resources/design-decisions/0002-azemu-plus-kind-for-aks-workload-deployments.md` and add nav entry to `website/mkdocs.yml` | `website/docs/resources/design-decisions/`, `website/mkdocs.yml` | DONE | Landed in PR #42 alongside website mermaid fixes. Status kept as `Proposed` until 8.7.1 ships. |
 | 8.8 | `scenarios/ado-pipeline/` | — | DONE | ARM resources for ADO pipeline: managed identity + federated credential + Key Vault + secret + Storage + blob container. ADO service connection example via curl in README. |
 
@@ -316,7 +351,7 @@ env vars and config, and execs the underlying tool. Replaces `scripts/aztf`.
 
 Acceptance: `azemu tf apply` from a cold start (no running emulator) exits 0
 against the `examples/terraform/` config. `azemu pulumi preview` works with
-the Pulumi Azure Native provider pointed at azemu.
+the Pulumi Azure Native provider pointed at azemu. ✅
 
 ### Phase 10: Plugin SDK
 
