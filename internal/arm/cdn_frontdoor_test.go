@@ -255,6 +255,10 @@ func TestAFDEndpoint_DELETE_CascadesRoutes(t *testing.T) {
 	httpPut(t, afdRouteURL(srv, "sub1", "rg1", "fd1", "ep1", "r1"),
 		afdRouteBody(afdOriginGroupID("sub1", "rg1", "fd1", "og1"))).Body.Close()
 
+	// Prove the route was actually created, so the post-delete 404 reflects the
+	// cascade rather than a setup that silently never created it.
+	assertStatus(t, httpGet(t, afdRouteURL(srv, "sub1", "rg1", "fd1", "ep1", "r1")), http.StatusOK)
+
 	// Deleting the endpoint must cascade its routes (store.Delete prefix match).
 	assertStatus(t, httpDelete(t, afdEndpointURL(srv, "sub1", "rg1", "fd1", "ep1")), http.StatusAccepted)
 	assertStatus(t, httpGet(t, afdRouteURL(srv, "sub1", "rg1", "fd1", "ep1", "r1")), http.StatusNotFound)
@@ -265,6 +269,9 @@ func TestAFDOriginGroup_DELETE_CascadesOrigins(t *testing.T) {
 	seedAFDProfile(t, srv, "sub1", "rg1", "fd1")
 	httpPut(t, afdOriginGroupURL(srv, "sub1", "rg1", "fd1", "og1"), afdOriginGroupBody).Body.Close()
 	httpPut(t, afdOriginURL(srv, "sub1", "rg1", "fd1", "og1", "o1"), afdOriginBody).Body.Close()
+
+	// Prove the origin was actually created before asserting the cascade.
+	assertStatus(t, httpGet(t, afdOriginURL(srv, "sub1", "rg1", "fd1", "og1", "o1")), http.StatusOK)
 
 	// Deleting the origin group must cascade its origins.
 	assertStatus(t, httpDelete(t, afdOriginGroupURL(srv, "sub1", "rg1", "fd1", "og1")), http.StatusAccepted)
@@ -279,6 +286,12 @@ func TestAFDProfile_DELETE_CascadesChildren(t *testing.T) {
 	httpPut(t, afdOriginURL(srv, "sub1", "rg1", "fd1", "og1", "o1"), afdOriginBody).Body.Close()
 	httpPut(t, afdRouteURL(srv, "sub1", "rg1", "fd1", "ep1", "r1"),
 		afdRouteBody(afdOriginGroupID("sub1", "rg1", "fd1", "og1"))).Body.Close()
+
+	// Prove every child exists before the delete, so the post-delete 404s
+	// reflect the cascade rather than a setup that never created them.
+	assertStatus(t, httpGet(t, afdEndpointURL(srv, "sub1", "rg1", "fd1", "ep1")), http.StatusOK)
+	assertStatus(t, httpGet(t, afdOriginURL(srv, "sub1", "rg1", "fd1", "og1", "o1")), http.StatusOK)
+	assertStatus(t, httpGet(t, afdRouteURL(srv, "sub1", "rg1", "fd1", "ep1", "r1")), http.StatusOK)
 
 	assertStatus(t, httpDelete(t, cdnProfileURL(srv, "sub1", "rg1", "fd1")), http.StatusAccepted)
 
