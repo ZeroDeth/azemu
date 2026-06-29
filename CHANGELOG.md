@@ -47,7 +47,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`azurerm_cdn_profile` / `azurerm_cdn_endpoint`) to Front Door
   (`azurerm_cdn_frontdoor_*`), lifting their provider pin from
   `>= 4.0, < 4.35` to `>= 4.35`. Classic CDN was removed at azurerm 4.35; the
-  scenarios now exercise the Front Door resource graph the production OTA
+  scenarios now exercise the Front Door resource graph that the production OTA
   read path ships.
 
 ## [v0.3.0] - 2026-06-28
