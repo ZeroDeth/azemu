@@ -21,11 +21,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Azure Front Door (Standard/Premium) support. Four new ARM child types under
+  the existing `Microsoft.Cdn/profiles` provider:
+  `azurerm_cdn_frontdoor_endpoint` (afdEndpoints),
+  `azurerm_cdn_frontdoor_origin_group` (originGroups),
+  `azurerm_cdn_frontdoor_origin` (origins), and
+  `azurerm_cdn_frontdoor_route` (routes), each with CRUD, HEAD, LIST,
+  parent-existence checks, and cascade delete. `azurerm_cdn_frontdoor_profile`
+  reuses the existing profile handler (the ARM type is shared with classic
+  CDN; the SKU is a no-op). On create, an endpoint advertises a deterministic
+  `{name}.azurefd.net` host. A new `*.azurefd.net` content data plane walks
+  endpoint to route to origin group to origin and reverse-proxies to the Blob
+  origin (Azurite, path-style), passing the origin's `Content-Type` and
+  `Cache-Control` through unchanged, mirroring the classic CDN data plane.
+  Classic CDN (`*.azureedge.net`) is unchanged and coexists. See design note 5.
 - `redis-cache` scenario: a Redis cache with its connection string stored in
   Key Vault, the common pattern of provisioning a managed cache and reading
   its connection details as a secret instead of embedding them. Runs end to
   end against azemu via `terraform test` and exercises the Redis `listKeys`
   endpoint and the Key Vault secret data plane.
+
+### Changed
+
+- `static-site` and `ota-delivery` scenarios migrated from classic CDN
+  (`azurerm_cdn_profile` / `azurerm_cdn_endpoint`) to Front Door
+  (`azurerm_cdn_frontdoor_*`), lifting their provider pin from
+  `>= 4.0, < 4.35` to `>= 4.35`. Classic CDN was removed at azurerm 4.35; the
+  scenarios now exercise the Front Door resource graph the production OTA
+  read path ships.
 
 ## [v0.3.0] - 2026-06-28
 

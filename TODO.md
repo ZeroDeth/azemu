@@ -53,14 +53,14 @@ The bundle file is written with mode 0600 because it contains the private key.
 
 ## Known Gaps
 
-- **static-site scenario pinned to azurerm < 4.35.** From v4.35.0 the
-  provider refuses to create classic CDN resources once the 2025-10-01
-  deprecation date has passed (wall-clock check in
-  `internal/services/cdn/cdn_deprecation.go`, no opt-out), so the error
-  fires client-side before any request reaches azemu. Lift the pin by
-  migrating the scenario (and azemu's CDN emulation) from
-  `azurerm_cdn_profile`/`azurerm_cdn_endpoint` to Front Door
-  (`azurerm_cdn_frontdoor_*`). Classic CDN retires fully 2027-09-30.
+- ~~**static-site scenario pinned to azurerm < 4.35.**~~ **RESOLVED
+  2026-06-29.** azemu now emulates Azure Front Door (the four
+  `Microsoft.Cdn/profiles` child types plus a `*.azurefd.net` data plane;
+  see design note 5), and the `static-site` and `ota-delivery` scenarios
+  migrated from classic CDN (`azurerm_cdn_profile`/`azurerm_cdn_endpoint`)
+  to Front Door (`azurerm_cdn_frontdoor_*`), lifting their pin to
+  `>= 4.35`. Classic CDN emulation stays for users still pinned `< 4.35`;
+  classic CDN retires fully 2027-09-30.
 - **All scenarios pinned to azurerm `< 4.35`; latest azurerm not yet
   supported (M6).** azurerm 4.78+ makes `azurerm_storage_container` parse the
   account blob endpoint and require a `core.windows.net` suffix, which
