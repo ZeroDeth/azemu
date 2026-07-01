@@ -86,6 +86,7 @@ nav:
           - resources/design-notes/0002-azemu-plus-kind-for-aks-workload-deployments.md
           - resources/design-notes/0003-add-azure-cache-for-redis.md
           - resources/design-notes/0004-azure-devops-pipelines-scope.md
+          - resources/design-notes/0005-front-door-data-plane-and-classic-cdn-coexistence.md
   - Community:
       - Contributing: community/contributing.md
       - Roadmap: community/roadmap.md

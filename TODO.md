@@ -53,23 +53,26 @@ The bundle file is written with mode 0600 because it contains the private key.
 
 ## Known Gaps
 
-- **static-site scenario pinned to azurerm < 4.35.** From v4.35.0 the
-  provider refuses to create classic CDN resources once the 2025-10-01
-  deprecation date has passed (wall-clock check in
-  `internal/services/cdn/cdn_deprecation.go`, no opt-out), so the error
-  fires client-side before any request reaches azemu. Lift the pin by
-  migrating the scenario (and azemu's CDN emulation) from
-  `azurerm_cdn_profile`/`azurerm_cdn_endpoint` to Front Door
-  (`azurerm_cdn_frontdoor_*`). Classic CDN retires fully 2027-09-30.
-- **All scenarios pinned to azurerm `< 4.35`; latest azurerm not yet
-  supported (M6).** azurerm 4.78+ makes `azurerm_storage_container` parse the
-  account blob endpoint and require a `core.windows.net` suffix, which
-  azemu's Azurite path-style endpoints (per design note 1) do not satisfy. To lift
-  the pin, azemu must return a `*.blob.core.windows.net` blob endpoint that
-  the provider accepts while still routing container data-plane calls to the
-  Azurite sidecar (host-based routing, same pattern as the Key Vault
-  data-plane resolver). Until then, `make tf-test*` runs without `-upgrade` so
-  the pin holds.
+- ~~**static-site scenario pinned to azurerm < 4.35.**~~ **RESOLVED
+  2026-06-29.** azemu now emulates Azure Front Door (the four
+  `Microsoft.Cdn/profiles` child types plus a `*.azurefd.net` data plane;
+  see design note 5), and the `static-site` and `ota-delivery` scenarios
+  migrated from classic CDN (`azurerm_cdn_profile`/`azurerm_cdn_endpoint`)
+  to Front Door (`azurerm_cdn_frontdoor_*`), lifting their pin to
+  `>= 4.35`. Classic CDN emulation stays for users still pinned `< 4.35`;
+  classic CDN retires fully 2027-09-30.
+- **Storage scenarios pinned to azurerm `< 4.35`; latest azurerm not yet
+  supported (M6).** The `storage_account_name` (data-plane) path of
+  `azurerm_storage_container` parses the account blob endpoint and requires a
+  `core.windows.net` suffix, which azemu's Azurite path-style endpoints (per
+  design note 1) do not satisfy. The Front Door scenarios (`static-site`,
+  `ota-delivery`) lifted to `>= 4.35, < 4.36` (design note 5); the storage
+  scenarios that exercise this path stay pinned `< 4.35`. To lift them, azemu
+  must return a `*.blob.core.windows.net` blob endpoint that the provider
+  accepts while still routing container data-plane calls to the Azurite
+  sidecar (host-based routing, same pattern as the Key Vault data-plane
+  resolver). Until then, `make tf-test*` runs without `-upgrade` so the pin
+  holds.
 - ~~**Website mirror missing for design notes 2 and 3.**~~
   **RESOLVED 2026-05-23.** Both mirrors landed in PR #42 and are registered
   in `website/mkdocs.yml` nav. Design note 2 status stays `Proposed` until

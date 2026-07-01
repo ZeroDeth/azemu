@@ -9,10 +9,12 @@ key and writes immutable artefacts to Blob, a release pipeline promotes by a
 server-side blob copy, and a CDN serves the static files. This needed one
 generic azemu capability (a CDN content data plane); it shipped with the
 `ota-delivery` scenario.
-Current focus: lifting the azurerm provider-version pins. static-site is
-pinned `< 4.35` pending a Front Door migration; the storage scenarios are
-pinned `< 4.35` pending host-style `*.blob.core.windows.net` routing. Both
-gaps are tracked in TODO.md Known Gaps.
+Current focus: lifting the azurerm provider-version pins. The `static-site`
+and `ota-delivery` scenarios migrated from classic CDN to Azure Front Door
+(`azurerm_cdn_frontdoor_*`, design note 5), lifting their pin to `>= 4.35`;
+the remaining storage scenarios stay pinned `< 4.35` pending host-style
+`*.blob.core.windows.net` routing. The storage gap is tracked in TODO.md
+Known Gaps.
 
 > **Ready-for-testing / scenario-CI health (2026-06-27, PR #74 merged).** The
 > Terraform Scenarios CI job had been red for weeks. The fail-fast loop in
