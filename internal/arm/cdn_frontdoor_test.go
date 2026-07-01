@@ -110,6 +110,17 @@ func TestAFDEndpoint_PUT_HostNameGenerated(t *testing.T) {
 	}
 }
 
+func TestAFDEndpoint_PUT_HostNameLowercased(t *testing.T) {
+	srv := newTestServer(t).URL
+	seedAFDProfile(t, srv, "sub1", "rg1", "fd1")
+	resp := httpPut(t, afdEndpointURL(srv, "sub1", "rg1", "fd1", "MyEdge"), afdEndpointBody)
+	body := decodeJSON(t, resp)
+	props := body["properties"].(map[string]interface{})
+	if got := props["hostName"]; got != "myedge.azurefd.net" {
+		t.Errorf("hostName = %v, want myedge.azurefd.net (lowercased so the data plane's case-insensitive host lookup resolves)", got)
+	}
+}
+
 func TestAFDEndpoint_PUT_ParentMissing_Returns404(t *testing.T) {
 	srv := newTestServer(t).URL
 	resp := httpPut(t, afdEndpointURL(srv, "sub1", "rg1", "ghost", "ep1"), afdEndpointBody)
@@ -194,6 +205,36 @@ func TestAFDOriginGroup_PUT_ParentMissing_Returns404(t *testing.T) {
 	resp.Body.Close()
 }
 
+func TestAFDOriginGroup_HEAD_And_404(t *testing.T) {
+	srv := newTestServer(t).URL
+	seedAFDProfile(t, srv, "sub1", "rg1", "fd1")
+	httpPut(t, afdOriginGroupURL(srv, "sub1", "rg1", "fd1", "og1"), afdOriginGroupBody).Body.Close()
+	assertStatus(t, httpHead(t, afdOriginGroupURL(srv, "sub1", "rg1", "fd1", "og1")), http.StatusNoContent)
+	assertStatus(t, httpHead(t, afdOriginGroupURL(srv, "sub1", "rg1", "fd1", "ghost")), http.StatusNotFound)
+}
+
+func TestAFDOriginGroup_DELETE_Then_GET_404(t *testing.T) {
+	srv := newTestServer(t).URL
+	seedAFDProfile(t, srv, "sub1", "rg1", "fd1")
+	httpPut(t, afdOriginGroupURL(srv, "sub1", "rg1", "fd1", "og1"), afdOriginGroupBody).Body.Close()
+	assertStatus(t, httpGet(t, afdOriginGroupURL(srv, "sub1", "rg1", "fd1", "og1")), http.StatusOK)
+	assertStatus(t, httpDelete(t, afdOriginGroupURL(srv, "sub1", "rg1", "fd1", "og1")), http.StatusAccepted)
+	assertStatus(t, httpGet(t, afdOriginGroupURL(srv, "sub1", "rg1", "fd1", "og1")), http.StatusNotFound)
+}
+
+func TestAFDOriginGroup_LIST_ValueWrapper(t *testing.T) {
+	srv := newTestServer(t).URL
+	seedAFDProfile(t, srv, "sub1", "rg1", "fd1")
+	httpPut(t, afdOriginGroupURL(srv, "sub1", "rg1", "fd1", "og1"), afdOriginGroupBody).Body.Close()
+	resp := httpGet(t, fmt.Sprintf(
+		"%s/subscriptions/sub1/resourcegroups/rg1/providers/microsoft.cdn/profiles/fd1/origingroups", srv))
+	body := decodeJSON(t, resp)
+	items, ok := body["value"].([]interface{})
+	if !ok || len(items) != 1 {
+		t.Fatalf("value = %v, want 1 origin group", body["value"])
+	}
+}
+
 // --- origin ---
 
 func TestAFDOrigin_PUT_Creates_PropsEchoed(t *testing.T) {
@@ -214,6 +255,39 @@ func TestAFDOrigin_PUT_ParentGroupMissing_Returns404(t *testing.T) {
 	resp := httpPut(t, afdOriginURL(srv, "sub1", "rg1", "fd1", "ghost", "o1"), afdOriginBody)
 	assertStatus(t, resp, http.StatusNotFound)
 	resp.Body.Close()
+}
+
+func TestAFDOrigin_HEAD_And_404(t *testing.T) {
+	srv := newTestServer(t).URL
+	seedAFDProfile(t, srv, "sub1", "rg1", "fd1")
+	httpPut(t, afdOriginGroupURL(srv, "sub1", "rg1", "fd1", "og1"), afdOriginGroupBody).Body.Close()
+	httpPut(t, afdOriginURL(srv, "sub1", "rg1", "fd1", "og1", "o1"), afdOriginBody).Body.Close()
+	assertStatus(t, httpHead(t, afdOriginURL(srv, "sub1", "rg1", "fd1", "og1", "o1")), http.StatusNoContent)
+	assertStatus(t, httpHead(t, afdOriginURL(srv, "sub1", "rg1", "fd1", "og1", "ghost")), http.StatusNotFound)
+}
+
+func TestAFDOrigin_DELETE_Then_GET_404(t *testing.T) {
+	srv := newTestServer(t).URL
+	seedAFDProfile(t, srv, "sub1", "rg1", "fd1")
+	httpPut(t, afdOriginGroupURL(srv, "sub1", "rg1", "fd1", "og1"), afdOriginGroupBody).Body.Close()
+	httpPut(t, afdOriginURL(srv, "sub1", "rg1", "fd1", "og1", "o1"), afdOriginBody).Body.Close()
+	assertStatus(t, httpGet(t, afdOriginURL(srv, "sub1", "rg1", "fd1", "og1", "o1")), http.StatusOK)
+	assertStatus(t, httpDelete(t, afdOriginURL(srv, "sub1", "rg1", "fd1", "og1", "o1")), http.StatusAccepted)
+	assertStatus(t, httpGet(t, afdOriginURL(srv, "sub1", "rg1", "fd1", "og1", "o1")), http.StatusNotFound)
+}
+
+func TestAFDOrigin_LIST_ValueWrapper(t *testing.T) {
+	srv := newTestServer(t).URL
+	seedAFDProfile(t, srv, "sub1", "rg1", "fd1")
+	httpPut(t, afdOriginGroupURL(srv, "sub1", "rg1", "fd1", "og1"), afdOriginGroupBody).Body.Close()
+	httpPut(t, afdOriginURL(srv, "sub1", "rg1", "fd1", "og1", "o1"), afdOriginBody).Body.Close()
+	resp := httpGet(t, fmt.Sprintf(
+		"%s/subscriptions/sub1/resourcegroups/rg1/providers/microsoft.cdn/profiles/fd1/origingroups/og1/origins", srv))
+	body := decodeJSON(t, resp)
+	items, ok := body["value"].([]interface{})
+	if !ok || len(items) != 1 {
+		t.Fatalf("value = %v, want 1 origin", body["value"])
+	}
 }
 
 // --- route ---
@@ -243,6 +317,68 @@ func TestAFDRoute_PUT_ParentEndpointMissing_Returns404(t *testing.T) {
 		afdRouteBody(afdOriginGroupID("sub1", "rg1", "fd1", "og1")))
 	assertStatus(t, resp, http.StatusNotFound)
 	resp.Body.Close()
+}
+
+func TestAFDRoute_HEAD_And_404(t *testing.T) {
+	srv := newTestServer(t).URL
+	seedAFDProfile(t, srv, "sub1", "rg1", "fd1")
+	httpPut(t, afdEndpointURL(srv, "sub1", "rg1", "fd1", "ep1"), afdEndpointBody).Body.Close()
+	httpPut(t, afdOriginGroupURL(srv, "sub1", "rg1", "fd1", "og1"), afdOriginGroupBody).Body.Close()
+	httpPut(t, afdRouteURL(srv, "sub1", "rg1", "fd1", "ep1", "r1"),
+		afdRouteBody(afdOriginGroupID("sub1", "rg1", "fd1", "og1"))).Body.Close()
+	assertStatus(t, httpHead(t, afdRouteURL(srv, "sub1", "rg1", "fd1", "ep1", "r1")), http.StatusNoContent)
+	assertStatus(t, httpHead(t, afdRouteURL(srv, "sub1", "rg1", "fd1", "ep1", "ghost")), http.StatusNotFound)
+}
+
+func TestAFDRoute_DELETE_Then_GET_404(t *testing.T) {
+	srv := newTestServer(t).URL
+	seedAFDProfile(t, srv, "sub1", "rg1", "fd1")
+	httpPut(t, afdEndpointURL(srv, "sub1", "rg1", "fd1", "ep1"), afdEndpointBody).Body.Close()
+	httpPut(t, afdOriginGroupURL(srv, "sub1", "rg1", "fd1", "og1"), afdOriginGroupBody).Body.Close()
+	httpPut(t, afdRouteURL(srv, "sub1", "rg1", "fd1", "ep1", "r1"),
+		afdRouteBody(afdOriginGroupID("sub1", "rg1", "fd1", "og1"))).Body.Close()
+	assertStatus(t, httpGet(t, afdRouteURL(srv, "sub1", "rg1", "fd1", "ep1", "r1")), http.StatusOK)
+	assertStatus(t, httpDelete(t, afdRouteURL(srv, "sub1", "rg1", "fd1", "ep1", "r1")), http.StatusAccepted)
+	assertStatus(t, httpGet(t, afdRouteURL(srv, "sub1", "rg1", "fd1", "ep1", "r1")), http.StatusNotFound)
+}
+
+func TestAFDRoute_LIST_ValueWrapper(t *testing.T) {
+	srv := newTestServer(t).URL
+	seedAFDProfile(t, srv, "sub1", "rg1", "fd1")
+	httpPut(t, afdEndpointURL(srv, "sub1", "rg1", "fd1", "ep1"), afdEndpointBody).Body.Close()
+	httpPut(t, afdOriginGroupURL(srv, "sub1", "rg1", "fd1", "og1"), afdOriginGroupBody).Body.Close()
+	httpPut(t, afdRouteURL(srv, "sub1", "rg1", "fd1", "ep1", "r1"),
+		afdRouteBody(afdOriginGroupID("sub1", "rg1", "fd1", "og1"))).Body.Close()
+	resp := httpGet(t, fmt.Sprintf(
+		"%s/subscriptions/sub1/resourcegroups/rg1/providers/microsoft.cdn/profiles/fd1/afdendpoints/ep1/routes", srv))
+	body := decodeJSON(t, resp)
+	items, ok := body["value"].([]interface{})
+	if !ok || len(items) != 1 {
+		t.Fatalf("value = %v, want 1 route", body["value"])
+	}
+}
+
+func TestAFDEndpoint_MissingAPIVersion_Returns400(t *testing.T) {
+	srv := newTestServer(t)
+	resp := httpGetRaw(t, afdEndpointURL(srv.URL, "sub1", "rg1", "fd1", "ep1"))
+	assertStatus(t, resp, http.StatusBadRequest)
+	body := decodeJSON(t, resp)
+	errObj := body["error"].(map[string]interface{})
+	if errObj["code"] != "MissingApiVersionParameter" {
+		t.Errorf("code = %v, want MissingApiVersionParameter", errObj["code"])
+	}
+}
+
+func TestAFDEndpoint_PUT_InvalidJSON_Returns400(t *testing.T) {
+	srv := newTestServer(t).URL
+	seedAFDProfile(t, srv, "sub1", "rg1", "fd1")
+	resp := httpPut(t, afdEndpointURL(srv, "sub1", "rg1", "fd1", "ep1"), `{not-json`)
+	assertStatus(t, resp, http.StatusBadRequest)
+	body := decodeJSON(t, resp)
+	errObj := body["error"].(map[string]interface{})
+	if errObj["code"] != "InvalidRequestContent" {
+		t.Errorf("code = %v, want InvalidRequestContent", errObj["code"])
+	}
 }
 
 // --- cascade ---

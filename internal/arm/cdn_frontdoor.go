@@ -69,8 +69,11 @@ func afdRouteID(subID, rgName, profileName, endpointName, routeName string) stri
 // Real Azure mints "{name}-{hash}.z01.azurefd.net"; azemu uses the stable
 // "{name}.azurefd.net" so the same value the provider reads from the response
 // (azurerm_cdn_frontdoor_endpoint.X.host_name) is what the host-mux resolves.
+// DNS hostnames are case-insensitive, and the data plane lowercases the
+// incoming Host header before matching, so the generated name must already be
+// lowercase or an endpoint with an uppercase name would never resolve.
 func afdGeneratedHostName(endpointName string) string {
-	return endpointName + afdHostSuffix
+	return strings.ToLower(endpointName) + afdHostSuffix
 }
 
 // afdChildBody is the PUT payload shared by every AFD child resource. Only the
@@ -328,7 +331,7 @@ func (a *Router) upsertAFDChild(w http.ResponseWriter, id, name, typeStr, locati
 	if exists {
 		status = http.StatusOK
 	}
-	log.Info().Str("resource_id", id).Bool("existed", exists).Msgf("%s upsert", logLabel)
+	log.Info().Str("resource_id", id).Bool("existed", exists).Str("kind", logLabel).Msg("AFD child upsert")
 	writeJSON(w, status, afdChildResponse(res))
 }
 
@@ -356,7 +359,7 @@ func (a *Router) deleteAFDChild(w http.ResponseWriter, r *http.Request, id, subI
 			fmt.Sprintf("The Resource 'Microsoft.Cdn/profiles/.../%s/%s' was not found.", segment, name))
 		return
 	}
-	log.Info().Str("resource_id", id).Msgf("AFD %s deleted", segment)
+	log.Info().Str("resource_id", id).Str("kind", segment).Msg("AFD child deleted")
 	a.acceptAsyncDelete(w, r, subID)
 }
 
@@ -376,7 +379,8 @@ func (a *Router) writeAFDChildList(w http.ResponseWriter, prefix, typeStr string
 // the provider's reads of originGroup.id, hostName, linkToDefaultDomain, the
 // health-probe block, and the rest round-trip exactly as sent. location is
 // emitted only when set (the afdEndpoint is "global"; the other three child
-// types have no location).
+// types have no location). tags is always emitted: upsertAFDChild normalises a
+// nil Tags map to an empty one, so res.Tags is never nil.
 func afdChildResponse(res *store.Resource) map[string]interface{} {
 	props := map[string]interface{}{"provisioningState": "Succeeded"}
 	for k, val := range res.Properties {
@@ -389,13 +393,11 @@ func afdChildResponse(res *store.Resource) map[string]interface{} {
 		"id":         res.ID,
 		"name":       res.Name,
 		"type":       res.Type,
+		"tags":       res.Tags,
 		"properties": props,
 	}
 	if res.Location != "" {
 		out["location"] = res.Location
-	}
-	if res.Tags != nil {
-		out["tags"] = res.Tags
 	}
 	return out
 }

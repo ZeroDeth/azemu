@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"sort"
 	"strings"
 
 	"github.com/zerodeth/azemu/internal/store"
@@ -86,12 +87,15 @@ func (a *Router) ServeAFDContent(w http.ResponseWriter, r *http.Request) {
 }
 
 // findAFDEndpoint returns the stored afdEndpoint resource whose name matches,
-// scanning the store for the afdEndpoint type. Endpoint names are unique enough
-// within a local emulator, the same assumption the classic CDN and Key Vault
-// host resolvers make.
+// scanning the store for the afdEndpoint type. The comparison is case-
+// insensitive because the host name (and so the name this function is called
+// with) is always lowercased by afdEndpointNameFromHost, while the stored
+// resource name preserves whatever case the provider sent on create. Endpoint
+// names are unique enough within a local emulator, the same assumption the
+// classic CDN and Key Vault host resolvers make.
 func (a *Router) findAFDEndpoint(name string) (*store.Resource, bool) {
 	for _, res := range a.store.List("/subscriptions/") {
-		if res.Type == afdEndpointTypeString && res.Name == name {
+		if res.Type == afdEndpointTypeString && strings.EqualFold(res.Name, name) {
 			return res, true
 		}
 	}
@@ -117,13 +121,18 @@ func (a *Router) resolveAFDOriginAccount(endpoint *store.Resource) (string, bool
 	return blobAccountFromHost(host)
 }
 
-// routeOriginGroupID returns the originGroup ARM ID referenced by the first
-// route under the given afdEndpoint. A minimal Front Door config has a single
-// route with link_to_default_domain enabled; if a scenario ever adds multiple
-// routes, the first one with an origin-group reference wins (pattern-priority
-// selection is out of scope until a scenario needs it).
+// routeOriginGroupID returns the originGroup ARM ID referenced by the
+// lexicographically first route (by name) under the given afdEndpoint. A
+// minimal Front Door config has a single route with link_to_default_domain
+// enabled; if a scenario ever adds multiple routes, the name-sorted first one
+// with an origin-group reference wins, keeping resolution deterministic
+// (store.List backs onto a map, so iteration order alone is not stable
+// across requests). Pattern-priority selection is out of scope until a
+// scenario needs it.
 func (a *Router) routeOriginGroupID(endpointID string) (string, bool) {
-	for _, res := range a.store.List(endpointID + "/") {
+	routes := a.store.List(endpointID + "/")
+	sort.Slice(routes, func(i, j int) bool { return routes[i].Name < routes[j].Name })
+	for _, res := range routes {
 		if res.Type != afdRouteTypeString {
 			continue
 		}

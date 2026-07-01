@@ -195,3 +195,43 @@ func TestServeAFDContent_methodNotAllowed(t *testing.T) {
 		t.Errorf("status = %d, want 405", rec.Result().StatusCode)
 	}
 }
+
+// TestServeAFDContent_upperCaseEndpointName_resolves guards the case-mismatch
+// regression: an endpoint whose name contains uppercase letters (permitted by
+// azurerm's naming validation) must still resolve on the data plane, because
+// afdGeneratedHostName lowercases the host it advertises and the incoming
+// request Host header is also lowercased before endpoint lookup.
+func TestServeAFDContent_upperCaseEndpointName_resolves(t *testing.T) {
+	origin := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = io.WriteString(w, "ok")
+	}))
+	defer origin.Close()
+
+	a := seedAFDGraph(t, origin.URL, "MyEdge", "otasa")
+
+	req := httptest.NewRequest(http.MethodGet, "http://myedge.azurefd.net/x", nil)
+	rec := httptest.NewRecorder()
+	a.ServeAFDContent(rec, req)
+
+	if resp := rec.Result(); resp.StatusCode != http.StatusOK {
+		t.Errorf("status = %d, want 200 (uppercase endpoint name should still resolve)", resp.StatusCode)
+	}
+}
+
+func TestIsAFDContentHost(t *testing.T) {
+	cases := []struct {
+		host string
+		want bool
+	}{
+		{"fdedge.azurefd.net", true},
+		{"fdedge.azurefd.net:4566", true},
+		{"otacdn.azureedge.net", false},
+		{"localhost", false},
+	}
+	for _, c := range cases {
+		if got := IsAFDContentHost(c.host); got != c.want {
+			t.Errorf("IsAFDContentHost(%q) = %v, want %v", c.host, got, c.want)
+		}
+	}
+}
