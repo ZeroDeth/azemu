@@ -27,6 +27,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   end against azemu via `terraform test` and exercises the Redis `listKeys`
   endpoint and the Key Vault secret data plane.
 
+### Changed
+
+- Docs site home page is now a Material template override
+  (`website/overrides/home.html`) rather than Markdown, so it renders
+  full-bleed above the content area with the left nav and right TOC hidden on
+  that page only. Adds a hero with a terminal card, a stat band, four "why it
+  works" rows, the emulated-today coverage table, six example-scenario cards,
+  and a contribution section. `website/docs/index.md` is now front matter only,
+  and the superseded `.azemu-hero`/`-badges`/`-cta`/`-features` rules are
+  removed from `website/docs/stylesheets/extra.css`.
+
 ## [v0.3.0] - 2026-06-28
 
 ### Added
