@@ -174,6 +174,13 @@
     .az .row { gap: 8px; }
     .az table.cov td:first-child { white-space: normal; }
   }
+  /* The whole page renders in the `tabs` block above, and `content` is
+     emptied below, so Material still lays out an empty content area
+     between the landing and the footer. Collapse it. `.md-main` itself
+     must stay: it holds the primary sidebar, which is the navigation
+     drawer on narrow viewports. */
+  .md-main__inner { margin: 0; }
+  .md-content { display: none; }
 </style>
 
 <div class="az">
@@ -319,3 +326,5 @@
 {% endblock %}
 
 {% block content %}{% endblock %}
+
+{% block footer %}{% endblock %}
