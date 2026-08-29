@@ -65,6 +65,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Material's `content` block but not its `footer` block, so Material's footer
   stacked beneath the landing's own and repeated the copyright and the
   "not affiliated with Microsoft, HashiCorp, or the OpenTofu project" line.
+- Docs site home page had no navigation at laptop widths. The landing hides
+  the navigation sidebar through front matter, and Material only offers the
+  drawer button below 76.25em, so on a full-screen laptop the home page
+  offered no way into the docs at all, while narrowing the window made a
+  working menu appear. Enabling Material's `navigation.tabs` puts the
+  top-level sections in the header on every page, which covers the home page
+  at the widths where the drawer button is hidden. As a side effect the
+  per-page sidebar now lists only the current section instead of all 25
+  pages.
 
 ## [v0.3.0] - 2026-06-28
 
