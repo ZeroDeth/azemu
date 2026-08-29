@@ -1,0 +1,375 @@
+{% extends "main.html" %}
+
+{#
+  azemu landing page — Material for MkDocs template override.
+
+  Usage: put this file at website/overrides/home.html (mkdocs.yml already sets
+  theme.custom_dir: overrides), then give website/docs/index.md this front matter:
+
+      ---
+      template: home.html
+      title: azemu — a local Azure emulator for Terraform and OpenTofu
+      hide:
+        - navigation
+        - toc
+      ---
+
+  The landing renders in the `tabs` block so it sits full-bleed above the
+  normal content area; `content` is emptied so index.md's body is not shown.
+#}
+
+{% block tabs %}
+{{ super() }}
+
+<style>
+  .az {
+    --az-bg: #161826;
+    --az-surface: #232532;
+    --az-text: #e9e9ed;
+    --az-accent: #9184d9;
+    --az-accent-300: #b9b0e8;
+    --az-accent-900: #2b2846;
+    --az-neutral-700: #595d6c;
+    --az-neutral-800: #3f424d;
+    --az-neutral-900: #292b31;
+    --az-section: #262a60;
+    --az-section-glow: #353b80;
+    --az-divider: color-mix(in srgb, #e9e9ed 16%, transparent);
+    --az-edge: clamp(20px, 5vw, 72px);
+    --az-lead: 28px;
+    --az-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+    color: var(--az-text);
+    font-family: "Inter", system-ui, sans-serif;
+    font-size: 15px;
+    line-height: 1.55;
+    text-wrap: pretty;
+    background:
+      radial-gradient(1200px 720px at 82% -160px, color-mix(in srgb, var(--az-accent-900) 75%, transparent), transparent 60%),
+      radial-gradient(1100px 800px at -10% 100%, color-mix(in srgb, #000 30%, transparent), transparent 55%),
+      var(--az-bg);
+  }
+  .az * { box-sizing: border-box; }
+  .az .wrap { max-width: 1200px; margin: 0 auto; padding: 0 var(--az-edge); }
+  .az a { color: var(--az-accent); text-decoration: none; }
+  .az a:hover { color: var(--az-accent-300); text-decoration: underline; }
+  .az ::selection { background: color-mix(in srgb, var(--az-accent) 30%, transparent); }
+  .az h1, .az h2, .az h3 { font-weight: 500; letter-spacing: -0.015em; margin: 0; }
+  .az p { margin: 0; }
+  .az :focus-visible { outline: 2px solid var(--az-accent); outline-offset: 2px; }
+
+  /* buttons — outlined, never filled */
+  .az .btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    padding: 9px 16px; border-radius: 8px; font-size: 14px; font-weight: 500;
+    line-height: 1.2; cursor: pointer; text-decoration: none;
+    border: 1px solid var(--az-neutral-800); background: transparent; color: var(--az-text);
+    transition: background-color .15s ease, border-color .15s ease, color .15s ease;
+  }
+  .az .btn:hover { text-decoration: none; background: color-mix(in srgb, var(--az-accent) 10%, transparent); border-color: var(--az-accent); color: var(--az-text); }
+  .az .btn:active { background: color-mix(in srgb, var(--az-accent) 18%, transparent); }
+  .az .btn-primary { border-color: var(--az-accent); color: var(--az-text); }
+  .az .btn-ghost { border-color: transparent; color: color-mix(in srgb, var(--az-text) 80%, transparent); }
+
+  .az .kicker {
+    display: block; font-size: 13px; line-height: 20px; letter-spacing: .06em;
+    text-transform: uppercase; color: var(--az-accent); margin: 0 0 var(--az-lead);
+    font-feature-settings: "tnum" 1;
+  }
+  .az code { font-family: var(--az-mono); font-size: .92em; color: var(--az-accent-300); background: none; padding: 0; }
+
+  /* hero */
+  .az .hero {
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: calc(2 * var(--az-lead)) clamp(32px, 5vw, 80px); align-items: center;
+    padding: calc(3.5 * var(--az-lead)) 0 calc(3 * var(--az-lead));
+  }
+  .az .hero h1 {
+    font-size: clamp(38px, 4.6vw, 68px); line-height: 1.08;
+    letter-spacing: -0.02em; margin-left: -0.06em;
+  }
+  .az .hero h1 span { display: block; }
+  .az .hero .sub {
+    font-size: 17px; line-height: var(--az-lead); max-width: 52ch;
+    margin-top: calc(1.5 * var(--az-lead)); color: color-mix(in srgb, var(--az-text) 82%, transparent);
+  }
+  .az .cta { display: flex; gap: 10px; flex-wrap: wrap; margin-top: var(--az-lead); }
+  .az .fineprint { font-size: 13px; line-height: var(--az-lead); margin-top: var(--az-lead); color: color-mix(in srgb, var(--az-text) 55%, transparent); }
+
+  /* terminal */
+  .az .term {
+    border: 1px solid var(--az-neutral-800); border-radius: 10px; overflow: hidden;
+    background: color-mix(in srgb, var(--az-surface) 70%, transparent);
+    box-shadow: 0 18px 48px rgba(0,0,0,.42);
+  }
+  .az .term-bar { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--az-neutral-800); }
+  .az .term-bar i { width: 8px; height: 8px; border-radius: 50%; background: var(--az-neutral-800); }
+  .az .term-bar i:first-child { background: var(--az-neutral-700); }
+  .az .term-bar span { margin-left: 8px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: color-mix(in srgb, var(--az-text) 50%, transparent); }
+  .az .term pre {
+    margin: 0; padding: 20px; font-family: var(--az-mono); font-size: 13px; line-height: 22px;
+    white-space: pre-wrap; overflow-wrap: anywhere; background: none;
+    color: color-mix(in srgb, var(--az-text) 88%, transparent);
+  }
+  .az .term .c { color: color-mix(in srgb, var(--az-text) 45%, transparent); }
+  .az .term .p { color: var(--az-accent); }
+  .az .term .ok { color: var(--az-accent-300); }
+  .az .term .gap { height: 12px; }
+
+  /* stat band */
+  .az .stats {
+    padding: calc(2.5 * var(--az-lead)) 0;
+    background:
+      radial-gradient(900px 420px at 85% -40%, color-mix(in srgb, var(--az-section-glow) 70%, transparent), transparent 64%),
+      var(--az-section);
+  }
+  .az .stats .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: calc(1.5 * var(--az-lead)) var(--az-lead); }
+  .az .stat-num { font-size: clamp(34px, 3.4vw, 50px); line-height: 1.1; font-weight: 500; margin-left: -0.055em; font-feature-settings: "tnum" 1; }
+  .az .stat-label { font-size: 13px; line-height: 20px; letter-spacing: .06em; text-transform: uppercase; margin-top: 12px; color: color-mix(in srgb, var(--az-text) 64%, transparent); }
+
+  /* section headings */
+  .az section.band { padding: calc(2.5 * var(--az-lead)) 0; }
+  .az .h2 { font-size: clamp(26px, 2.8vw, 38px); line-height: 1.15; letter-spacing: -0.015em; }
+  .az .lede { font-size: 15.5px; line-height: var(--az-lead); max-width: 56ch; margin-top: calc(.75 * var(--az-lead)); color: color-mix(in srgb, var(--az-text) 78%, transparent); }
+
+  /* numbered feature rows */
+  .az .row {
+    display: grid; grid-template-columns: minmax(48px, 96px) minmax(0, 380px) minmax(0, 1fr);
+    gap: var(--az-lead) clamp(24px, 4vw, 64px); align-items: baseline;
+    padding: calc(1.5 * var(--az-lead)) 0;
+  }
+  .az .row + .row { border-top: 1px solid var(--az-neutral-800); }
+  .az .row .n { font-size: 15px; line-height: var(--az-lead); color: var(--az-accent); font-feature-settings: "tnum" 1; font-weight: 500; }
+  .az .row h3 { font-size: 23px; line-height: var(--az-lead); letter-spacing: -0.01em; }
+  .az .row p { font-size: 15.5px; line-height: var(--az-lead); max-width: 54ch; color: color-mix(in srgb, var(--az-text) 78%, transparent); }
+
+  /* coverage table */
+  .az table.cov { width: 100%; border-collapse: collapse; margin-top: calc(1.5 * var(--az-lead)); font-size: 14.5px; }
+  .az table.cov th {
+    text-align: left; font-weight: 500; font-size: 12px; letter-spacing: .06em; text-transform: uppercase;
+    color: color-mix(in srgb, var(--az-text) 60%, transparent);
+    padding: 10px 16px 10px 0; border-bottom: 1px solid var(--az-neutral-700);
+  }
+  .az table.cov td { padding: 16px 16px 16px 0; border-bottom: 1px solid var(--az-neutral-900); vertical-align: top; line-height: 24px; color: color-mix(in srgb, var(--az-text) 82%, transparent); }
+  .az table.cov td:first-child { font-weight: 500; color: var(--az-text); width: 26%; white-space: nowrap; }
+
+  /* scenario cards */
+  .az .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 16px; margin-top: calc(1.5 * var(--az-lead)); }
+  .az .card {
+    display: block; padding: 18px; border-radius: 10px; text-decoration: none; color: inherit;
+    background: var(--az-surface); border: 1px solid var(--az-neutral-900);
+    transition: border-color .15s ease, transform .15s ease;
+  }
+  .az .card:hover { text-decoration: none; border-color: var(--az-accent); transform: translateY(-2px); }
+  .az .card .k { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--az-accent); }
+  .az .card h3 { font-size: 17px; line-height: 1.25; margin: 8px 0; }
+  .az .card p { font-size: 14px; line-height: 22px; color: color-mix(in srgb, var(--az-text) 74%, transparent); }
+
+  .az .split { display: grid; grid-template-columns: minmax(0, 6fr) minmax(0, 5fr); gap: var(--az-lead) clamp(24px, 5vw, 80px); align-items: start; }
+  .az hr.rule { height: 1px; border: 0; margin: 0; background: linear-gradient(to right, transparent, var(--az-divider) 48px calc(100% - 48px), transparent); }
+  .az footer { padding: calc(2 * var(--az-lead)) 0; font-size: 13px; line-height: var(--az-lead); color: color-mix(in srgb, var(--az-text) 55%, transparent); border-top: 1px solid var(--az-neutral-900); }
+
+  /* request card: the concrete shape of a useful feature request, so the
+     "tell us what you need" ask has something to show rather than only
+     asserting itself. Echoes the hero's terminal card. */
+  .az .ask { background: var(--az-surface); border: 1px solid var(--az-neutral-900); border-radius: 12px; overflow: hidden; }
+  .az .ask-bar { padding: 11px 18px; border-bottom: 1px solid var(--az-neutral-800); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: color-mix(in srgb, var(--az-text) 50%, transparent); }
+  .az .ask dl { margin: 0; padding: 4px 18px 0; }
+  .az .ask dl > div { display: grid; grid-template-columns: minmax(0, 92px) minmax(0, 1fr); gap: 16px; padding: 13px 0; border-bottom: 1px solid var(--az-neutral-900); }
+  .az .ask dl > div:last-child { border-bottom: none; }
+  .az .ask dt { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; line-height: 22px; color: color-mix(in srgb, var(--az-text) 50%, transparent); }
+  .az .ask dd { margin: 0; font-size: 14px; line-height: 22px; color: color-mix(in srgb, var(--az-text) 82%, transparent); }
+  .az .ask-note { padding: 14px 18px 18px; border-top: 1px solid var(--az-neutral-800); font-size: 13px; line-height: 21px; color: color-mix(in srgb, var(--az-text) 58%, transparent); }
+
+  /* contribution routes: three ways in, given the same rule-and-label
+     structure as the rest of the page instead of one run-on sentence */
+  .az .routes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--az-lead) clamp(24px, 4vw, 56px); margin-top: calc(1.5 * var(--az-lead)); }
+  .az .routes > div { padding-top: 18px; border-top: 1px solid var(--az-neutral-800); }
+  .az .routes h3 { font-size: 16px; line-height: 24px; }
+  .az .routes p { margin-top: 8px; font-size: 14px; line-height: 22px; color: color-mix(in srgb, var(--az-text) 74%, transparent); }
+
+  .az .h2-sm { font-size: clamp(25px, 2.3vw, 31px); line-height: 1.2; }
+
+  @media (max-width: 900px) {
+    .az .hero, .az .row, .az .split, .az .routes { grid-template-columns: 1fr; }
+    .az .row { gap: 8px; }
+    .az table.cov td:first-child { white-space: normal; }
+  }
+  /* The whole page renders in the `tabs` block above, and `content` is
+     emptied below, so Material still lays out an empty content area
+     between the landing and the footer. Collapse it. `.md-main` itself
+     must stay: it holds the primary sidebar, which is the navigation
+     drawer on narrow viewports. */
+  .md-main__inner { margin: 0; }
+  .md-content { display: none; }
+</style>
+
+<div class="az">
+  <div class="wrap">
+    <section class="hero">
+      <div>
+        <h1><span>Your Azure stack,</span><span>running on your laptop.</span></h1>
+        <p class="sub">azemu is an open-source local Azure emulator. Point the unmodified <code>azurerm</code> provider at it and your Terraform or OpenTofu stack applies and destroys end to end — no subscription, no account, no network, no bill.</p>
+        <div class="cta">
+          <a class="btn btn-primary" href="{{ 'getting-started/install/' | url }}">Quick start</a>
+          <a class="btn btn-ghost" href="https://github.com/zerodeth/azemu">View source</a>
+        </div>
+        <p class="fineprint">MIT licensed · no paid tier · no telemetry · no account to create</p>
+      </div>
+
+      <div class="term">
+        <div class="term-bar"><i></i><i></i><i></i><span>terminal</span></div>
+        <pre><div class="c"># start the emulator + Azurite sidecar</div><div><span class="p">$</span> docker compose up -d --build</div><div class="gap"></div><div class="c"># trust the local cert for this shell</div><div><span class="p">$</span> export SSL_CERT_FILE=$PWD/.azemu/cert-bundle.pem</div><div class="gap"></div><div class="c"># apply a real stack against it</div><div><span class="p">$</span> terraform -chdir=examples/terraform init</div><div><span class="p">$</span> terraform -chdir=examples/terraform apply -auto-approve</div><div class="gap"></div><div>Apply complete! Resources: <span class="ok">14 added</span>, 0 changed, 0 destroyed.</div></pre>
+      </div>
+    </section>
+  </div>
+
+  <section class="stats" aria-label="azemu at a glance">
+    <div class="wrap">
+      <div class="grid">
+        <div><p class="stat-num">£0</p><p class="stat-label">Cloud spend to run it</p></div>
+        <div><p class="stat-num">8</p><p class="stat-label">Worked example stacks</p></div>
+        <div><p class="stat-num">2</p><p class="stat-label">Terraform &amp; OpenTofu</p></div>
+        <div><p class="stat-num">MIT</p><p class="stat-label">Licence, no paid tier</p></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="wrap">
+    <section class="band">
+      <span class="kicker">Why it works</span>
+      <h2 class="h2">The provider never knows the difference.</h2>
+
+      <div class="row" style="margin-top: 28px;">
+        <p class="n">01</p>
+        <h3>Real ARM endpoints, not mocks</h3>
+        <p>azemu serves the standard Azure management endpoints over TLS. The stock <code>azurerm</code> provider runs unmodified — swap <code>terraform</code> for <code>tofu</code> and nothing else changes.</p>
+      </div>
+      <div class="row">
+        <p class="n">02</p>
+        <h3>Fidelity you can audit</h3>
+        <p>Every supported resource is listed in a public parity matrix with its support depth, and every row links to the test that proves it. No coverage claims you have to take on trust — read the row, read the test.</p>
+      </div>
+      <div class="row">
+        <p class="n">03</p>
+        <h3>Data planes, not just metadata</h3>
+        <p>Blobs land in Azurite, Key Vault actually signs, the CDN endpoint actually serves content. You can test the read path, not just watch state files change.</p>
+      </div>
+      <div class="row">
+        <p class="n">04</p>
+        <h3>A portal for the emulator</h3>
+        <p>A local web console ships inside the binary: three views over your emulated subscription and a live stream of every ARM request the provider makes. When an apply fails, you can see why.</p>
+      </div>
+    </section>
+
+    <section class="band">
+      <span class="kicker">Emulated today</span>
+      <h2 class="h2">Everything here round-trips a real apply and destroy.</h2>
+      <p class="lede">Against the unmodified provider. No subscription, no account, no network.</p>
+      <table class="cov">
+        <thead><tr><th>Area</th><th>Resources</th></tr></thead>
+        <tbody>
+          <tr><td>Networking</td><td>Resource Groups · Virtual Networks · Subnets · Public IPs · NSGs · Load Balancers · Application Gateways · DNS Zones with record sets</td></tr>
+          <tr><td>Storage &amp; secrets</td><td>Storage Accounts + Blob containers (data plane via Azurite) · Key Vault secrets and keys, including <code>sign</code></td></tr>
+          <tr><td>Compute &amp; identity</td><td>User-Assigned Managed Identities · Federated Identity Credentials · AKS management plane</td></tr>
+          <tr><td>CDN &amp; CI/CD</td><td>CDN Profiles and Endpoints with a content data plane · Redis Cache · Azure DevOps OIDC and service connections</td></tr>
+        </tbody>
+      </table>
+      <p style="margin-top: 28px; font-size: 14px;"><a href="{{ 'concepts/parity-matrix/' | url }}">See the full parity matrix →</a></p>
+    </section>
+
+    <section class="band">
+      <span class="kicker">Examples</span>
+      <h2 class="h2">Whole stacks, not snippets.</h2>
+      <p class="lede">Each one applies and destroys locally, and doubles as an integration test — so they keep working.</p>
+      <div class="cards">
+        <a class="card" href="https://github.com/zerodeth/azemu/tree/main/examples/terraform/scenarios/three-tier">
+          <p class="k">Architecture</p><h3>Three-tier web app</h3>
+          <p>Web, app and data tiers built from the networking primitives.</p>
+        </a>
+        <a class="card" href="https://github.com/zerodeth/azemu/tree/main/examples/terraform/scenarios/static-site">
+          <p class="k">Delivery</p><h3>Static site, CDN and DNS</h3>
+          <p>A website on Storage behind a CDN profile and a custom DNS zone.</p>
+        </a>
+        <a class="card" href="https://github.com/zerodeth/azemu/tree/main/examples/terraform/scenarios/redis-cache">
+          <p class="k">Secrets</p><h3>Redis with Key Vault</h3>
+          <p>A cache whose connection string is stored in, and read back from, Key Vault.</p>
+        </a>
+        <a class="card" href="https://github.com/zerodeth/azemu/tree/main/examples/terraform/scenarios/aks-workload">
+          <p class="k">Identity</p><h3>AKS workload identity</h3>
+          <p>Management-plane provisioning for a workload that reads Key Vault via workload identity.</p>
+        </a>
+        <a class="card" href="https://github.com/zerodeth/azemu/tree/main/examples/terraform/scenarios/ado-pipeline">
+          <p class="k">CI/CD</p><h3>Azure DevOps OIDC</h3>
+          <p>The ARM resources behind a pipeline that authenticates with workload identity federation.</p>
+        </a>
+        <a class="card" href="https://github.com/zerodeth/azemu/tree/main/examples/terraform/scenarios/ota-delivery">
+          <p class="k">End to end</p><h3>Server-less OTA delivery</h3>
+          <p>A signed manifest, immutable blob artefacts and a CDN read path — verified with no compute in the path.</p>
+        </a>
+      </div>
+    </section>
+
+    <section class="band">
+      <div class="split">
+        <div>
+          <span class="kicker">Where it's going</span>
+          <h2 class="h2 h2-sm">Coverage grows from what people actually need.</h2>
+          <p class="lede">The resources above work end to end today. The aim is to cover more of Azure so more teams can test their stack locally, and to keep raising fidelity on what already exists — but the order is set by demand, not by a roadmap written in a vacuum.</p>
+          <div class="cta">
+            <a class="btn btn-primary" href="https://github.com/zerodeth/azemu/issues/new?labels=enhancement">Request a resource</a>
+            <a class="btn btn-ghost" href="https://github.com/zerodeth/azemu/discussions">Start a discussion</a>
+          </div>
+        </div>
+
+        <div class="ask">
+          <div class="ask-bar">Feature request</div>
+          <dl>
+            <div><dt>Resource</dt><dd><code>azurerm_service_plan</code></dd></div>
+            <div><dt>ARM path</dt><dd><code>Microsoft.Web/serverfarms</code></dd></div>
+            <div><dt>Blocked on</dt><dd>the apply it stops you running locally</dd></div>
+          </dl>
+          <p class="ask-note">Three lines is enough. Naming the provider path is what turns a wish into something that can be built and tested.</p>
+        </div>
+      </div>
+    </section>
+
+    <hr class="rule" />
+
+    <section class="band">
+      <span class="kicker">Contributing</span>
+      <h2 class="h2 h2-sm" style="max-width: 24ch;">You do not need to be an Azure or Go expert to help.</h2>
+
+      <div class="routes">
+        <div>
+          <h3>Add a resource</h3>
+          <p>Copy the shape of an existing handler, add the test that proves it, and the parity matrix gains a row.</p>
+        </div>
+        <div>
+          <h3>Fix a rejected apply</h3>
+          <p>Paste the error the provider returned. Every one of them is a real gap in fidelity worth closing.</p>
+        </div>
+        <div>
+          <h3>Sharpen a page</h3>
+          <p>The docs are in the same repo. A confusing paragraph you had to reread is worth reporting.</p>
+        </div>
+      </div>
+
+      <div class="cta" style="margin-top: calc(1.5 * var(--az-lead));">
+        <a class="btn btn-primary" href="{{ 'community/contributing/' | url }}">Start contributing</a>
+        <a class="btn btn-ghost" href="https://github.com/zerodeth/azemu">Star on GitHub</a>
+      </div>
+      <p class="ask-note" style="padding: 0; border: none; margin-top: 16px;">If azemu is useful to you, a star is the cheapest way to help other people find it.</p>
+    </section>
+
+    <footer>
+      <p>MIT licensed · © 2026 azemu contributors</p>
+      <p style="margin-top: 8px; max-width: 70ch;">A community project. Not affiliated with or endorsed by Microsoft, HashiCorp, or the OpenTofu project.</p>
+    </footer>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}{% endblock %}
+
+{% block footer %}{% endblock %}

@@ -49,6 +49,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `>= 4.0, < 4.35` to `>= 4.35, < 4.36`. Classic CDN was removed at azurerm 4.35; the
   scenarios now exercise the Front Door resource graph that the production OTA
   read path ships.
+- Docs site home page is now a Material template override
+  (`website/overrides/home.html`) rather than Markdown, so it renders
+  full-bleed above the content area with the left nav and right TOC hidden on
+  that page only. Adds a hero with a terminal card, a stat band, four "why it
+  works" rows, the emulated-today coverage table, six example-scenario cards,
+  and a contribution section. `website/docs/index.md` is now front matter only,
+  and the superseded `.azemu-hero`/`-badges`/`-cta`/`-features` rules are
+  removed from `website/docs/stylesheets/extra.css`.
+- Docs site now uses one design language throughout. The redesigned landing
+  introduced an Inter and muted-purple palette, but the other pages kept the
+  previous monospace-and-neon-green terminal theme, so clicking off the home
+  page changed the look of the site. `website/docs/stylesheets/extra.css` now
+  mirrors the landing: Inter headings, a `#9184d9` accent (darkened to
+  `#5f51b8` in light mode, where the lighter value fails WCAG AA on white),
+  an `#161826` ground, rule-separated tables, and code blocks styled as the
+  landing's terminal card. Monospace is kept for code. Design-note status
+  badges keep semantic green, amber and red, because they carry meaning the
+  single accent cannot.
+- Docs landing page closes on structure rather than two blocks of prose. The
+  "Where it's going" and contributing sections were both a headline, a
+  paragraph and a pair of buttons, so the page lost the rhythm every earlier
+  section had. "Where it's going" now pairs its copy with a request card
+  showing the three lines a useful feature request needs; the contributing
+  section splits its single run-on sentence into three routes in, and demotes
+  the star request to a footnote under the call to action.
+
+### Fixed
+
+- Docs site header title and icons were invisible. `extra.css` painted the
+  header `#010409` while Material kept deriving the text colour from
+  `--md-primary-bg-color`, which was `#0d1117`: a contrast ratio of about
+  1.05:1. The header colours now come from the palette variables alone.
+- Docs site home page rendered two footers. The landing template emptied
+  Material's `content` block but not its `footer` block, so Material's footer
+  stacked beneath the landing's own and repeated the copyright and the
+  "not affiliated with Microsoft, HashiCorp, or the OpenTofu project" line.
+- Docs site home page had no navigation at laptop widths. The landing hides
+  the navigation sidebar through front matter, and Material only offers the
+  drawer button below 76.25em, so on a full-screen laptop the home page
+  offered no way into the docs at all, while narrowing the window made a
+  working menu appear. Enabling Material's `navigation.tabs` puts the
+  top-level sections in the header on every page, which covers the home page
+  at the widths where the drawer button is hidden. As a side effect, the
+  per-page sidebar now lists only the current section instead of all 25
+  pages.
 
 ## [v0.3.0] - 2026-06-28
 

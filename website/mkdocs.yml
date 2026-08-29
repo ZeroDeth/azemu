@@ -22,6 +22,7 @@ theme:
     edit: material/pencil
     view: material/eye
   features:
+    - navigation.tabs
     - navigation.sections
     - navigation.expand
     - navigation.top
