@@ -47,6 +47,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   landing's terminal card. Monospace is kept for code. Design-note status
   badges keep semantic green, amber and red, because they carry meaning the
   single accent cannot.
+- Docs landing page closes on structure rather than two blocks of prose. The
+  "Where it's going" and contributing sections were both a headline, a
+  paragraph and a pair of buttons, so the page lost the rhythm every earlier
+  section had. "Where it's going" now pairs its copy with a request card
+  showing the three lines a useful feature request needs; the contributing
+  section splits its single run-on sentence into three routes in, and demotes
+  the star request to a footnote under the call to action.
 
 ### Fixed
 

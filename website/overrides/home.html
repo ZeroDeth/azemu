@@ -165,12 +165,33 @@
   .az .card h3 { font-size: 17px; line-height: 1.25; margin: 8px 0; }
   .az .card p { font-size: 14px; line-height: 22px; color: color-mix(in srgb, var(--az-text) 74%, transparent); }
 
-  .az .split { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: var(--az-lead) clamp(24px, 5vw, 80px); align-items: start; }
+  .az .split { display: grid; grid-template-columns: minmax(0, 6fr) minmax(0, 5fr); gap: var(--az-lead) clamp(24px, 5vw, 80px); align-items: start; }
   .az hr.rule { height: 1px; border: 0; margin: 0; background: linear-gradient(to right, transparent, var(--az-divider) 48px calc(100% - 48px), transparent); }
   .az footer { padding: calc(2 * var(--az-lead)) 0; font-size: 13px; line-height: var(--az-lead); color: color-mix(in srgb, var(--az-text) 55%, transparent); border-top: 1px solid var(--az-neutral-900); }
 
+  /* request card: the concrete shape of a useful feature request, so the
+     "tell us what you need" ask has something to show rather than only
+     asserting itself. Echoes the hero's terminal card. */
+  .az .ask { background: var(--az-surface); border: 1px solid var(--az-neutral-900); border-radius: 12px; overflow: hidden; }
+  .az .ask-bar { padding: 11px 18px; border-bottom: 1px solid var(--az-neutral-800); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: color-mix(in srgb, var(--az-text) 50%, transparent); }
+  .az .ask dl { margin: 0; padding: 4px 18px 0; }
+  .az .ask dl > div { display: grid; grid-template-columns: minmax(0, 92px) minmax(0, 1fr); gap: 16px; padding: 13px 0; border-bottom: 1px solid var(--az-neutral-900); }
+  .az .ask dl > div:last-child { border-bottom: none; }
+  .az .ask dt { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; line-height: 22px; color: color-mix(in srgb, var(--az-text) 50%, transparent); }
+  .az .ask dd { margin: 0; font-size: 14px; line-height: 22px; color: color-mix(in srgb, var(--az-text) 82%, transparent); }
+  .az .ask-note { padding: 14px 18px 18px; border-top: 1px solid var(--az-neutral-800); font-size: 13px; line-height: 21px; color: color-mix(in srgb, var(--az-text) 58%, transparent); }
+
+  /* contribution routes: three ways in, given the same rule-and-label
+     structure as the rest of the page instead of one run-on sentence */
+  .az .routes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--az-lead) clamp(24px, 4vw, 56px); margin-top: calc(1.5 * var(--az-lead)); }
+  .az .routes > div { padding-top: 18px; border-top: 1px solid var(--az-neutral-800); }
+  .az .routes h3 { font-size: 16px; line-height: 24px; }
+  .az .routes p { margin-top: 8px; font-size: 14px; line-height: 22px; color: color-mix(in srgb, var(--az-text) 74%, transparent); }
+
+  .az .h2-sm { font-size: clamp(25px, 2.3vw, 31px); line-height: 1.2; }
+
   @media (max-width: 900px) {
-    .az .hero, .az .row, .az .split { grid-template-columns: 1fr; }
+    .az .hero, .az .row, .az .split, .az .routes { grid-template-columns: 1fr; }
     .az .row { gap: 8px; }
     .az table.cov td:first-child { white-space: normal; }
   }
@@ -293,15 +314,22 @@
       <div class="split">
         <div>
           <span class="kicker">Where it's going</span>
-          <h2 class="h2" style="font-size: clamp(26px, 2.4vw, 32px); line-height: 1.2;">Coverage grows from what people actually need.</h2>
-        </div>
-        <div>
-          <p style="font-size: 15.5px; line-height: 28px; max-width: 54ch; color: color-mix(in srgb, var(--az-text) 78%, transparent);">The resources above work end to end today. The aim is to cover more of Azure so more teams can test their stack locally, and to keep raising fidelity on what already exists — but the order is set by demand, not by a roadmap written in a vacuum.</p>
-          <p style="font-size: 15.5px; line-height: 28px; margin-top: 28px; max-width: 54ch; color: color-mix(in srgb, var(--az-text) 78%, transparent);">The most useful thing you can do is name the <code>azurerm</code> resource you are blocked on.</p>
+          <h2 class="h2 h2-sm">Coverage grows from what people actually need.</h2>
+          <p class="lede">The resources above work end to end today. The aim is to cover more of Azure so more teams can test their stack locally, and to keep raising fidelity on what already exists — but the order is set by demand, not by a roadmap written in a vacuum.</p>
           <div class="cta">
-            <a class="btn" href="https://github.com/zerodeth/azemu/issues/new?labels=enhancement">Request a resource</a>
+            <a class="btn btn-primary" href="https://github.com/zerodeth/azemu/issues/new?labels=enhancement">Request a resource</a>
             <a class="btn btn-ghost" href="https://github.com/zerodeth/azemu/discussions">Start a discussion</a>
           </div>
+        </div>
+
+        <div class="ask">
+          <div class="ask-bar">Feature request</div>
+          <dl>
+            <div><dt>Resource</dt><dd><code>azurerm_service_plan</code></dd></div>
+            <div><dt>ARM path</dt><dd><code>Microsoft.Web/serverfarms</code></dd></div>
+            <div><dt>Blocked on</dt><dd>the apply it stops you running locally</dd></div>
+          </dl>
+          <p class="ask-note">Three lines is enough. Naming the provider path is what turns a wish into something that can be built and tested.</p>
         </div>
       </div>
     </section>
@@ -309,12 +337,29 @@
     <hr class="rule" />
 
     <section class="band">
-      <h2 class="h2" style="font-size: clamp(26px, 2.4vw, 32px); line-height: 1.2; max-width: 24ch;">You do not need to be an Azure or Go expert to help.</h2>
-      <p class="lede">Adding a resource, fixing a rejected apply, or sharpening a doc page all count. And if azemu is useful to you, a star is the cheapest way to help other people find it.</p>
-      <div class="cta">
+      <span class="kicker">Contributing</span>
+      <h2 class="h2 h2-sm" style="max-width: 24ch;">You do not need to be an Azure or Go expert to help.</h2>
+
+      <div class="routes">
+        <div>
+          <h3>Add a resource</h3>
+          <p>Copy the shape of an existing handler, add the test that proves it, and the parity matrix gains a row.</p>
+        </div>
+        <div>
+          <h3>Fix a rejected apply</h3>
+          <p>Paste the error the provider returned. Every one of them is a real gap in fidelity worth closing.</p>
+        </div>
+        <div>
+          <h3>Sharpen a page</h3>
+          <p>The docs are in the same repo. A confusing paragraph you had to reread is worth reporting.</p>
+        </div>
+      </div>
+
+      <div class="cta" style="margin-top: calc(1.5 * var(--az-lead));">
         <a class="btn btn-primary" href="{{ 'community/contributing/' | url }}">Start contributing</a>
         <a class="btn btn-ghost" href="https://github.com/zerodeth/azemu">Star on GitHub</a>
       </div>
+      <p class="ask-note" style="padding: 0; border: none; margin-top: 16px;">If azemu is useful to you, a star is the cheapest way to help other people find it.</p>
     </section>
 
     <footer>
