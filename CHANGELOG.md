@@ -71,7 +71,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   offered no way into the docs at all, while narrowing the window made a
   working menu appear. Enabling Material's `navigation.tabs` puts the
   top-level sections in the header on every page, which covers the home page
-  at the widths where the drawer button is hidden. As a side effect the
+  at the widths where the drawer button is hidden. As a side effect, the
   per-page sidebar now lists only the current section instead of all 25
   pages.
 
