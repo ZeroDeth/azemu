@@ -1,83 +1,108 @@
 /* =========================================================
-   azemu -- Industrial Terminal theme
+   azemu docs theme
+
+   The palette, type and spacing here mirror the landing page in
+   `website/overrides/home.html`, so that clicking off the home page does
+   not change design language. When you change a colour there, change it
+   here too. The landing uses `--az-*` names locally; this file exposes
+   the same values as `--azemu-*` because Material's own rules and the
+   design-note components already reference them.
    ========================================================= */
 
-/* --- Google Fonts import (monospace for headings) --- */
+/* --- Google Fonts import (monospace, for code and small caps) --- */
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap');
 
 /* =========================================================
    Dark mode (default) -- slate scheme
    ========================================================= */
 [data-md-color-scheme="slate"] {
-  --md-default-bg-color:        #0d1117;
-  --md-default-fg-color:        #e6edf3;
-  --md-default-fg-color--light: #8b949e;
-  --md-default-fg-color--lightest: #484f58;
+  --md-default-bg-color:        #161826;
+  --md-default-fg-color:        #e9e9ed;
+  --md-default-fg-color--light: #a7a9b6;
+  --md-default-fg-color--lightest: #595d6c;
 
-  --md-primary-fg-color:        #00ff41;
-  --md-primary-fg-color--light: #33ff5c;
-  --md-primary-fg-color--dark:  #00cc34;
-  --md-primary-bg-color:        #0d1117;
-  --md-primary-bg-color--light: #161b22;
+  /* Material paints the header from --md-primary-fg-color and the text
+     on it from --md-primary-bg-color. Keeping the header on the page
+     ground lets the landing run under it without a seam. */
+  --md-primary-fg-color:        #161826;
+  --md-primary-fg-color--light: #232532;
+  --md-primary-fg-color--dark:  #12131f;
+  --md-primary-bg-color:        #e9e9ed;
+  --md-primary-bg-color--light: #a7a9b6;
 
-  --md-accent-fg-color:         #00ff41;
-  --md-accent-fg-color--transparent: rgba(0, 255, 65, 0.12);
-  --md-accent-bg-color:         #0d1117;
+  --md-accent-fg-color:         #9184d9;
+  --md-accent-fg-color--transparent: rgba(145, 132, 217, 0.12);
+  --md-accent-bg-color:         #161826;
 
-  --md-typeset-color:           #e6edf3;
-  --md-typeset-a-color:         #58a6ff;
+  --md-typeset-color:           #e9e9ed;
+  --md-typeset-a-color:         #9184d9;
 
-  --md-code-bg-color:           #0a0e14;
-  --md-code-fg-color:           #e6edf3;
-  --md-code-hl-color:           rgba(0, 255, 65, 0.1);
+  --md-code-bg-color:           #232532;
+  --md-code-fg-color:           #e9e9ed;
+  --md-code-hl-color:           rgba(145, 132, 217, 0.12);
 
-  --md-footer-bg-color:         #010409;
-  --md-footer-bg-color--dark:   #010409;
-  --md-footer-fg-color:         #8b949e;
-  --md-footer-fg-color--light:  #484f58;
-  --md-footer-fg-color--lighter:#30363d;
+  --md-footer-bg-color:         #12131f;
+  --md-footer-bg-color--dark:   #12131f;
+  --md-footer-fg-color:         #a7a9b6;
+  --md-footer-fg-color--light:  #595d6c;
+  --md-footer-fg-color--lighter:#3f424d;
 
   /* Admonition accents */
-  --md-admonition-bg-color:     #161b22;
+  --md-admonition-bg-color:     #232532;
 
   /* Custom tokens */
-  --azemu-surface:              #161b22;
-  --azemu-border:               #30363d;
-  --azemu-green:                #00ff41;
-  --azemu-green-dim:            #238636;
-  --azemu-blue:                 #58a6ff;
+  --azemu-surface:              #232532;
+  --azemu-border:               #3f424d;
+  --azemu-rule:                 #292b31;
+  --azemu-accent:               #9184d9;
+  --azemu-accent-light:         #b9b0e8;
+  --azemu-accent-dim:           #595d6c;
+  --azemu-success:              #3fb950;
   --azemu-amber:                #d29922;
+  --azemu-danger:               #f85149;
 }
 
 /* =========================================================
    Light mode
+
+   The landing carries its own dark ground in every scheme, so light mode
+   only restyles the chrome around it. The accent is darkened from the
+   landing's #9184d9, which sits at about 3.5:1 on white and fails
+   WCAG AA for text; #5f51b8 clears 6:1.
    ========================================================= */
 [data-md-color-scheme="default"] {
-  --md-primary-fg-color:        #1a7f37;
-  --md-primary-fg-color--light: #2ea043;
-  --md-primary-fg-color--dark:  #116329;
+  --md-primary-fg-color:        #5f51b8;
+  --md-primary-fg-color--light: #7b6fca;
+  --md-primary-fg-color--dark:  #4a3f94;
   --md-primary-bg-color:        #ffffff;
-  --md-primary-bg-color--light: #f6f8fa;
+  --md-primary-bg-color--light: #f4f3fa;
 
-  --md-accent-fg-color:         #1a7f37;
-  --md-accent-fg-color--transparent: rgba(26, 127, 55, 0.1);
+  --md-accent-fg-color:         #5f51b8;
+  --md-accent-fg-color--transparent: rgba(95, 81, 184, 0.1);
 
-  --md-typeset-a-color:         #0969da;
+  --md-typeset-a-color:         #5f51b8;
 
-  --md-code-bg-color:           #f0f2f4;
+  --md-code-bg-color:           #f2f1f7;
   --md-code-fg-color:           #1f2328;
 
   /* Custom tokens */
-  --azemu-surface:              #f6f8fa;
-  --azemu-border:               #d0d7de;
-  --azemu-green:                #1a7f37;
-  --azemu-green-dim:            #2ea043;
-  --azemu-blue:                 #0969da;
+  --azemu-surface:              #f7f7fb;
+  --azemu-border:               #d8d6e4;
+  --azemu-rule:                 #e6e4ee;
+  --azemu-accent:               #5f51b8;
+  --azemu-accent-light:         #4a3f94;
+  --azemu-accent-dim:           #8a83b5;
+  --azemu-success:              #1a7f37;
   --azemu-amber:                #9a6700;
+  --azemu-danger:               #cf222e;
 }
 
 /* =========================================================
-   Typography -- monospace headings
+   Typography
+
+   Headings use the theme text face (Inter) at medium weight with the
+   landing's negative tracking, rather than the bold monospace the docs
+   used to run.
    ========================================================= */
 .md-typeset h1,
 .md-typeset h2,
@@ -85,147 +110,159 @@
 .md-typeset h4,
 .md-typeset h5,
 .md-typeset h6 {
-  font-family: 'JetBrains Mono', monospace;
-  font-weight: 700;
-  letter-spacing: -0.02em;
+  font-weight: 500;
+  letter-spacing: -0.015em;
 }
 
 .md-typeset h1 {
-  font-size: 2rem;
-  border-bottom: 2px solid var(--azemu-green);
-  padding-bottom: 0.4rem;
-  margin-bottom: 1.2rem;
-}
-
-[data-md-color-scheme="slate"] .md-typeset h1 {
-  color: var(--azemu-green);
+  font-size: 2.1rem;
+  line-height: 1.15;
+  color: var(--md-default-fg-color);
+  border-bottom: 1px solid var(--azemu-border);
+  padding-bottom: 0.6rem;
+  margin-bottom: 1.4rem;
 }
 
 .md-typeset h2 {
-  font-size: 1.4rem;
-  margin-top: 2rem;
+  font-size: 1.45rem;
+  line-height: 1.2;
+  margin-top: 2.2rem;
+  color: var(--md-default-fg-color);
 }
 
-[data-md-color-scheme="slate"] .md-typeset h2 {
-  color: #e6edf3;
+.md-typeset h3 {
+  font-size: 1.1rem;
+  margin-top: 1.6rem;
 }
 
 /* =========================================================
    Navigation header bar
+
+   The header takes its colours from --md-primary-* above. It must not
+   set its own background: doing that while leaving the foreground on
+   --md-primary-bg-color is what made the title and icons render as
+   near-black on near-black.
    ========================================================= */
 [data-md-color-scheme="slate"] .md-header {
-  background-color: #010409;
-  border-bottom: 1px solid var(--azemu-border);
+  border-bottom: 1px solid var(--azemu-rule);
 }
 
-[data-md-color-scheme="slate"] .md-header .md-header__title {
-  font-family: 'JetBrains Mono', monospace;
-  font-weight: 700;
-  letter-spacing: 0.05em;
+.md-header__title {
+  font-weight: 500;
+  letter-spacing: -0.01em;
 }
 
 /* =========================================================
    Sidebar navigation
    ========================================================= */
-[data-md-color-scheme="slate"] .md-nav__link {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.75rem;
-  letter-spacing: 0.02em;
+.md-nav__link {
+  font-size: 0.78rem;
+  letter-spacing: 0;
+}
+
+.md-nav__title {
+  font-weight: 500;
 }
 
 [data-md-color-scheme="slate"] .md-nav__link--active,
 [data-md-color-scheme="slate"] .md-nav__link:hover {
-  color: var(--azemu-green);
+  color: var(--azemu-accent);
 }
 
 [data-md-color-scheme="slate"] .md-nav__item--active > .md-nav__link {
-  color: var(--azemu-green);
+  color: var(--azemu-accent);
 }
 
 /* =========================================================
-   Code blocks -- terminal feel
+   Code blocks
+
+   Same card as the landing's terminal: raised surface, hairline border,
+   a title bar of three muted dots. The dots are neutral rather than
+   traffic-light so they read as chrome, not status.
    ========================================================= */
 .md-typeset pre {
   border: 1px solid var(--azemu-border);
-  border-radius: 6px;
+  border-radius: 10px;
   position: relative;
 }
 
 [data-md-color-scheme="slate"] .md-typeset pre {
-  background-color: #0a0e14;
+  background-color: var(--azemu-surface);
 }
 
-/* Terminal dots on code blocks */
+[data-md-color-scheme="slate"] .md-typeset pre > code {
+  background-color: transparent;
+}
+
 [data-md-color-scheme="slate"] .md-typeset pre::before {
   content: "";
   display: block;
   height: 12px;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
   background:
-    radial-gradient(circle at 8px 6px,  #ff5f56 4px, transparent 4px),
-    radial-gradient(circle at 24px 6px, #ffbd2e 4px, transparent 4px),
-    radial-gradient(circle at 40px 6px, #27c93f 4px, transparent 4px);
+    radial-gradient(circle at 8px 6px,  var(--azemu-accent-dim) 4px, transparent 4px),
+    radial-gradient(circle at 24px 6px, var(--azemu-border) 4px, transparent 4px),
+    radial-gradient(circle at 40px 6px, var(--azemu-border) 4px, transparent 4px);
   border-bottom: 1px solid var(--azemu-border);
-  padding-bottom: 8px;
+  padding-bottom: 10px;
 }
 
 /* Inline code */
 .md-typeset code {
   border-radius: 4px;
-  font-size: 0.82em;
+  font-size: 0.85em;
 }
 
 [data-md-color-scheme="slate"] .md-typeset :not(pre) > code {
-  background-color: rgba(110, 118, 129, 0.15);
-  border: 1px solid var(--azemu-border);
-  color: var(--azemu-green);
+  background-color: rgba(145, 132, 217, 0.12);
+  border: 1px solid transparent;
+  color: var(--azemu-accent-light);
 }
 
 /* =========================================================
    Links
    ========================================================= */
-[data-md-color-scheme="slate"] .md-typeset a {
-  color: var(--azemu-blue);
+.md-typeset a {
+  color: var(--azemu-accent);
   text-decoration: none;
   border-bottom: 1px solid transparent;
-  transition: border-color 0.15s ease;
+  transition: border-color 0.15s ease, color 0.15s ease;
 }
 
-[data-md-color-scheme="slate"] .md-typeset a:hover {
-  border-bottom-color: var(--azemu-blue);
+.md-typeset a:hover {
+  color: var(--azemu-accent-light);
+  border-bottom-color: currentcolor;
 }
 
 /* =========================================================
    Tables
+
+   Borderless with rules under each row, matching the landing's coverage
+   table, rather than a boxed grid.
    ========================================================= */
-[data-md-color-scheme="slate"] .md-typeset table:not([class]) {
-  border: 1px solid var(--azemu-border);
-  border-collapse: separate;
-  border-spacing: 0;
-  border-radius: 6px;
-  overflow: hidden;
+.md-typeset table:not([class]) {
+  border: none;
+  border-collapse: collapse;
+  font-size: 0.76rem;
 }
 
-[data-md-color-scheme="slate"] .md-typeset table:not([class]) th {
-  background-color: #161b22;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.78rem;
+.md-typeset table:not([class]) th {
+  background-color: transparent;
+  font-weight: 500;
+  font-size: 0.68rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--azemu-green);
+  color: var(--md-default-fg-color--light);
   border-bottom: 1px solid var(--azemu-border);
 }
 
-[data-md-color-scheme="slate"] .md-typeset table:not([class]) td {
-  border-bottom: 1px solid var(--azemu-border);
-}
-
-[data-md-color-scheme="slate"] .md-typeset table:not([class]) tr:last-child td {
-  border-bottom: none;
+.md-typeset table:not([class]) td {
+  border-bottom: 1px solid var(--azemu-rule);
+  vertical-align: top;
 }
 
 [data-md-color-scheme="slate"] .md-typeset table:not([class]) tr:hover td {
-  background-color: rgba(0, 255, 65, 0.03);
+  background-color: rgba(145, 132, 217, 0.04);
 }
 
 /* =========================================================
@@ -236,6 +273,7 @@
   background-color: var(--azemu-surface);
   border: 1px solid var(--azemu-border);
   border-left: 3px solid;
+  border-radius: 10px;
 }
 
 /* =========================================================
@@ -244,17 +282,29 @@
 [data-md-color-scheme="slate"] .md-search__form {
   background-color: var(--azemu-surface);
   border: 1px solid var(--azemu-border);
+  border-radius: 8px;
 }
 
 [data-md-color-scheme="slate"] .md-search__form:hover {
-  border-color: var(--azemu-green);
+  border-color: var(--azemu-accent);
 }
 
 /* =========================================================
    Footer
    ========================================================= */
 [data-md-color-scheme="slate"] .md-footer {
-  border-top: 1px solid var(--azemu-border);
+  border-top: 1px solid var(--azemu-rule);
+}
+
+/* =========================================================
+   Focus ring
+
+   Matches the landing, so keyboard focus looks the same everywhere and
+   never falls back to the browser default.
+   ========================================================= */
+:focus-visible {
+  outline: 2px solid var(--azemu-accent);
+  outline-offset: 2px;
 }
 
 /* =========================================================
@@ -266,20 +316,24 @@
 }
 
 [data-md-color-scheme="slate"] ::-webkit-scrollbar-track {
-  background: #0d1117;
+  background: #161826;
 }
 
 [data-md-color-scheme="slate"] ::-webkit-scrollbar-thumb {
-  background: #30363d;
+  background: #3f424d;
   border-radius: 4px;
 }
 
 [data-md-color-scheme="slate"] ::-webkit-scrollbar-thumb:hover {
-  background: #484f58;
+  background: #595d6c;
 }
 
 /* =========================================================
    Design note pages
+
+   Status badges keep semantic colour: a reader has to be able to tell
+   implemented from proposed from deprecated at a glance, which the
+   single accent cannot carry. They are muted to sit alongside it.
    ========================================================= */
 
 /* Status badge */
@@ -287,7 +341,7 @@
   display: inline-block;
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.7rem;
-  font-weight: 700;
+  font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.1em;
   padding: 0.2rem 0.8rem;
@@ -295,26 +349,26 @@
 }
 
 .designnote-status--implemented {
-  background: rgba(0, 255, 65, 0.1);
-  color: var(--azemu-green);
-  border: 1px solid var(--azemu-green-dim);
+  background: rgba(63, 185, 80, 0.1);
+  color: var(--azemu-success);
+  border: 1px solid rgba(63, 185, 80, 0.4);
 }
 
 [data-md-color-scheme="default"] .designnote-status--implemented {
   background: rgba(26, 127, 55, 0.1);
-  color: var(--azemu-green);
-  border: 1px solid var(--azemu-green-dim);
+  color: var(--azemu-success);
+  border: 1px solid rgba(26, 127, 55, 0.4);
 }
 
 .designnote-status--proposed {
   background: rgba(210, 153, 34, 0.12);
   color: var(--azemu-amber);
-  border: 1px solid var(--azemu-amber);
+  border: 1px solid rgba(210, 153, 34, 0.4);
 }
 
 .designnote-status--deprecated {
   background: rgba(248, 81, 73, 0.1);
-  color: #f85149;
+  color: var(--azemu-danger);
   border: 1px solid rgba(248, 81, 73, 0.4);
 }
 
@@ -327,10 +381,9 @@
   padding: 0.8rem 1.2rem;
   background: var(--azemu-surface);
   border: 1px solid var(--azemu-border);
-  border-radius: 6px;
+  border-radius: 10px;
   margin: 0.5rem 0 1.8rem;
   font-size: 0.82rem;
-  font-family: 'JetBrains Mono', monospace;
 }
 
 .designnote-meta-item {
@@ -340,51 +393,52 @@
 
 .designnote-meta-item strong {
   color: var(--md-default-fg-color);
+  font-weight: 500;
   margin-right: 0.3rem;
 }
 
 .designnote-github-link {
   margin-left: auto;
-  font-family: 'JetBrains Mono', monospace;
   font-size: 0.75rem;
-  padding: 0.2rem 0.7rem;
+  padding: 0.25rem 0.8rem;
   border: 1px solid var(--azemu-border);
-  border-radius: 4px;
+  border-radius: 6px;
   text-decoration: none !important;
   border-bottom: none !important;
   color: var(--md-default-fg-color--light) !important;
-  transition: border-color 0.15s, color 0.15s;
+  transition: border-color 0.15s, color 0.15s, background-color 0.15s;
   white-space: nowrap;
 }
 
 .designnote-github-link:hover {
-  border-color: var(--azemu-green);
-  color: var(--azemu-green) !important;
+  background-color: rgba(145, 132, 217, 0.1);
+  border-color: var(--azemu-accent);
+  color: var(--azemu-accent) !important;
 }
 
 /* Decision callout */
 .designnote-decision {
-  border-left: 3px solid var(--azemu-green);
+  border-left: 3px solid var(--azemu-accent);
   padding: 1rem 1.5rem;
   margin: 1.5rem 0;
-  border-radius: 0 6px 6px 0;
+  border-radius: 0 10px 10px 0;
 }
 
 [data-md-color-scheme="slate"] .designnote-decision {
-  background: rgba(0, 255, 65, 0.04);
+  background: rgba(145, 132, 217, 0.06);
 }
 
 [data-md-color-scheme="default"] .designnote-decision {
-  background: rgba(26, 127, 55, 0.05);
+  background: rgba(95, 81, 184, 0.06);
 }
 
 .designnote-decision-label {
   display: block;
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.68rem;
-  font-weight: 700;
+  font-weight: 500;
   letter-spacing: 0.12em;
-  color: var(--azemu-green);
+  color: var(--azemu-accent);
   margin-bottom: 0.6rem;
 }
 
