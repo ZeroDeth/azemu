@@ -17,6 +17,7 @@ stays readable.
 | 0002 | [azemu + kind hybrid for AKS workload deployments](0002-azemu-plus-kind-for-aks-workload-deployments.md) | Proposed |
 | 0003 | [Add Azure Cache for Redis](0003-add-azure-cache-for-redis.md) | Implemented |
 | 0004 | [How far azemu emulates Azure DevOps Pipelines](0004-azure-devops-pipelines-scope.md) | Proposed |
+| 0005 | [Front Door data plane and classic CDN coexistence](0005-front-door-data-plane-and-classic-cdn-coexistence.md) | Implemented |
 
 ## When to write one
 

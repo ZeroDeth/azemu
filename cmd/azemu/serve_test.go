@@ -12,8 +12,10 @@ import (
 )
 
 // TestCDNHostMux_routing locks down the real entrypoint: a
-// {endpoint}.azureedge.net host must be dispatched to the CDN data plane and
-// bypass the ARM router, while every other host falls through to ARM.
+// {endpoint}.azureedge.net host must be dispatched to the classic CDN data
+// plane, a {endpoint}.azurefd.net host must be dispatched to the Front Door
+// data plane, and every other host falls through to ARM. All three bypass
+// the ARM router when matched.
 func TestCDNHostMux_routing(t *testing.T) {
 	ar := arm.NewRouter(store.NewMemoryStore(), "http://azurite:10000", "https://kv", "redis://r:6379")
 
@@ -32,6 +34,20 @@ func TestCDNHostMux_routing(t *testing.T) {
 	mux.ServeHTTP(rec, req)
 	if nextCalled {
 		t.Fatal("CDN host was routed to the ARM handler instead of ServeCDNContent")
+	}
+
+	// Front Door host: handled by ServeAFDContent, so the ARM next handler is
+	// bypassed. No endpoint is seeded, so it returns 404, but the point is that
+	// the ARM path was not taken.
+	nextCalled = false
+	req = httptest.NewRequest(http.MethodGet, "http://fdedge.azurefd.net/c/blob", nil)
+	rec = httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+	if nextCalled {
+		t.Fatal("Front Door host was routed to the ARM handler instead of ServeAFDContent")
+	}
+	if rec.Result().StatusCode != http.StatusNotFound {
+		t.Errorf("status = %d, want 404 from the unresolved AFD proxy", rec.Result().StatusCode)
 	}
 
 	// Non-CDN host: falls through to the ARM handler.

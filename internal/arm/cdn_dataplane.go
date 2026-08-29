@@ -97,6 +97,18 @@ func (a *Router) ServeCDNContent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	a.proxyBlobObject(w, r, account, name)
+}
+
+// proxyBlobObject reverse-proxies a content request to a Blob account on the
+// Azurite origin and streams the response back, passing the origin's
+// Content-Type, Cache-Control, and the rest of the content/caching headers
+// through unchanged. It is shared by the classic CDN (*.azureedge.net) and
+// Front Door (*.azurefd.net) data planes: both resolve an endpoint to a Blob
+// account and then proxy identically. logLabel identifies the resolved
+// endpoint in the structured log. The caller is responsible for restricting
+// the method to GET/HEAD before calling.
+func (a *Router) proxyBlobObject(w http.ResponseWriter, r *http.Request, account, logLabel string) {
 	// Use the escaped path so encoded blob keys (%20, %23, %2F, ...) reach the
 	// origin intact rather than being decoded by net/http.
 	originURL := a.blobOriginURL(account, r.URL.EscapedPath(), r.URL.RawQuery)
@@ -109,7 +121,7 @@ func (a *Router) ServeCDNContent(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := cdnOriginClient.Do(proxyReq)
 	if err != nil {
-		log.Error().Err(err).Str("endpoint", name).Str("origin", originURL).
+		log.Error().Err(err).Str("endpoint", logLabel).Str("origin", originURL).
 			Msg("cdn origin fetch failed")
 		writeAzureError(w, http.StatusBadGateway, "OriginUnreachable",
 			fmt.Sprintf("could not reach CDN origin: %s", err))
@@ -131,7 +143,7 @@ func (a *Router) ServeCDNContent(w http.ResponseWriter, r *http.Request) {
 	// the (emulated) edge rather than hitting the origin directly.
 	w.Header().Set("X-Cache", "CONFIG_NOCACHE")
 
-	log.Info().Str("endpoint", name).Str("account", account).
+	log.Info().Str("endpoint", logLabel).Str("account", account).
 		Str("path", r.URL.Path).Int("status", resp.StatusCode).
 		Msg("cdn content served")
 

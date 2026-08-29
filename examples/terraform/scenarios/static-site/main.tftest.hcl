@@ -30,8 +30,8 @@ run "static_site_lifecycle" {
   }
 
   assert {
-    condition     = output.cdn_endpoint_fqdn != ""
-    error_message = "cdn_endpoint_fqdn must not be empty"
+    condition     = endswith(output.cdn_endpoint_fqdn, ".azurefd.net")
+    error_message = "cdn_endpoint_fqdn must be a Front Door .azurefd.net host"
   }
 
   assert {

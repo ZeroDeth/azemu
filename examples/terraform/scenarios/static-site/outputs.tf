@@ -14,13 +14,13 @@ output "storage_primary_blob_endpoint" {
 }
 
 output "cdn_profile_id" {
-  description = "CDN profile ARM ID"
-  value       = azurerm_cdn_profile.site.id
+  description = "Front Door profile ARM ID"
+  value       = azurerm_cdn_frontdoor_profile.site.id
 }
 
 output "cdn_endpoint_fqdn" {
-  description = "CDN endpoint hostname"
-  value       = azurerm_cdn_endpoint.site.fqdn
+  description = "Front Door endpoint hostname ({name}.azurefd.net)"
+  value       = azurerm_cdn_frontdoor_endpoint.site.host_name
 }
 
 output "dns_zone_id" {
@@ -30,5 +30,5 @@ output "dns_zone_id" {
 
 output "www_cname_fqdn" {
   description = "CNAME record FQDN for www subdomain"
-  value       = azurerm_dns_cname_record.cdn.fqdn
+  value       = azurerm_dns_cname_record.frontdoor.fqdn
 }

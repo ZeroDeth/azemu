@@ -46,7 +46,7 @@ run "ota_delivery_lifecycle" {
   }
 
   assert {
-    condition     = endswith(output.cdn_endpoint_fqdn, ".azureedge.net")
-    error_message = "cdn_endpoint_fqdn must be an azureedge.net host"
+    condition     = endswith(output.cdn_endpoint_fqdn, ".azurefd.net")
+    error_message = "cdn_endpoint_fqdn must be a Front Door .azurefd.net host"
   }
 }

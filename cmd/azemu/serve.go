@@ -166,11 +166,12 @@ func runServe(args []string) error {
 
 	// *.vault.localhost serves the per-vault Key Vault data-plane hosts
 	// ({vaultName}.vault.localhost) that the azurerm provider requires in
-	// vaultUri. *.azureedge.net serves the CDN endpoint content hosts
-	// ({endpoint}.azureedge.net) that the CDN data-plane proxy answers. Bundles
-	// generated before either SAN existed are regenerated automatically; the new
-	// cert must be trusted again.
-	tlsCfg, generated, err := auth.LoadOrGenerateSelfSignedTLS(cfg.CertPath, "localhost", "127.0.0.1", "*.vault.localhost", "*.azureedge.net")
+	// vaultUri. *.azureedge.net serves the classic CDN endpoint content hosts
+	// and *.azurefd.net the Front Door endpoint hosts
+	// ({endpoint}.azurefd.net) that the respective data-plane proxies answer.
+	// Bundles generated before any SAN existed are regenerated automatically;
+	// the new cert must be trusted again.
+	tlsCfg, generated, err := auth.LoadOrGenerateSelfSignedTLS(cfg.CertPath, "localhost", "127.0.0.1", "*.vault.localhost", "*.azureedge.net", "*.azurefd.net")
 	if err != nil {
 		if len(tlsCfg.Certificate) == 0 {
 			log.Fatal().Err(err).Msg("failed to load/generate TLS cert")
@@ -216,11 +217,12 @@ func runServe(args []string) error {
 		WriteTimeout: 5 * time.Second,
 	}
 
-	// On the ARM port, multiplex the CDN content data plane: a request to a
-	// {endpoint}.azureedge.net host is served by the CDN proxy, everything else
-	// by the ARM control plane. Real Azure serves CDN content from a distinct
-	// host; azemu colocates both on the ARM port so one trusted cert and port
-	// cover the read path. Mirrors the Key Vault {vault}.vault.localhost split.
+	// On the ARM port, multiplex the CDN content data planes: a request to a
+	// {endpoint}.azureedge.net host is served by the classic CDN proxy and a
+	// {endpoint}.azurefd.net host by the Front Door proxy, everything else by
+	// the ARM control plane. Real Azure serves CDN content from distinct hosts;
+	// azemu colocates them on the ARM port so one trusted cert and port cover
+	// the read path. Mirrors the Key Vault {vault}.vault.localhost split.
 	armAndCDN := cdnHostMux(armRouter, r)
 
 	httpSrv := &http.Server{
@@ -333,16 +335,20 @@ func armCertPoolFromTLS(cert tls.Certificate) *x509.CertPool {
 	return pool
 }
 
-// cdnHostMux dispatches CDN content hosts ({endpoint}.azureedge.net) to the CDN
-// data plane and every other host to the ARM control plane. Extracted from the
+// cdnHostMux dispatches CDN content hosts to their data planes and every other
+// host to the ARM control plane: {endpoint}.azureedge.net to the classic CDN
+// proxy and {endpoint}.azurefd.net to the Front Door proxy. Extracted from the
 // server wiring so the routing decision is unit-testable.
 func cdnHostMux(armRouter *arm.Router, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		if arm.IsCDNContentHost(req.Host) {
+		switch {
+		case arm.IsCDNContentHost(req.Host):
 			armRouter.ServeCDNContent(w, req)
-			return
+		case arm.IsAFDContentHost(req.Host):
+			armRouter.ServeAFDContent(w, req)
+		default:
+			next.ServeHTTP(w, req)
 		}
-		next.ServeHTTP(w, req)
 	})
 }
 

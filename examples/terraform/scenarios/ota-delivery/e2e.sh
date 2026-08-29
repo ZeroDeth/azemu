@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # End-to-end driver for the server-less OTA delivery scenario. Provisions the
 # ARM estate against azemu, publishes a signed update, promotes it, asserts the
-# CDN read path, then tears down. Local-only: it needs the running Azurite data
+# Front Door read path, then tears down. Local-only: it needs the running Azurite data
 # plane (the ARM-half smoke that CI runs lives in main.tftest.hcl).
 #
 # Run via `make ota-delivery` from the repo root (which brings up the stack).
@@ -55,7 +55,7 @@ echo "== promote v$VERSION to 100% (server-side copy, write rollout.json) =="
 "${FG[@]}" promote -account "$ACCOUNT" -key "$DEV_KEY" -azurite "$AZURITE" \
   -container "$CONTAINER" -prefix "$PREFIX" -version "$VERSION"
 
-echo "== verify CDN read path (Content-Type, cache TTLs, signature) =="
+echo "== verify Front Door read path (Content-Type, cache TTLs, signature) =="
 "${FG[@]}" verify -fqdn "$FQDN" -base "$CONTAINER/$PREFIX" -version "$VERSION" \
   -asset "$ASSET" -pubkey "$SCENARIO_DIR/pub.pem" -cacert "$CERT"
 
