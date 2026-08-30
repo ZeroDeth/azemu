@@ -47,12 +47,16 @@ func runServe(args []string) error {
 
 	// --- store selection ---
 	var state store.Store
+	// storeKind is reported on /health so the console can tell the user
+	// whether their state survives a restart instead of guessing.
+	storeKind := "in-memory"
 	if cfg.PersistPath != "" {
 		fs, err := store.NewFileStore(cfg.PersistPath)
 		if err != nil {
 			log.Fatal().Err(err).Str("path", cfg.PersistPath).Msg("failed to open persist store")
 		}
 		state = fs
+		storeKind = "file-backed"
 		log.Info().Str("path", cfg.PersistPath).Msg("file-backed store enabled")
 	} else {
 		state = store.NewMemoryStore()
@@ -207,6 +211,11 @@ func runServe(args []string) error {
 			"status":         "ok",
 			"version":        Version,
 			"uptime_seconds": int(time.Since(startTime).Seconds()),
+			"store":          storeKind,
+			// Key algorithm of the self-signed serving cert, generated in
+			// internal/auth/tls.go. Reported here so the console does not
+			// hardcode a claim about the TLS setup.
+			"tls": "ECDSA P-256",
 		})
 	})
 	healthSrv := &http.Server{
