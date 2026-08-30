@@ -62,6 +62,9 @@ export const TYPE_TO_CATEGORY: Record<string, { code: CategoryCode; label: strin
   'Microsoft.Storage/storageAccounts': { code: 'ST', label: 'Storage accounts' },
   'Microsoft.Cache/redis': { code: 'RC', label: 'Redis caches' },
   'Microsoft.Cdn/profiles': { code: 'CD', label: 'CDN profiles' },
+  // Key Vault keys live on the data plane, so their ids and types do not
+  // follow the ARM provider naming scheme.
+  'keyvault/key': { code: 'KV', label: 'Key vault keys' },
 };
 
 export function getCategoryForType(resourceType: string): { code: CategoryCode; color: string } | null {
@@ -73,6 +76,38 @@ export function getCategoryForType(resourceType: string): { code: CategoryCode; 
 export function getResourceGroup(armId: string): string | null {
   const match = armId.match(/\/resourceGroups\/([^/]+)/i);
   return match ? match[1] : null;
+}
+
+/**
+ * Key Vault data-plane ids look like /keyvault/{vault}/keys/{name}/{version}
+ * and carry no /resourceGroups segment, so getResourceGroup alone files them
+ * under "unknown". Resolve them through the vault they belong to.
+ */
+export function resolveResourceGroup(
+  resource: Resource,
+  all: Resource[],
+): string | null {
+  const direct = getResourceGroup(resource.id);
+  if (direct) return direct;
+
+  const vault = resource.id.match(/^\/keyvault\/([^/]+)/i)?.[1];
+  if (!vault) return null;
+
+  const owner = all.find(
+    (r) =>
+      r.type === 'Microsoft.KeyVault/vaults' &&
+      r.name.toLowerCase() === vault.toLowerCase(),
+  );
+  return owner ? getResourceGroup(owner.id) : null;
+}
+
+/**
+ * The store keeps a `.../current` alias pointing at the latest version of a
+ * Key Vault key. It is a pointer, not a second resource, so counting or
+ * listing it would double every key the user created.
+ */
+export function isAliasResource(resource: Resource): boolean {
+  return resource.type.endsWith('/current');
 }
 
 export const METHOD_COLORS: Record<string, string> = {

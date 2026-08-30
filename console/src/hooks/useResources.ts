@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { Resource } from '../types/resource';
+import { isAliasResource } from '../types/resource';
 import { fetchResources } from '../lib/api';
 
 export function useResources() {
@@ -22,7 +23,9 @@ export function useResources() {
 
   useEffect(() => { refresh(); }, [refresh]);
 
-  const resourceList = Object.values(resources);
+  // Alias entries are pointers to a real resource, not resources of their
+  // own; including them double-counts every Key Vault key.
+  const resourceList = Object.values(resources).filter((r) => !isAliasResource(r));
 
   return { resources, resourceList, loading, error, refresh };
 }

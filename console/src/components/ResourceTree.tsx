@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { ChevronRight, Plus } from 'lucide-react';
 import { CategoryBadge } from './CategoryBadge';
 import type { Resource, CategoryCode } from '../types/resource';
-import { getResourceGroup, getCategoryForType } from '../types/resource';
+import { resolveResourceGroup, getCategoryForType } from '../types/resource';
 import styles from './ResourceTree.module.css';
 
 interface ResourceGroup {
@@ -21,7 +21,7 @@ export function ResourceTree({ resources, selectedId, onSelect }: Props) {
     const map = new Map<string, Resource[]>();
     for (const r of resources) {
       if (r.type === 'Microsoft.Resources/resourceGroups') continue;
-      const rg = getResourceGroup(r.id) ?? 'unknown';
+      const rg = resolveResourceGroup(r, resources) ?? 'unassigned';
       if (!map.has(rg)) map.set(rg, []);
       map.get(rg)!.push(r);
     }

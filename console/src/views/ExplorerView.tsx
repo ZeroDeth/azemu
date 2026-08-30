@@ -6,7 +6,7 @@ import { DetailBlade } from '../components/DetailBlade';
 import { DockedLog } from '../components/DockedLog';
 import { useResources } from '../hooks/useResources';
 import { useRequestLog } from '../hooks/useRequestLog';
-import { getResourceGroup } from '../types/resource';
+import { resolveResourceGroup } from '../types/resource';
 import type { Resource } from '../types/resource';
 import styles from './ExplorerView.module.css';
 
@@ -24,7 +24,7 @@ export function ExplorerView() {
     return resourceList.filter((r) =>
       r.name.toLowerCase().includes(query) ||
       r.type.toLowerCase().includes(query) ||
-      (getResourceGroup(r.id) ?? '').toLowerCase().includes(query),
+      (resolveResourceGroup(r, resourceList) ?? '').toLowerCase().includes(query),
     );
   }, [resourceList, query]);
 
