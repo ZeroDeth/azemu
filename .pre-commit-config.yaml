@@ -22,11 +22,17 @@
 
 repos:
   # === Generic file hygiene ===
+  # internal/console/dist is the Vite build output committed for go:embed.
+  # Rewriting minified bundles serves no purpose, and because the hooks edit
+  # the files after staging, every `make console-build` commit aborted on the
+  # first attempt and only succeeded when re-staged.
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.6.0
     hooks:
       - id: trailing-whitespace
+        exclude: '^internal/console/dist/'
       - id: end-of-file-fixer
+        exclude: '^internal/console/dist/'
       - id: check-yaml
         args: ['--unsafe']
       - id: check-json
@@ -38,6 +44,7 @@ repos:
       # pre-commit versions and errors out on newer ones.
       - id: mixed-line-ending
         args: ['--fix=lf']
+        exclude: '^internal/console/dist/'
       # Mechanical enforcement of CLAUDE.md section 4: "Do NOT commit to
       # main directly. All work on feature branches." This hook blocks the
       # commit if you forget to branch first. Bypass with --no-verify only
