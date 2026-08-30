@@ -38,7 +38,7 @@ export function ExplorerView() {
           onSelect={setSelected}
         />
         {selected ? (
-          <DetailBlade resource={selected} />
+          <DetailBlade resource={selected} all={resourceList} />
         ) : (
           <div className={styles.placeholder}>
             {query
