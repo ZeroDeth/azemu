@@ -17,13 +17,20 @@ cert trust.
 docker compose up -d --build
 ```
 
-This builds the image, starts azemu, and exposes three ports:
+This builds the image, starts azemu, and exposes five ports:
 
 | Port | Protocol | Purpose |
 |---|---|---|
 | 4566 | HTTPS | ARM API |
 | 4567 | HTTPS | Metadata, OAuth2, OIDC |
 | 4568 | HTTP | Health check (no TLS) |
+| 4569 | HTTP | Azure DevOps OIDC and service-endpoint API |
+| 4570 | HTTP | Web console (no TLS) |
+
+Open <http://localhost:4570> for the web console: resource inventory, a
+resource explorer with a detail pane, and a live request log streaming every
+ARM call the provider makes. It is read-only apart from the state export,
+import and reset controls; Terraform still drives the emulator.
 
 The compose file bind-mounts `.azemu/` from the host, so the self-signed cert
 bundle appears at `.azemu/cert-bundle.pem` on the host after first boot.
