@@ -13,6 +13,10 @@ export interface HealthResponse {
   status: string;
   version: string;
   uptime_seconds: number;
+  /** "in-memory" or "file-backed". Reported by the emulator, never assumed. */
+  store: string;
+  /** Key algorithm of the emulator's self-signed serving cert. */
+  tls: string;
 }
 
 export interface RequestLogEntry {
