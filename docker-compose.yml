@@ -43,6 +43,8 @@ services:
       - "4566:4566"
       - "4567:4567"
       - "4568:4568"
+      - "4569:4569"
+      - "4570:4570"
     environment:
       AZEMU_CERT_PATH: /azemu/cert-bundle.pem
       AZEMU_METADATA_HOST: 127.0.0.1:4567

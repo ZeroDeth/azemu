@@ -85,7 +85,7 @@ export function CockpitView() {
           </span>
         </div>
 
-        <ServiceCards healthy={!healthError} />
+        <ServiceCards healthy={!healthError} armRequests={logEntries.length} />
         <MetaStrip health={health} resourceCount={resourceList.length} />
 
         <div className={styles.bottomGrid}>

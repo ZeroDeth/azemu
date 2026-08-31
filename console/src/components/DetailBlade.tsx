@@ -2,27 +2,38 @@ import { useState } from 'react';
 import { CategoryBadge } from './CategoryBadge';
 import { StatusDot } from './StatusDot';
 import type { Resource, CategoryCode } from '../types/resource';
-import { getCategoryForType, getResourceGroup } from '../types/resource';
+import { getCategoryForType, resolveResourceGroup } from '../types/resource';
 import styles from './DetailBlade.module.css';
 
-const TABS = ['Overview', 'Secrets', 'Keys', 'Access', 'JSON'] as const;
+const TABS = ['Overview', 'JSON'] as const;
 
 interface Props {
   resource: Resource;
+  /** Full resource list, needed to resolve data-plane ids to their group. */
+  all: Resource[];
 }
 
-export function DetailBlade({ resource }: Props) {
+export function DetailBlade({ resource, all }: Props) {
   const [activeTab, setActiveTab] = useState<string>('Overview');
   const cat = getCategoryForType(resource.type);
-  const rg = getResourceGroup(resource.id);
+  const rg = resolveResourceGroup(resource, all);
   const typeName = resource.type.split('/').pop() ?? resource.type;
+
+  // Only ARM resources carry a provisioning state; data-plane objects such as
+  // Key Vault keys have none, so the badge is omitted rather than invented.
+  const provisioningState = resource.properties?.provisioningState;
+  const state = typeof provisioningState === 'string' ? provisioningState : null;
 
   return (
     <div className={styles.blade}>
       {/* Mini breadcrumb */}
       <div className={styles.miniBreadcrumb}>
-        <span className={styles.bcLink}>{rg}</span>
-        <span className={styles.bcSep}>/</span>
+        {rg && (
+          <>
+            <span className={styles.bcLink}>{rg}</span>
+            <span className={styles.bcSep}>/</span>
+          </>
+        )}
         <span className={styles.bcCurrent}>{resource.name}</span>
       </div>
 
@@ -32,13 +43,16 @@ export function DetailBlade({ resource }: Props) {
         <div className={styles.headerText}>
           <h2 className={styles.title}>{resource.name}</h2>
           <div className={styles.subtitle}>
-            {typeName} · {resource.location}
+            {typeName}
+            {resource.location && ` · ${resource.location}`}
           </div>
         </div>
-        <div className={styles.statusBadge}>
-          <StatusDot color="#3fb950" size={7} />
-          Succeeded
-        </div>
+        {state && (
+          <div className={styles.statusBadge}>
+            <StatusDot color={state === 'Succeeded' ? '#3fb950' : '#d29922'} size={7} />
+            {state}
+          </div>
+        )}
       </div>
 
       {/* Tabs */}
@@ -61,39 +75,30 @@ export function DetailBlade({ resource }: Props) {
             {JSON.stringify(resource, null, 2)}
           </pre>
         </div>
-      ) : activeTab === 'Overview' ? (
-        <OverviewTab resource={resource} />
       ) : (
-        <div className={styles.tabPlaceholder}>
-          {activeTab} tab — coming soon
-        </div>
+        <OverviewTab resource={resource} />
       )}
     </div>
   );
 }
 
 function OverviewTab({ resource }: { resource: Resource }) {
-  const props = resource.properties ?? {};
-  const entries = Object.entries(props).slice(0, 8);
+  const entries = Object.entries(resource.properties ?? {});
 
   return (
-    <>
-      <div className={styles.essentials}>
-        {entries.map(([key, val]) => (
-          <div key={key} className={styles.essRow}>
-            <span className={styles.essKey}>{key}</span>
-            <span className={styles.essVal}>
-              {typeof val === 'object' ? JSON.stringify(val) : String(val)}
-            </span>
-          </div>
-        ))}
-        {entries.length === 0 && (
-          <div className={styles.essRow}>
-            <span className={styles.essKey}>Type</span>
-            <span className={styles.essVal}>{resource.type}</span>
-          </div>
-        )}
+    <div className={styles.essentials}>
+      <div className={styles.essRow}>
+        <span className={styles.essKey}>Type</span>
+        <span className={styles.essVal}>{resource.type}</span>
       </div>
-    </>
+      {entries.map(([key, val]) => (
+        <div key={key} className={styles.essRow}>
+          <span className={styles.essKey}>{key}</span>
+          <span className={styles.essVal}>
+            {typeof val === 'object' ? JSON.stringify(val) : String(val)}
+          </span>
+        </div>
+      ))}
+    </div>
   );
 }
