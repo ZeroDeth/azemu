@@ -43,8 +43,13 @@ services:
       - "4566:4566"
       - "4567:4567"
       - "4568:4568"
-      - "4569:4569"
-      - "4570:4570"
+      # Bound to the loopback interface: the console proxies the state
+      # export, import and reset endpoints with no authentication, and the
+      # ADO OIDC port mints tokens. Neither should be reachable from the
+      # network. Change only if you deliberately want remote access and have
+      # put something in front of it.
+      - "127.0.0.1:4569:4569"
+      - "127.0.0.1:4570:4570"
     environment:
       AZEMU_CERT_PATH: /azemu/cert-bundle.pem
       AZEMU_METADATA_HOST: 127.0.0.1:4567
