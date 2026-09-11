@@ -2,6 +2,9 @@ package main
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"crypto/ed25519"
+	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
@@ -212,10 +215,7 @@ func runServe(args []string) error {
 			"version":        Version,
 			"uptime_seconds": int(time.Since(startTime).Seconds()),
 			"store":          storeKind,
-			// Key algorithm of the self-signed serving cert, generated in
-			// internal/auth/tls.go. Reported here so the console does not
-			// hardcode a claim about the TLS setup.
-			"tls": "ECDSA P-256",
+			"tls":            tlsKeyAlgorithm(tlsCfg),
 		})
 	})
 	healthSrv := &http.Server{
@@ -393,4 +393,35 @@ func printServeUsage(w *os.File) {
 	fmt.Fprintf(w, "  :4568   Health check (plain HTTP)\n")
 	fmt.Fprintf(w, "  :4569   ADO OIDC / service connections (plain HTTP)\n")
 	fmt.Fprintf(w, "  :4570   Web console (plain HTTP)\n\n")
+}
+
+// tlsKeyAlgorithm describes the serving certificate's public key, for /health.
+//
+// The bundle is not always the one azemu generates: with AZEMU_CERT_PATH set,
+// tryLoadBundle accepts whatever tls.X509KeyPair accepts, which includes RSA
+// and Ed25519. Reporting a fixed "ECDSA P-256" would therefore be a guess, and
+// the point of surfacing this field at all is that the console stops guessing.
+func tlsKeyAlgorithm(cert tls.Certificate) string {
+	leaf := cert.Leaf
+	if leaf == nil {
+		if len(cert.Certificate) == 0 {
+			return "unknown"
+		}
+		parsed, err := x509.ParseCertificate(cert.Certificate[0])
+		if err != nil {
+			return "unknown"
+		}
+		leaf = parsed
+	}
+
+	switch pub := leaf.PublicKey.(type) {
+	case *ecdsa.PublicKey:
+		return "ECDSA " + pub.Curve.Params().Name
+	case *rsa.PublicKey:
+		return fmt.Sprintf("RSA %d", pub.N.BitLen())
+	case ed25519.PublicKey:
+		return "Ed25519"
+	default:
+		return leaf.PublicKeyAlgorithm.String()
+	}
 }
