@@ -34,6 +34,7 @@ export function ExplorerView() {
         <SideNav active="all-resources" compact width={188} />
         <ResourceTree
           resources={visible}
+          all={resourceList}
           selectedId={selected?.id}
           onSelect={setSelected}
         />

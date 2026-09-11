@@ -11,17 +11,24 @@ interface ResourceGroup {
 }
 
 interface Props {
+  /** Resources to display; may be a filtered subset. */
   resources: Resource[];
+  /**
+   * Every known resource, used only to resolve owners. A search that matches a
+   * Key Vault key but not its vault would otherwise strand the key under
+   * "unassigned", because the vault it resolves through is not in `resources`.
+   */
+  all: Resource[];
   selectedId?: string | null;
   onSelect?: (resource: Resource) => void;
 }
 
-export function ResourceTree({ resources, selectedId, onSelect }: Props) {
+export function ResourceTree({ resources, all, selectedId, onSelect }: Props) {
   const groups = useMemo(() => {
     const map = new Map<string, Resource[]>();
     for (const r of resources) {
       if (r.type === 'Microsoft.Resources/resourceGroups') continue;
-      const rg = resolveResourceGroup(r, resources) ?? 'unassigned';
+      const rg = resolveResourceGroup(r, all) ?? 'unassigned';
       if (!map.has(rg)) map.set(rg, []);
       map.get(rg)!.push(r);
     }
@@ -30,7 +37,7 @@ export function ResourceTree({ resources, selectedId, onSelect }: Props) {
       result.push({ name, resources: res });
     }
     return result;
-  }, [resources]);
+  }, [resources, all]);
 
   const [expanded, setExpanded] = useState<Set<string>>(() =>
     new Set(groups.map((g) => g.name)),
