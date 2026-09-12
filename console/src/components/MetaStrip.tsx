@@ -12,8 +12,8 @@ export function MetaStrip({ health, resourceCount }: Props) {
     { label: 'Version', value: health?.version ?? '...', accent: true },
     { label: 'Uptime', value: health ? formatUptime(health.uptime_seconds) : '...' },
     { label: 'Resources', value: String(resourceCount) },
-    { label: 'Store', value: 'file-backed' },
-    { label: 'TLS', value: 'ECDSA P-256' },
+    { label: 'Store', value: health?.store ?? '...' },
+    { label: 'TLS', value: health?.tls ?? '...' },
   ];
 
   return (

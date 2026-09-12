@@ -53,6 +53,8 @@ Requires Docker, Docker Compose, and Terraform 1.6+ or OpenTofu 1.6+.
 # Start azemu.
 docker compose up -d --build
 
+# Watch what Terraform does to it, at http://localhost:4570
+
 # Trust the self-signed cert for this shell session.
 export SSL_CERT_FILE=$PWD/.azemu/cert-bundle.pem
 

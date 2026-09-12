@@ -1,10 +1,19 @@
 package main
 
 import (
+	"crypto/ecdsa"
+	"crypto/ed25519"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/rsa"
 	"crypto/tls"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"math/big"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/zerodeth/azemu/internal/arm"
 	"github.com/zerodeth/azemu/internal/auth"
@@ -86,4 +95,65 @@ func TestArmCertPoolFromTLS(t *testing.T) {
 			t.Fatal("expected nil pool for an unparseable certificate")
 		}
 	})
+}
+
+// TestTLSKeyAlgorithm covers the key types tls.X509KeyPair accepts, because
+// AZEMU_CERT_PATH lets a user supply any of them and /health must describe the
+// certificate actually in use rather than the one azemu would have generated.
+func TestTLSKeyAlgorithm(t *testing.T) {
+	t.Parallel()
+
+	newCert := func(t *testing.T, pub, priv any) tls.Certificate {
+		t.Helper()
+		tmpl := &x509.Certificate{
+			SerialNumber: big.NewInt(1),
+			Subject:      pkix.Name{CommonName: "azemu test"},
+			NotBefore:    time.Now().Add(-time.Hour),
+			NotAfter:     time.Now().Add(time.Hour),
+		}
+		der, err := x509.CreateCertificate(rand.Reader, tmpl, tmpl, pub, priv)
+		if err != nil {
+			t.Fatalf("create certificate: %v", err)
+		}
+		return tls.Certificate{Certificate: [][]byte{der}}
+	}
+
+	ecKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatalf("generate ecdsa key: %v", err)
+	}
+	ecP384, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
+	if err != nil {
+		t.Fatalf("generate ecdsa p384 key: %v", err)
+	}
+	rsaKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatalf("generate rsa key: %v", err)
+	}
+	edPub, edPriv, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		t.Fatalf("generate ed25519 key: %v", err)
+	}
+
+	tests := []struct {
+		name string
+		cert tls.Certificate
+		want string
+	}{
+		{"ecdsa p256", newCert(t, &ecKey.PublicKey, ecKey), "ECDSA P-256"},
+		{"ecdsa p384", newCert(t, &ecP384.PublicKey, ecP384), "ECDSA P-384"},
+		{"rsa 2048", newCert(t, &rsaKey.PublicKey, rsaKey), "RSA 2048"},
+		{"ed25519", newCert(t, edPub, edPriv), "Ed25519"},
+		{"empty", tls.Certificate{}, "unknown"},
+		{"undecodable", tls.Certificate{Certificate: [][]byte{{0x00}}}, "unknown"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			if got := tlsKeyAlgorithm(tt.cert); got != tt.want {
+				t.Errorf("tlsKeyAlgorithm() = %q, want %q", got, tt.want)
+			}
+		})
+	}
 }
