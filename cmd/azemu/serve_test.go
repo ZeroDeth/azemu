@@ -17,6 +17,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-chi/chi/v5"
+
 	"github.com/zerodeth/azemu/internal/arm"
 	"github.com/zerodeth/azemu/internal/auth"
 	mw "github.com/zerodeth/azemu/internal/middleware"
@@ -161,23 +163,44 @@ func TestTLSKeyAlgorithm(t *testing.T) {
 	}
 }
 
-// TestMethodNotAllowed_azureEnvelope pins the shape of a 405. chi's default is
-// an empty body, which azurerm reports as an unparseable response, hiding the
-// real cause: azemu knows the route but not the verb.
-func TestMethodNotAllowed_azureEnvelope(t *testing.T) {
+// TestMethodNotAllowed_throughRouter drives a real router rather than calling
+// the handler directly, so removing the r.MethodNotAllowed registration fails
+// this test instead of passing silently.
+func TestMethodNotAllowed_throughRouter(t *testing.T) {
 	t.Parallel()
 
 	tracker := mw.NewUnhandledTracker()
-	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPatch, "/subscriptions/s/resourcegroups/rg", nil)
+	r := chi.NewRouter()
+	r.MethodNotAllowed(methodNotAllowed(r, tracker))
+	r.Get("/subscriptions/{id}/resourcegroups/{rg}", func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+	r.Delete("/subscriptions/{id}/resourcegroups/{rg}", func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusAccepted)
+	})
 
-	methodNotAllowed(tracker)(rec, req)
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, httptest.NewRequest(http.MethodPatch, "/subscriptions/s/resourcegroups/rg", nil))
 
 	if rec.Code != http.StatusMethodNotAllowed {
-		t.Errorf("status = %d, want %d", rec.Code, http.StatusMethodNotAllowed)
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusMethodNotAllowed)
 	}
 	if ct := rec.Header().Get("Content-Type"); ct != "application/json" {
 		t.Errorf("Content-Type = %q, want application/json", ct)
+	}
+
+	// RFC 9110 15.5.6: the 405 must advertise what this server does support.
+	allow := rec.Header().Get("Allow")
+	for _, want := range []string{http.MethodGet, http.MethodDelete} {
+		if !strings.Contains(allow, want) {
+			t.Errorf("Allow = %q, missing registered method %s", allow, want)
+		}
+	}
+	if strings.Contains(allow, http.MethodPatch) {
+		t.Errorf("Allow = %q, must not advertise the rejected method", allow)
+	}
+	if strings.Contains(allow, http.MethodPut) {
+		t.Errorf("Allow = %q, advertises a method that is not registered", allow)
 	}
 
 	var body struct {

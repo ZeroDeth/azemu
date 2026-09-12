@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -121,7 +122,7 @@ func runServe(args []string) error {
 	// and the real cause is invisible. A verb azemu does not implement for a
 	// path it does know is a parity gap worth surfacing, so it is recorded
 	// alongside the unhandled routes.
-	r.MethodNotAllowed(methodNotAllowed(unhandled))
+	r.MethodNotAllowed(methodNotAllowed(r, unhandled))
 	r.HandleFunc("/api/unhandled", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(map[string]any{
@@ -434,16 +435,32 @@ func tlsKeyAlgorithm(cert tls.Certificate) string {
 
 // methodNotAllowed answers a known path reached with an unsupported verb.
 //
-// chi does not set an Allow header when a custom handler is installed, and
-// azemu does not reconstruct one: the route table is the wrong place to infer
-// Azure's real verb set from, and a wrong Allow is worse than none.
-func methodNotAllowed(tracker *mw.UnhandledTracker) http.HandlerFunc {
+// RFC 9110 15.5.6 requires a 405 to carry an Allow header listing the methods
+// the origin server supports for that target. That is azemu's registered verb
+// set, not Azure's, so it is derived by re-matching the path against the router
+// for each method. chi's Match only routes; it runs no handler.
+func methodNotAllowed(router *chi.Mux, tracker *mw.UnhandledTracker) http.HandlerFunc {
+	candidates := []string{
+		http.MethodGet, http.MethodHead, http.MethodPost, http.MethodPut,
+		http.MethodPatch, http.MethodDelete, http.MethodOptions,
+	}
+
 	return func(w http.ResponseWriter, r *http.Request) {
+		// tracker.Record already logs the method and path.
 		tracker.Record(r.Method, r.URL.Path)
-		log.Warn().
-			Str("method", r.Method).
-			Str("path", r.URL.Path).
-			Msg("method not implemented for this route")
+
+		allowed := make([]string, 0, len(candidates))
+		for _, m := range candidates {
+			if m == r.Method {
+				continue
+			}
+			if router.Match(chi.NewRouteContext(), m, r.URL.Path) {
+				allowed = append(allowed, m)
+			}
+		}
+		if len(allowed) > 0 {
+			w.Header().Set("Allow", strings.Join(allowed, ", "))
+		}
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusMethodNotAllowed)
