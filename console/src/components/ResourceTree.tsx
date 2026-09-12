@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { ChevronRight, Plus } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import { CategoryBadge } from './CategoryBadge';
 import type { Resource, CategoryCode } from '../types/resource';
 import { resolveResourceGroup, getCategoryForType } from '../types/resource';
@@ -56,7 +56,6 @@ export function ResourceTree({ resources, all, selectedId, onSelect }: Props) {
     <div className={styles.tree}>
       <div className={styles.header}>
         <span className={styles.headerTitle}>Resource explorer</span>
-        <Plus size={13} strokeWidth={1.7} color="#6e7681" />
       </div>
       <div className={styles.body}>
         {groups.map((group) => (

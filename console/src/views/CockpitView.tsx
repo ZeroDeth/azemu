@@ -7,64 +7,25 @@ import { ServiceCards } from '../components/ServiceCards';
 import { MetaStrip } from '../components/MetaStrip';
 import { InventoryTiles } from '../components/InventoryTiles';
 import { RequestLog } from '../components/RequestLog';
-import { fetchResources, resetState, importState } from '../lib/api';
-import type { Resource } from '../types/resource';
+import { useStateActions } from '../hooks/useStateActions';
 import styles from './CockpitView.module.css';
 
 const RAIL_ROUTES: Record<string, string> = {
   overview: '/',
   resources: '/explorer',
+  networking: '/networking',
+  keyvault: '/key-vault',
+  storage: '/storage',
+  health: '/emulator/health',
+  'state-store': '/emulator/state-store',
 };
 
 export function CockpitView() {
   const navigate = useNavigate();
   const { health, error: healthError } = useHealth();
   const { resourceList, refresh } = useResources();
+  const { exportState, importFromFile, reset, error: actionError } = useStateActions(refresh);
   const { entries: logEntries } = useRequestLog();
-
-  const handleExport = async () => {
-    try {
-      const data = await fetchResources();
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'azemu-state.json';
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error('Export failed:', err);
-    }
-  };
-
-  const handleImport = () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.json';
-    input.onchange = async () => {
-      try {
-        const file = input.files?.[0];
-        if (!file) return;
-        const text = await file.text();
-        const data = JSON.parse(text) as Record<string, Resource>;
-        await importState(data);
-        refresh();
-      } catch (err) {
-        console.error('Import failed:', err);
-      }
-    };
-    input.click();
-  };
-
-  const handleReset = async () => {
-    if (!confirm('Reset all resources? This cannot be undone.')) return;
-    try {
-      await resetState();
-      refresh();
-    } catch (err) {
-      console.error('Reset failed:', err);
-    }
-  };
 
   const startTime = health
     ? new Date(Date.now() - health.uptime_seconds * 1000)
@@ -85,15 +46,24 @@ export function CockpitView() {
           </span>
         </div>
 
-        <ServiceCards healthy={!healthError} armRequests={logEntries.length} />
+        <ServiceCards
+          state={healthError ? 'unreachable' : health ? 'healthy' : 'checking'}
+          armRequests={logEntries.length}
+        />
         <MetaStrip health={health} resourceCount={resourceList.length} />
+
+        {actionError && (
+          <div className={styles.actionError} role="alert">
+            {actionError}
+          </div>
+        )}
 
         <div className={styles.bottomGrid}>
           <InventoryTiles
             resources={resourceList}
-            onExport={handleExport}
-            onImport={handleImport}
-            onReset={handleReset}
+            onExport={exportState}
+            onImport={importFromFile}
+            onReset={reset}
           />
           <RequestLog entries={logEntries} />
         </div>
