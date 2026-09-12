@@ -24,7 +24,7 @@ export function CockpitView() {
   const navigate = useNavigate();
   const { health, error: healthError } = useHealth();
   const { resourceList, refresh } = useResources();
-  const { exportState, importFromFile, reset } = useStateActions(refresh);
+  const { exportState, importFromFile, reset, error: actionError } = useStateActions(refresh);
   const { entries: logEntries } = useRequestLog();
 
   const startTime = health
@@ -46,8 +46,17 @@ export function CockpitView() {
           </span>
         </div>
 
-        <ServiceCards healthy={!healthError} armRequests={logEntries.length} />
+        <ServiceCards
+          state={healthError ? 'unreachable' : health ? 'healthy' : 'checking'}
+          armRequests={logEntries.length}
+        />
         <MetaStrip health={health} resourceCount={resourceList.length} />
+
+        {actionError && (
+          <div className={styles.actionError} role="alert">
+            {actionError}
+          </div>
+        )}
 
         <div className={styles.bottomGrid}>
           <InventoryTiles

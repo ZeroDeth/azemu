@@ -98,3 +98,22 @@
   flex: 0 0 auto;
   margin-top: 2px;
 }
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.actionError {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding: var(--pad-card);
+  border: 1px solid var(--red);
+  border-radius: var(--radius-card);
+  background: rgba(248, 81, 73, 0.06);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--red);
+}

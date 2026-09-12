@@ -16,21 +16,36 @@ const SERVICES: Service[] = [
   { name: 'Azure DevOps OIDC', port: '4569', proto: 'HTTP', metered: false },
 ];
 
+export type HealthState = 'checking' | 'healthy' | 'unreachable';
+
+const STATE_LABEL: Record<HealthState, string> = {
+  checking: 'Checking',
+  healthy: 'Running',
+  unreachable: 'Unreachable',
+};
+
+const STATE_COLOR: Record<HealthState, string> = {
+  checking: '#8b949e',
+  healthy: '#3fb950',
+  unreachable: '#f85149',
+};
+
 interface Props {
-  healthy: boolean;
+  /** Never assume healthy: until /health answers, the state is unknown. */
+  state: HealthState;
   /** Requests seen on the ARM port this session, from the live request log. */
   armRequests: number;
 }
 
-export function ServiceCards({ healthy, armRequests }: Props) {
+export function ServiceCards({ state, armRequests }: Props) {
   return (
     <div className={styles.grid}>
       {SERVICES.map((s) => (
         <div key={s.port} className={styles.card}>
           <div className={styles.cardTop}>
             <span className={styles.status}>
-              <StatusDot color={healthy ? '#3fb950' : '#f85149'} glow />
-              {healthy ? 'Running' : 'Unreachable'}
+              <StatusDot color={STATE_COLOR[state]} glow />
+              {STATE_LABEL[state]}
             </span>
             <span className={styles.port}>:{s.port}</span>
           </div>

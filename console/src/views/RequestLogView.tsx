@@ -6,6 +6,8 @@ import { useRequestLog } from '../hooks/useRequestLog';
 import styles from './RequestLogView.module.css';
 
 const FILTERS = ['All', 'Errors', 'Writes'] as const;
+/** Methods that cannot change a resource, so they are not "writes". */
+const READ_ONLY = new Set(['GET', 'HEAD', 'OPTIONS']);
 type Filter = (typeof FILTERS)[number];
 
 export function RequestLogView() {
@@ -17,7 +19,7 @@ export function RequestLogView() {
     const q = needle.trim().toLowerCase();
     return entries.filter((e) => {
       if (filter === 'Errors' && e.status < 400) return false;
-      if (filter === 'Writes' && e.method === 'GET') return false;
+      if (filter === 'Writes' && READ_ONLY.has(e.method)) return false;
       if (q && !e.path.toLowerCase().includes(q) && !e.method.toLowerCase().includes(q)) {
         return false;
       }

@@ -83,14 +83,17 @@ export function ServiceView({ service }: { service: ServiceDef }) {
             {matches.map((r) => {
               const cat = getCategoryForType(r.type);
               return (
-                <tr
-                  key={r.id}
-                  className={styles.row}
-                  onClick={() => navigate(`/explorer?q=${encodeURIComponent(r.name)}`)}
-                >
+                <tr key={r.id} className={styles.row}>
                   <td className={styles.nameCell}>
                     {cat && <CategoryBadge code={cat.code} size={18} />}
-                    {r.name}
+                    {/* The button, not the row, is the control: a <tr> takes no
+                        keyboard focus and cannot be activated without a mouse. */}
+                    <button
+                      className={styles.nameLink}
+                      onClick={() => navigate(`/explorer?q=${encodeURIComponent(r.name)}`)}
+                    >
+                      {r.name}
+                    </button>
                   </td>
                   <td className={styles.dim}>{r.type}</td>
                   <td className={styles.dim}>{resolveResourceGroup(r, resourceList) ?? '--'}</td>

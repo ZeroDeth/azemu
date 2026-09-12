@@ -11,7 +11,7 @@ import styles from './StateStoreView.module.css';
 export function StateStoreView() {
   const { resources, resourceList, refresh } = useResources();
   const { health } = useHealth();
-  const { exportState, importFromFile, reset } = useStateActions(refresh);
+  const { exportState, importFromFile, reset, error, busy } = useStateActions(refresh);
 
   const byType = useMemo(() => {
     const counts = new Map<string, number>();
@@ -40,16 +40,23 @@ export function StateStoreView() {
       )}
 
       <div className={styles.actions}>
-        <button className={styles.btn} onClick={exportState}>
+        <button className={styles.btn} onClick={exportState} disabled={busy}>
           <Download size={13} strokeWidth={1.7} /> Export
         </button>
-        <button className={styles.btn} onClick={importFromFile}>
+        <button className={styles.btn} onClick={importFromFile} disabled={busy}>
           <Upload size={13} strokeWidth={1.7} /> Import
         </button>
-        <button className={`${styles.btn} ${styles.danger}`} onClick={reset}>
+        <button className={`${styles.btn} ${styles.danger}`} onClick={reset} disabled={busy}>
           <RotateCcw size={13} strokeWidth={1.7} /> Reset
         </button>
       </div>
+
+      {error && (
+        <div className={styles.actionError}>
+          <AlertTriangle size={14} strokeWidth={1.7} className={styles.warningIcon} />
+          <div>{error}</div>
+        </div>
+      )}
 
       {byType.length === 0 ? (
         <div className={styles.empty}>

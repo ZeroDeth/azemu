@@ -1,5 +1,6 @@
 import { PageShell } from './PageShell';
 import { ServiceCards } from '../components/ServiceCards';
+import type { HealthState } from '../components/ServiceCards';
 import { MetaStrip } from '../components/MetaStrip';
 import { StatusDot } from '../components/StatusDot';
 import { useHealth } from '../hooks/useHealth';
@@ -9,6 +10,8 @@ import styles from './HealthView.module.css';
 
 export function HealthView() {
   const { health, error } = useHealth();
+  // useHealth starts with both null, so "no error" is not yet "healthy".
+  const state: HealthState = error ? 'unreachable' : health ? 'healthy' : 'checking';
   const { resourceList } = useResources();
   const { entries, connected } = useRequestLog();
 
@@ -19,15 +22,18 @@ export function HealthView() {
       subtitle="Reported by the emulator, not inferred by this page"
       aside={
         <>
-          <StatusDot color={error ? '#f85149' : '#3fb950'} glow />
-          {error ? 'Unreachable' : 'Healthy'}
+          <StatusDot
+            color={state === 'healthy' ? '#3fb950' : state === 'checking' ? '#8b949e' : '#f85149'}
+            glow
+          />
+          {state === 'healthy' ? 'Healthy' : state === 'checking' ? 'Checking' : 'Unreachable'}
         </>
       }
     >
       <MetaStrip health={health} resourceCount={resourceList.length} />
 
       <h2 className={styles.heading}>Listeners</h2>
-      <ServiceCards healthy={!error} armRequests={entries.length} />
+      <ServiceCards state={state} armRequests={entries.length} />
 
       <h2 className={styles.heading}>Request log stream</h2>
       <div className={styles.streamRow}>
