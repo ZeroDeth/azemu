@@ -116,6 +116,12 @@ func runServe(args []string) error {
 
 	unhandled := mw.NewUnhandledTracker()
 	r.NotFound(mw.LogUnhandledRequests(unhandled))
+	// chi's default 405 has an empty body, which azurerm cannot parse: it
+	// reports `error response cannot be parsed: {"" '\x00' '\x00'} error: EOF`
+	// and the real cause is invisible. A verb azemu does not implement for a
+	// path it does know is a parity gap worth surfacing, so it is recorded
+	// alongside the unhandled routes.
+	r.MethodNotAllowed(methodNotAllowed(unhandled))
 	r.HandleFunc("/api/unhandled", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(map[string]any{
@@ -423,5 +429,34 @@ func tlsKeyAlgorithm(cert tls.Certificate) string {
 		return "Ed25519"
 	default:
 		return leaf.PublicKeyAlgorithm.String()
+	}
+}
+
+// methodNotAllowed answers a known path reached with an unsupported verb.
+//
+// chi does not set an Allow header when a custom handler is installed, and
+// azemu does not reconstruct one: the route table is the wrong place to infer
+// Azure's real verb set from, and a wrong Allow is worse than none.
+func methodNotAllowed(tracker *mw.UnhandledTracker) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		tracker.Record(r.Method, r.URL.Path)
+		log.Warn().
+			Str("method", r.Method).
+			Str("path", r.URL.Path).
+			Msg("method not implemented for this route")
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		if err := json.NewEncoder(w).Encode(map[string]any{
+			"error": map[string]any{
+				"code": "MethodNotAllowed",
+				"message": fmt.Sprintf(
+					"The HTTP method %q is not implemented by azemu for this resource. See GET /api/unhandled for details.",
+					r.Method,
+				),
+			},
+		}); err != nil {
+			log.Error().Err(err).Str("path", r.URL.Path).Msg("failed to write error response")
+		}
 	}
 }
