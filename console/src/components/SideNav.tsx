@@ -13,19 +13,18 @@ export interface NavItem {
   route?: string;
 }
 
-// Only items with a route are navigable; others render disabled.
 const NAV_ITEMS: NavItem[] = [
   { id: 'overview', label: 'Overview', icon: Home, route: '/' },
   { id: 'resource-groups', label: 'Resource groups', icon: Box, route: '/' },
   { id: 'all-resources', label: 'All resources', icon: LayoutGrid, route: '/explorer' },
-  { id: 'networking', label: 'Networking', icon: Network, section: 'SERVICES' },
-  { id: 'storage', label: 'Storage', icon: Database },
-  { id: 'key-vault', label: 'Key Vault', icon: Shield },
-  { id: 'dns-zones', label: 'DNS zones', icon: Globe },
-  { id: 'databases', label: 'Databases', icon: Cpu },
-  { id: 'health', label: 'Health', icon: Activity, section: 'EMULATOR' },
-  { id: 'request-log', label: 'Request log', icon: List },
-  { id: 'state-store', label: 'State store', icon: Archive },
+  { id: 'networking', label: 'Networking', icon: Network, section: 'SERVICES', route: '/networking' },
+  { id: 'storage', label: 'Storage', icon: Database, route: '/storage' },
+  { id: 'key-vault', label: 'Key Vault', icon: Shield, route: '/key-vault' },
+  { id: 'dns-zones', label: 'DNS zones', icon: Globe, route: '/dns-zones' },
+  { id: 'databases', label: 'Databases', icon: Cpu, route: '/databases' },
+  { id: 'health', label: 'Health', icon: Activity, section: 'EMULATOR', route: '/emulator/health' },
+  { id: 'request-log', label: 'Request log', icon: List, route: '/emulator/request-log' },
+  { id: 'state-store', label: 'State store', icon: Archive, route: '/emulator/state-store' },
 ];
 
 interface Props {
@@ -55,8 +54,6 @@ export function SideNav({ active = 'overview', onSelect, compact = false, width 
           <button
             className={`${styles.item} ${active === item.id ? styles.active : ''}`}
             onClick={() => handleClick(item)}
-            disabled={!item.route}
-            title={item.route ? undefined : 'Not yet implemented'}
             style={{ fontSize: compact ? 11.5 : 12 }}
           >
             <item.icon size={compact ? 15 : 16} strokeWidth={1.6} />

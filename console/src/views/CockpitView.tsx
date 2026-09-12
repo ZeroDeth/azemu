@@ -14,6 +14,11 @@ import styles from './CockpitView.module.css';
 const RAIL_ROUTES: Record<string, string> = {
   overview: '/',
   resources: '/explorer',
+  networking: '/networking',
+  keyvault: '/key-vault',
+  storage: '/storage',
+  health: '/emulator/health',
+  'state-store': '/emulator/state-store',
 };
 
 export function CockpitView() {
