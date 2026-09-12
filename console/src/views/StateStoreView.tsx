@@ -1,8 +1,7 @@
 import { useMemo } from 'react';
-import { Download, Upload, RotateCcw } from 'lucide-react';
+import { Download, Upload, RotateCcw, AlertTriangle } from 'lucide-react';
 import { PageShell } from './PageShell';
 import { CategoryBadge } from '../components/CategoryBadge';
-import { PageShellNote } from './PageShellNote';
 import { useResources } from '../hooks/useResources';
 import { useHealth } from '../hooks/useHealth';
 import { useStateActions } from '../hooks/useStateActions';
@@ -30,11 +29,14 @@ export function StateStoreView() {
       aside={`${Object.keys(resources).length} entries including aliases`}
     >
       {health && !durable && (
-        <PageShellNote tone="warn">
-          This emulator is running the in-memory store. Everything here is lost on
-          restart, and Terraform state will then point at resources that no longer
-          exist. Set AZEMU_PERSIST_PATH to keep it on disk.
-        </PageShellNote>
+        <div className={styles.warning}>
+          <AlertTriangle size={14} strokeWidth={1.7} className={styles.warningIcon} />
+          <div>
+            This emulator is running the in-memory store. Everything here is lost
+            on restart, and Terraform state will then point at resources that no
+            longer exist. Set AZEMU_PERSIST_PATH to keep it on disk.
+          </div>
+        </div>
       )}
 
       <div className={styles.actions}>

@@ -79,3 +79,22 @@
   line-height: 1.7;
   color: var(--text-faint);
 }
+
+.warning {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding: var(--pad-card);
+  border: 1px solid var(--amber);
+  border-radius: var(--radius-card);
+  background: rgba(210, 153, 34, 0.07);
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--amber-light);
+}
+
+.warningIcon {
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
