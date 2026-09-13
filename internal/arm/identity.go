@@ -183,7 +183,8 @@ func (a *Router) patchUserAssignedIdentity(w http.ResponseWriter, r *http.Reques
 		chi.URLParam(r, "resourceGroupName"),
 		chi.URLParam(r, "identityName"),
 	)
-	a.patchResource(w, r, id, "User Assigned Identity", func(res *store.Resource) interface{} {
-		return userAssignedIdentityResponse(res)
-	})
+	a.patchResource(w, r, id, "User Assigned Identity", nil,
+		func(res *store.Resource) interface{} {
+			return userAssignedIdentityResponse(res)
+		})
 }

@@ -174,3 +174,53 @@ func TestPatch_badBody_leavesStoreUntouched(t *testing.T) {
 		t.Errorf("tags = %v after a rejected patch, want the original {env:dev}", tags)
 	}
 }
+
+// TestPatch_cannotOverwriteServerOwnedFields pins that a merge is not a hole
+// past the PUT path. vaultUri is derived from the vault name and is how
+// azurerm reaches the Key Vault data plane; a client that could repoint it
+// would break every secret and key operation against that vault.
+func TestPatch_cannotOverwriteServerOwnedFields(t *testing.T) {
+	srv := newTestServer(t)
+	url := srv.URL + patchCases[0].path
+
+	httpPut(t, url, patchCases[0].createBody)
+	before, _ := decodeJSON(t, httpGet(t, url))["properties"].(map[string]interface{})
+
+	resp := httpPatch(t, url, `{"properties":{"vaultUri":"https://evil.example.com/"}}`)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d, want 200", resp.StatusCode)
+	}
+
+	after, _ := decodeJSON(t, httpGet(t, url))["properties"].(map[string]interface{})
+	if after["vaultUri"] != before["vaultUri"] {
+		t.Errorf("vaultUri = %v after patch, want %v; a server-owned field was client-settable",
+			after["vaultUri"], before["vaultUri"])
+	}
+}
+
+// TestPatch_appliesPutValidation pins that PATCH cannot store a value PUT
+// would reject. A generic merge skips every check the PUT handler runs, so
+// each resource re-runs its own on the merged result.
+func TestPatch_appliesPutValidation(t *testing.T) {
+	srv := newTestServer(t)
+	url := srv.URL + patchCases[1].path
+	invalidSKU := `{"properties":{"sku":{"name":"Bogus","family":"Z","capacity":99}}}`
+
+	httpPut(t, url, patchCases[1].createBody)
+
+	if resp := httpPut(t, url, `{"location":"uksouth","properties":{"sku":{"name":"Bogus","family":"Z","capacity":99}}}`); resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("PUT with an invalid sku = %d, want 400; the premise of this test is gone",
+			resp.StatusCode)
+	}
+	if resp := httpPatch(t, url, invalidSKU); resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("PATCH with an invalid sku = %d, want 400; PATCH bypasses PUT's validation",
+			resp.StatusCode)
+	}
+
+	// And the rejected SKU was not stored.
+	props, _ := decodeJSON(t, httpGet(t, url))["properties"].(map[string]interface{})
+	sku, _ := props["sku"].(map[string]interface{})
+	if sku["name"] == "Bogus" {
+		t.Errorf("sku = %v after a rejected patch, want the original", sku)
+	}
+}

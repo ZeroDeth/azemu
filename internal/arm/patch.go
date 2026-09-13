@@ -30,13 +30,20 @@ import (
 //   - The response is 200 carrying the same envelope as GET, so the provider
 //     can read the result back without a second request.
 //
-// respond renders the resource in its own response shape; each resource type
-// has its own, so the caller supplies it.
+// A generic merge cannot know a resource's own rules, so the caller supplies
+// two hooks:
+//
+//   - finalise re-applies fields the server owns and re-runs whatever the PUT
+//     path validates. Without it PATCH is a hole straight past PUT's checks:
+//     a client could set a Key Vault's vaultUri, which is how azurerm routes
+//     data-plane calls, or store a SKU that PUT would reject.
+//   - respond renders the resource in its own response shape.
 func (a *Router) patchResource(
 	w http.ResponseWriter,
 	r *http.Request,
 	id string,
 	kind string,
+	finalise func(*store.Resource) (code, message string, ok bool),
 	respond func(*store.Resource) interface{},
 ) {
 	existing, ok := a.store.Get(id)
@@ -104,6 +111,13 @@ func (a *Router) patchResource(
 		updated.Properties = map[string]interface{}{}
 	}
 	updated.Properties["provisioningState"] = "Succeeded"
+
+	if finalise != nil {
+		if code, message, ok := finalise(&updated); !ok {
+			writeAzureError(w, http.StatusBadRequest, code, message)
+			return
+		}
+	}
 
 	if err := a.store.Put(id, &updated); err != nil {
 		writeAzureError(w, http.StatusInternalServerError, "InternalServerError",

@@ -396,7 +396,17 @@ func (a *Router) patchRedisCache(w http.ResponseWriter, r *http.Request) {
 		chi.URLParam(r, "resourceGroupName"),
 		chi.URLParam(r, "cacheName"),
 	)
-	a.patchResource(w, r, id, "Redis cache", func(res *store.Resource) interface{} {
-		return redisCacheResponse(res)
-	})
+	a.patchResource(w, r, id, "Redis cache",
+		func(res *store.Resource) (string, string, bool) {
+			// A merge must not store a SKU that PUT would reject.
+			sku, ok, msg := validateAndDefaultRedisSKU(res.Properties["sku"])
+			if !ok {
+				return "InvalidRequestContent", msg, false
+			}
+			res.Properties["sku"] = sku
+			return "", "", true
+		},
+		func(res *store.Resource) interface{} {
+			return redisCacheResponse(res)
+		})
 }

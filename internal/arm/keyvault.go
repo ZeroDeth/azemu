@@ -296,7 +296,16 @@ func (a *Router) patchKeyVault(w http.ResponseWriter, r *http.Request) {
 		chi.URLParam(r, "resourceGroupName"),
 		chi.URLParam(r, "vaultName"),
 	)
-	a.patchResource(w, r, id, "Key Vault", func(res *store.Resource) interface{} {
-		return keyVaultResponse(res)
-	})
+	name := chi.URLParam(r, "vaultName")
+	a.patchResource(w, r, id, "Key Vault",
+		func(res *store.Resource) (string, string, bool) {
+			// vaultUri is derived from the vault name and is how azurerm
+			// reaches the data plane. A client must not be able to point it
+			// somewhere else, so it is reasserted after every merge.
+			res.Properties["vaultUri"] = a.vaultBaseURL(name) + "/"
+			return "", "", true
+		},
+		func(res *store.Resource) interface{} {
+			return keyVaultResponse(res)
+		})
 }
