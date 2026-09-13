@@ -226,26 +226,26 @@ func (a *Router) blobOriginURL(account, reqPath, rawQuery string) (string, bool)
 // resolves to `/{account}/../otheraccount/private/secret` on the Azurite
 // sidecar and escapes the account.
 //
-// The path stays escaped throughout: blob keys legitimately contain encoded
-// characters, and %2F in particular means a slash *inside* a key rather than a
-// separator. Splitting the escaped path and unescaping each segment preserves
-// that, while still catching both `..` and `%2e%2e`.
+// The check runs on the fully decoded path, because a traversal can hide inside
+// a single segment: `%2e%2e%2f` decodes to `../`, so comparing each escaped
+// segment against ".." would miss it. The value returned is still the escaped
+// path, because blob keys legitimately contain encoded characters and must
+// reach the origin byte for byte.
 func safeBlobPath(escapedPath string) (string, bool) {
 	if escapedPath == "" {
 		return "/", true
 	}
-	for _, seg := range strings.Split(escapedPath, "/") {
-		if seg == "" {
-			continue
-		}
-		decoded, err := url.PathUnescape(seg)
-		if err != nil {
-			return "", false
-		}
-		if decoded == "." || decoded == ".." {
+
+	decoded, err := url.PathUnescape(escapedPath)
+	if err != nil {
+		return "", false
+	}
+	for _, seg := range strings.Split(decoded, "/") {
+		if seg == "." || seg == ".." {
 			return "", false
 		}
 	}
+
 	if !strings.HasPrefix(escapedPath, "/") {
 		return "/" + escapedPath, true
 	}

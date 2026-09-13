@@ -224,6 +224,15 @@ func TestSafeBlobPath(t *testing.T) {
 		{"single dot", "/./c/b.txt", "", false},
 		{"trailing dotdot", "/c/..", "", false},
 		{"bad escape", "/c/%zz", "", false},
+
+		// A traversal can hide inside a single segment: %2e%2e%2f decodes to
+		// "../", so comparing escaped segments against ".." misses it. These
+		// all bypassed an earlier version of this function.
+		{"encoded separator", "/c/%2e%2e%2f/x", "", false},
+		{"encoded separator twice", "/c/%2e%2e%2f%2e%2e%2f/x", "", false},
+		{"encoded separator at root", "/%2e%2e%2fotheracct/secret.txt", "", false},
+		{"mixed case encoded separator", "/c/%2e%2e%2F%2e%2e%2Fother/x", "", false},
+		{"literal dots, encoded slash", "/c/..%2f..%2fotheracct/x", "", false},
 	}
 
 	for _, tt := range tests {
