@@ -173,3 +173,18 @@ func userAssignedIdentityResponse(v *store.Resource) map[string]interface{} {
 		"properties": props,
 	}
 }
+
+// patchUserAssignedIdentity serves the update path. azurerm updates a
+// user-assigned identity with a PATCH, so without this a second
+// `terraform apply` fails with 405.
+func (a *Router) patchUserAssignedIdentity(w http.ResponseWriter, r *http.Request) {
+	id := userAssignedIdentityID(
+		chi.URLParam(r, "subscriptionID"),
+		chi.URLParam(r, "resourceGroupName"),
+		chi.URLParam(r, "identityName"),
+	)
+	a.patchResource(w, r, id, "User Assigned Identity", nil,
+		func(res *store.Resource) interface{} {
+			return userAssignedIdentityResponse(res)
+		})
+}

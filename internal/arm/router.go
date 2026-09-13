@@ -186,6 +186,7 @@ func (a *Router) Routes(r chi.Router) {
 	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.cache/redis/{cacheName}", a.getRedisCache)
 	r.Head("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.cache/redis/{cacheName}", a.headRedisCache)
 	r.Delete("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.cache/redis/{cacheName}", a.deleteRedisCache)
+	r.Patch("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.cache/redis/{cacheName}", a.patchRedisCache)
 	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.cache/redis", a.listRedisCachesByRG)
 	r.Get("/{subscriptionID}/providers/microsoft.cache/redis", a.listRedisCachesBySub)
 	// listKeys returns deterministic dev keys whose primary value matches the
@@ -198,6 +199,7 @@ func (a *Router) Routes(r chi.Router) {
 	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.keyvault/vaults/{vaultName}", a.getKeyVault)
 	r.Head("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.keyvault/vaults/{vaultName}", a.headKeyVault)
 	r.Delete("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.keyvault/vaults/{vaultName}", a.deleteKeyVault)
+	r.Patch("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.keyvault/vaults/{vaultName}", a.patchKeyVault)
 	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.keyvault/vaults", a.listKeyVaultsByRG)
 	r.Get("/{subscriptionID}/providers/microsoft.keyvault/vaults", a.listKeyVaultsBySub)
 	// azurerm v4 checks for soft-deleted Key Vaults before creating a new one.
@@ -256,6 +258,7 @@ func (a *Router) Routes(r chi.Router) {
 	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.managedidentity/userassignedidentities/{identityName}", a.getUserAssignedIdentity)
 	r.Head("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.managedidentity/userassignedidentities/{identityName}", a.headUserAssignedIdentity)
 	r.Delete("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.managedidentity/userassignedidentities/{identityName}", a.deleteUserAssignedIdentity)
+	r.Patch("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.managedidentity/userassignedidentities/{identityName}", a.patchUserAssignedIdentity)
 	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.managedidentity/userassignedidentities", a.listUserAssignedIdentitiesByRG)
 	r.Get("/{subscriptionID}/providers/microsoft.managedidentity/userassignedidentities", a.listUserAssignedIdentitiesBySub)
 
