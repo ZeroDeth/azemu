@@ -99,7 +99,12 @@ func (a *Router) ServeCDNContent(w http.ResponseWriter, r *http.Request) {
 
 	// Use the escaped path so encoded blob keys (%20, %23, %2F, ...) reach the
 	// origin intact rather than being decoded by net/http.
-	originURL := a.blobOriginURL(account, r.URL.EscapedPath(), r.URL.RawQuery)
+	originURL, ok := a.blobOriginURL(account, r.URL.EscapedPath(), r.URL.RawQuery)
+	if !ok {
+		writeAzureError(w, http.StatusBadRequest, "InvalidUri",
+			"The request URI addresses a path outside the endpoint's origin account.")
+		return
+	}
 	proxyReq, err := http.NewRequestWithContext(r.Context(), r.Method, originURL, nil)
 	if err != nil {
 		writeAzureError(w, http.StatusInternalServerError, "InternalServerError",
@@ -200,12 +205,51 @@ func cdnOriginHost(endpoint *store.Resource) string {
 // account, matching the blob primaryEndpoint that storage accounts advertise
 // ({base}/{account}/{container}/{blob}). reqPath already carries its leading
 // slash and the container as its first segment.
-func (a *Router) blobOriginURL(account, reqPath, rawQuery string) string {
-	u := fmt.Sprintf("%s/%s%s", blobServiceBase(a.azuriteEndpoint), account, reqPath)
+func (a *Router) blobOriginURL(account, reqPath, rawQuery string) (string, bool) {
+	clean, ok := safeBlobPath(reqPath)
+	if !ok {
+		return "", false
+	}
+	u := fmt.Sprintf("%s/%s%s", blobServiceBase(a.azuriteEndpoint), account, clean)
 	if rawQuery != "" {
 		u += "?" + rawQuery
 	}
-	return u
+	return u, true
+}
+
+// safeBlobPath rejects a request path that would address anything outside the
+// account prefix the caller resolved.
+//
+// The data-plane mux keys off the client-controlled Host header and runs before
+// any auth middleware, so the path here is entirely attacker-chosen. Without
+// this check, `GET /../otheraccount/private/secret` against a CDN endpoint host
+// resolves to `/{account}/../otheraccount/private/secret` on the Azurite
+// sidecar and escapes the account.
+//
+// The path stays escaped throughout: blob keys legitimately contain encoded
+// characters, and %2F in particular means a slash *inside* a key rather than a
+// separator. Splitting the escaped path and unescaping each segment preserves
+// that, while still catching both `..` and `%2e%2e`.
+func safeBlobPath(escapedPath string) (string, bool) {
+	if escapedPath == "" {
+		return "/", true
+	}
+	for _, seg := range strings.Split(escapedPath, "/") {
+		if seg == "" {
+			continue
+		}
+		decoded, err := url.PathUnescape(seg)
+		if err != nil {
+			return "", false
+		}
+		if decoded == "." || decoded == ".." {
+			return "", false
+		}
+	}
+	if !strings.HasPrefix(escapedPath, "/") {
+		return "/" + escapedPath, true
+	}
+	return escapedPath, true
 }
 
 // blobServiceBase normalises an Azurite endpoint to its blob service base URL.
