@@ -286,3 +286,17 @@ func keyVaultResponse(v *store.Resource) map[string]interface{} {
 		"properties": props,
 	}
 }
+
+// patchKeyVault serves the update path. azurerm calls VaultsClient.Update,
+// which is a PATCH; without this a second `terraform apply` that changes tags
+// or any other non-ForceNew attribute fails with 405.
+func (a *Router) patchKeyVault(w http.ResponseWriter, r *http.Request) {
+	id := keyVaultID(
+		chi.URLParam(r, "subscriptionID"),
+		chi.URLParam(r, "resourceGroupName"),
+		chi.URLParam(r, "vaultName"),
+	)
+	a.patchResource(w, r, id, "Key Vault", func(res *store.Resource) interface{} {
+		return keyVaultResponse(res)
+	})
+}
