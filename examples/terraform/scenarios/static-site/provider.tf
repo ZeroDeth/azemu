@@ -6,13 +6,19 @@
 terraform {
   required_providers {
     azurerm = {
-      source  = "hashicorp/azurerm"
-      # Pinned below 4.35: from v4.35.0 the provider refuses to create
-      # classic CDN resources after the 2025-10-01 deprecation date
-      # (wall-clock check, no opt-out), failing this scenario before any
-      # request reaches azemu. Migrate the scenario to Front Door
-      # (cdn_frontdoor_*) to lift the pin; tracked in TODO.md.
-      version = ">= 4.0, < 4.35"
+      source = "hashicorp/azurerm"
+      # Lower bound 4.35: Front Door (cdn_frontdoor_*) replaced classic CDN,
+      # which the provider removed at v4.35.0, so this scenario requires
+      # >= 4.35. Upper bound < 4.36: this scenario also creates an
+      # azurerm_storage_container against azemu's path-style Azurite endpoint.
+      # The provider's storage data-plane parser rejects a non-core.windows.net
+      # blob host, and the container resource tightened on this from v4.77
+      # (storage_account_name deprecation) through the 4.78+ break recorded in
+      # TODO.md M6. Pinning 4.35.x keeps the scenario on the exact provider
+      # azemu's Front Door emulation was validated against, below that
+      # tightening. Lift the upper bound once azemu serves
+      # *.blob.core.windows.net blob endpoints (TODO.md Known Gaps).
+      version = ">= 4.35, < 4.36"
     }
   }
 }

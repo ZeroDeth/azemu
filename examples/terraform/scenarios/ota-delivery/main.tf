@@ -55,28 +55,57 @@ resource "azurerm_key_vault_key" "manifest" {
   key_opts = ["sign", "verify"]
 }
 
-# --- CDN read path ---
+# --- Front Door read path ---
 
-resource "azurerm_cdn_profile" "ota" {
-  name                = "${var.prefix}-cdn"
-  location            = var.location
+resource "azurerm_cdn_frontdoor_profile" "ota" {
+  name                = "${var.prefix}-fd"
   resource_group_name = azurerm_resource_group.main.name
-  sku                 = "Standard_Microsoft"
+  sku_name            = "Standard_AzureFrontDoor"
 }
 
-resource "azurerm_cdn_endpoint" "ota" {
-  name                = "${var.prefix}-endpoint"
-  profile_name        = azurerm_cdn_profile.ota.name
-  location            = var.location
-  resource_group_name = azurerm_resource_group.main.name
+resource "azurerm_cdn_frontdoor_endpoint" "ota" {
+  name                     = "${var.prefix}-endpoint"
+  cdn_frontdoor_profile_id = azurerm_cdn_frontdoor_profile.ota.id
+}
 
-  # The Blob origin. azemu's CDN content data plane parses the storage account
-  # from this host and reverse-proxies to Azurite path-style, passing the
-  # origin's Content-Type and Cache-Control through unchanged.
-  origin {
-    name      = "blob-origin"
-    host_name = "${azurerm_storage_account.ota.name}.blob.core.windows.net"
+resource "azurerm_cdn_frontdoor_origin_group" "ota" {
+  name                     = "${var.prefix}-og"
+  cdn_frontdoor_profile_id = azurerm_cdn_frontdoor_profile.ota.id
+
+  load_balancing {
+    sample_size                 = 4
+    successful_samples_required = 3
   }
+}
 
+# The Blob origin. azemu's Front Door content data plane walks endpoint -> route
+# -> origin group -> origin, parses the storage account from this host, and
+# reverse-proxies to Azurite path-style, passing the origin's Content-Type and
+# Cache-Control through unchanged (the OTA manifest keeps its multipart boundary
+# and short TTL).
+resource "azurerm_cdn_frontdoor_origin" "ota" {
+  name                          = "blob-origin"
+  cdn_frontdoor_origin_group_id = azurerm_cdn_frontdoor_origin_group.ota.id
+  enabled                       = true
+
+  host_name          = "${azurerm_storage_account.ota.name}.blob.core.windows.net"
   origin_host_header = "${azurerm_storage_account.ota.name}.blob.core.windows.net"
+  http_port          = 80
+  https_port         = 443
+  priority           = 1
+  weight             = 1000
+
+  certificate_name_check_enabled = false
+}
+
+resource "azurerm_cdn_frontdoor_route" "ota" {
+  name                          = "${var.prefix}-route"
+  cdn_frontdoor_endpoint_id     = azurerm_cdn_frontdoor_endpoint.ota.id
+  cdn_frontdoor_origin_group_id = azurerm_cdn_frontdoor_origin_group.ota.id
+  cdn_frontdoor_origin_ids      = [azurerm_cdn_frontdoor_origin.ota.id]
+
+  supported_protocols    = ["Http", "Https"]
+  patterns_to_match      = ["/*"]
+  forwarding_protocol    = "MatchRequest"
+  link_to_default_domain = true
 }

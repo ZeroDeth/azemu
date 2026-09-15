@@ -201,7 +201,7 @@ Priority order inside v0.2 is top-down; ship the first row first.
 | `azemu` multi-toolchain CLI | SHIPPED (Phase 9). Subcommands (`azemu tf`, `azemu pulumi`, `azemu kubectl`, `azemu python`) auto-start the emulator, inject env vars, and exec the underlying tool. One binary, any toolchain. Replaced the shell `scripts/aztf` wrapper. |
 | Plugin SDK | Out-of-process resource modules so community can ship providers without forking |
 | Native Terraform test framework (`.tftest.hcl`) | First-class support for `terraform test` in the emulator test pyramid |
-| Front Door, Traffic Manager | Requested by users once Application Gateway lands |
+| Traffic Manager | Requested by users once Application Gateway lands (Front Door shipped; see design note 5) |
 | Cosmos DB (management + data plane) | The next natural storage type after Blob |
 | Event Grid + Service Bus | Eventing story for microservices scenarios |
 

@@ -1,8 +1,8 @@
-# Scenario: Static site with CDN and DNS
+# Scenario: Static site with Front Door and DNS
 
-Demonstrates a static website hosted on Azure Storage behind a CDN profile
-with a custom DNS zone, all running against a local azemu instance. No Azure
-subscription required.
+Demonstrates a static website hosted on Azure Storage behind an Azure Front
+Door profile with a custom DNS zone, all running against a local azemu
+instance. No Azure subscription required.
 
 ## Resources created
 
@@ -11,11 +11,13 @@ subscription required.
 | Resource Group | `azemusite-rg` | Container for all resources |
 | Storage Account | `azemusitesa` | StorageV2, Standard_LRS |
 | Blob Container | `$web` | Public blob access for static content |
-| CDN Profile | `azemusite-cdn` | Standard_Microsoft SKU |
-| CDN Endpoint | `azemusite-endpoint` | Origin points to storage blob endpoint |
+| Front Door Profile | `azemusite-fd` | Standard_AzureFrontDoor SKU |
+| Front Door Endpoint | `azemusite-endpoint` | Generated `{name}.azurefd.net` host |
+| Front Door Origin Group | `azemusite-og` | Load-balancing settings |
+| Front Door Origin | `storage-origin` | Points to the storage blob endpoint |
+| Front Door Route | `azemusite-route` | Links endpoint to origin group, default domain |
 | DNS Zone | `staticsite.local` | Custom domain zone |
-| CNAME Record | `www.staticsite.local` | Points to CDN endpoint FQDN |
-| TXT Record | `cdnverify.staticsite.local` | CDN domain verification |
+| CNAME Record | `www.staticsite.local` | Points to the Front Door endpoint host |
 
 ## Prerequisites
 

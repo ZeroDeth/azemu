@@ -58,6 +58,11 @@ var canonicalLiteralSegments = map[string]string{
 	"microsoft.cdn":   "microsoft.cdn",
 	"profiles":        "profiles",
 	"endpoints":       "endpoints",
+	// Front Door (Standard/Premium) child segments under Microsoft.Cdn/profiles.
+	"afdendpoints":    "afdendpoints",
+	"origingroups":    "origingroups",
+	"origins":         "origins",
+	"routes":          "routes",
 	"microsoft.cache": "microsoft.cache",
 	"redis":           "redis",
 	// Phase 8 resource types

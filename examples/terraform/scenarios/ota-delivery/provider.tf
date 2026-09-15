@@ -7,10 +7,14 @@ terraform {
   required_providers {
     azurerm = {
       source = "hashicorp/azurerm"
-      # Classic CDN (azurerm_cdn_*) was removed at azurerm 4.35 in favour of
-      # Front Door. This scenario uses classic CDN, so it pins below 4.35,
-      # matching the static-site scenario and the rest of the suite.
-      version = ">= 4.0, < 4.35"
+      # Lower bound 4.35: classic CDN (azurerm_cdn_*) was removed at azurerm
+      # 4.35 in favour of Front Door, which this scenario uses. Upper bound
+      # < 4.36: pin to the 4.35.x line azemu's Front Door emulation was
+      # validated against, matching static-site and staying below the storage /
+      # Key Vault data-plane tightening in later 4.x that azemu's path-style
+      # Azurite and *.vault.localhost endpoints do not yet satisfy (TODO.md M6
+      # and Known Gaps). Lift the upper bound alongside static-site.
+      version = ">= 4.35, < 4.36"
     }
   }
 }
