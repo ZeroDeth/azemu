@@ -1,10 +1,11 @@
 {
   "lockfile-version": 1,
   "manifest": {
-    "schema-version": "1.12.0",
+    "schema-version": "1.14.0",
     "install": {
       "go": {
-        "pkg-path": "go"
+        "pkg-path": "go",
+        "version": "^1.26"
       },
       "jq": {
         "pkg-path": "jq"
@@ -54,27 +55,27 @@
     {
       "attr_path": "go",
       "broken": false,
-      "derivation": "/nix/store/97qfa61h35q0nqppixvxknsq6wj612gv-go-1.26.2.drv",
+      "derivation": "/nix/store/w6w7pzbrnk1j01afyzxjhiwirql5lq6m-go-1.26.7.drv",
       "description": "Go Programming language",
       "install_id": "go",
       "license": "BSD-3-Clause",
-      "locked_url": "https://github.com/flox/nixpkgs?rev=d233902339c02a9c334e7e593de68855ad26c4cb",
-      "name": "go-1.26.2",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=83199d0d373dd3ac2b9a1996b1d0263f76ab7a4c",
+      "name": "go-1.26.7",
       "pname": "go",
-      "rev": "d233902339c02a9c334e7e593de68855ad26c4cb",
-      "rev_count": 998534,
-      "rev_date": "2026-05-15T18:21:44Z",
-      "scrape_date": "2026-05-17T07:05:51.912929Z",
+      "rev": "83199d0d373dd3ac2b9a1996b1d0263f76ab7a4c",
+      "rev_count": 1063296,
+      "rev_date": "2026-08-28T06:55:34Z",
+      "scrape_date": "2026-08-30T04:57:00.129770Z",
       "stabilities": [
         "unstable"
       ],
       "unfree": false,
-      "version": "1.26.2",
+      "version": "1.26.7",
       "outputs_to_install": [
         "out"
       ],
       "outputs": {
-        "out": "/nix/store/fkzywh7rg8lg1n2p0r161iqjwhz540wx-go-1.26.2"
+        "out": "/nix/store/jdgrfinlrf89z3wdfa6ipr1chpny5v11-go-1.26.7"
       },
       "system": "aarch64-darwin",
       "group": "toplevel",
@@ -83,27 +84,27 @@
     {
       "attr_path": "go",
       "broken": false,
-      "derivation": "/nix/store/5a501r66jxszbpw9af1q1a5z3rnrcmfs-go-1.26.2.drv",
+      "derivation": "/nix/store/ra2z8ff739aawml2iirfz76g7gxv9i8g-go-1.26.7.drv",
       "description": "Go Programming language",
       "install_id": "go",
       "license": "BSD-3-Clause",
-      "locked_url": "https://github.com/flox/nixpkgs?rev=d233902339c02a9c334e7e593de68855ad26c4cb",
-      "name": "go-1.26.2",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=83199d0d373dd3ac2b9a1996b1d0263f76ab7a4c",
+      "name": "go-1.26.7",
       "pname": "go",
-      "rev": "d233902339c02a9c334e7e593de68855ad26c4cb",
-      "rev_count": 998534,
-      "rev_date": "2026-05-15T18:21:44Z",
-      "scrape_date": "2026-05-17T08:32:11.746565Z",
+      "rev": "83199d0d373dd3ac2b9a1996b1d0263f76ab7a4c",
+      "rev_count": 1063296,
+      "rev_date": "2026-08-28T06:55:34Z",
+      "scrape_date": "2026-08-30T06:07:15.341091Z",
       "stabilities": [
         "unstable"
       ],
       "unfree": false,
-      "version": "1.26.2",
+      "version": "1.26.7",
       "outputs_to_install": [
         "out"
       ],
       "outputs": {
-        "out": "/nix/store/dimnagks1qsp7180yw74z0npp7z2ihs3-go-1.26.2"
+        "out": "/nix/store/i77g9dmcd399rmxk8688qfr4g2wzgk37-go-1.26.7"
       },
       "system": "x86_64-linux",
       "group": "toplevel",
@@ -112,35 +113,32 @@
     {
       "attr_path": "jq",
       "broken": false,
-      "derivation": "/nix/store/8m1acd54mxn25zahyn0scbi10a49v91c-jq-1.8.1.drv",
+      "derivation": "/nix/store/9dvdpr6yfny92m7jn37q0xxa2lf1ih9q-jq-1.8.2.drv",
       "description": "Lightweight and flexible command-line JSON processor",
       "install_id": "jq",
       "license": "MIT",
-      "locked_url": "https://github.com/flox/nixpkgs?rev=d233902339c02a9c334e7e593de68855ad26c4cb",
-      "name": "jq-1.8.1",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=83199d0d373dd3ac2b9a1996b1d0263f76ab7a4c",
+      "name": "jq-1.8.2",
       "pname": "jq",
-      "rev": "d233902339c02a9c334e7e593de68855ad26c4cb",
-      "rev_count": 998534,
-      "rev_date": "2026-05-15T18:21:44Z",
-      "scrape_date": "2026-05-17T07:06:07.708604Z",
+      "rev": "83199d0d373dd3ac2b9a1996b1d0263f76ab7a4c",
+      "rev_count": 1063296,
+      "rev_date": "2026-08-28T06:55:34Z",
+      "scrape_date": "2026-08-30T04:57:15.752413Z",
       "stabilities": [
         "unstable"
       ],
       "unfree": false,
-      "version": "1.8.1",
+      "version": "1.8.2",
       "outputs_to_install": [
         "bin",
-        "bin",
-        "bin",
-        "man",
         "man"
       ],
       "outputs": {
-        "bin": "/nix/store/zpaiv3csv85i5qdhwlivlbg8a5clnqmh-jq-1.8.1-bin",
-        "dev": "/nix/store/h46rnp90pvk5ky12r9drbzhl1fqlmjnf-jq-1.8.1-dev",
-        "doc": "/nix/store/iksz05vk9j78ls9agfg9blhax9azgv69-jq-1.8.1-doc",
-        "man": "/nix/store/vs9rx9xgqachcay4mn95m1gwifzxrhm4-jq-1.8.1-man",
-        "out": "/nix/store/inmyqx7646xrcqrwxipacv5gkf3ca6m3-jq-1.8.1"
+        "bin": "/nix/store/d01nk4ck93bwlzwbnnb1qf1kv4d94a09-jq-1.8.2-bin",
+        "dev": "/nix/store/mf170p9ynrn0g7s5i8kw655i1q4dxl6y-jq-1.8.2-dev",
+        "doc": "/nix/store/bhalwqvdympjhs6gj584d29bga0l8q3s-jq-1.8.2-doc",
+        "man": "/nix/store/s1d0597z830wrhza2g5b6i9a4a0jis8a-jq-1.8.2-man",
+        "out": "/nix/store/bpfcs06n720irpzril2mh6z59ddafhzx-jq-1.8.2"
       },
       "system": "aarch64-darwin",
       "group": "toplevel",
@@ -149,36 +147,34 @@
     {
       "attr_path": "jq",
       "broken": false,
-      "derivation": "/nix/store/b7xrk5idxkza33wiaizqzs9fqzvw5lqb-jq-1.8.1.drv",
+      "derivation": "/nix/store/d1h6nfwgqq43drkzzszmryjvcfrs1s5p-jq-1.8.2.drv",
       "description": "Lightweight and flexible command-line JSON processor",
       "install_id": "jq",
       "license": "MIT",
-      "locked_url": "https://github.com/flox/nixpkgs?rev=d233902339c02a9c334e7e593de68855ad26c4cb",
-      "name": "jq-1.8.1",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=83199d0d373dd3ac2b9a1996b1d0263f76ab7a4c",
+      "name": "jq-1.8.2",
       "pname": "jq",
-      "rev": "d233902339c02a9c334e7e593de68855ad26c4cb",
-      "rev_count": 998534,
-      "rev_date": "2026-05-15T18:21:44Z",
-      "scrape_date": "2026-05-17T08:32:32.450313Z",
+      "rev": "83199d0d373dd3ac2b9a1996b1d0263f76ab7a4c",
+      "rev_count": 1063296,
+      "rev_date": "2026-08-28T06:55:34Z",
+      "scrape_date": "2026-08-30T06:07:36.179436Z",
       "stabilities": [
         "unstable"
       ],
       "unfree": false,
-      "version": "1.8.1",
+      "version": "1.8.2",
       "outputs_to_install": [
-        "bin",
-        "bin",
         "bin",
         "bin",
         "bin",
         "man"
       ],
       "outputs": {
-        "bin": "/nix/store/v5c3inhfq6xshmwg1c254vfbcy4jp3k9-jq-1.8.1-bin",
-        "dev": "/nix/store/p8x5zv9s9qg3ld8b7jdm03hkpdqybjl9-jq-1.8.1-dev",
-        "doc": "/nix/store/g2wlgi44rn837jdirpwi3lk5f2iy13zg-jq-1.8.1-doc",
-        "man": "/nix/store/lsyqny7h1riwhzajwy2vjjdd63viiwvm-jq-1.8.1-man",
-        "out": "/nix/store/09bq2i0kb008ccg3qdbyxv81ggxxnn09-jq-1.8.1"
+        "bin": "/nix/store/xvd6920kffyyshg7mbw5wvfk6lg9wfkl-jq-1.8.2-bin",
+        "dev": "/nix/store/qavm4f7d2wm4s9v1ck90n200y20x95fm-jq-1.8.2-dev",
+        "doc": "/nix/store/2ga5gcahn4vr0b5fmlinxbz1w2m4qm5g-jq-1.8.2-doc",
+        "man": "/nix/store/n36fiv9a8p19bcj6cyjfgmb0l9s55qfn-jq-1.8.2-man",
+        "out": "/nix/store/d91mwgs15hv4ajza7jn6axyiwa07ga7m-jq-1.8.2"
       },
       "system": "x86_64-linux",
       "group": "toplevel",
@@ -187,30 +183,30 @@
     {
       "attr_path": "just",
       "broken": false,
-      "derivation": "/nix/store/r2mvsn3dg1rf7sxcj2ki0caj5jq262dj-just-1.51.0.drv",
+      "derivation": "/nix/store/qzj0g4aigq9d35bxgwbqvq1qwaz1fvkf-just-1.58.0.drv",
       "description": "Handy way to save and run project-specific commands",
       "install_id": "just",
       "license": "CC0-1.0",
-      "locked_url": "https://github.com/flox/nixpkgs?rev=d233902339c02a9c334e7e593de68855ad26c4cb",
-      "name": "just-1.51.0",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=83199d0d373dd3ac2b9a1996b1d0263f76ab7a4c",
+      "name": "just-1.58.0",
       "pname": "just",
-      "rev": "d233902339c02a9c334e7e593de68855ad26c4cb",
-      "rev_count": 998534,
-      "rev_date": "2026-05-15T18:21:44Z",
-      "scrape_date": "2026-05-17T07:06:07.835943Z",
+      "rev": "83199d0d373dd3ac2b9a1996b1d0263f76ab7a4c",
+      "rev_count": 1063296,
+      "rev_date": "2026-08-28T06:55:34Z",
+      "scrape_date": "2026-08-30T04:57:15.875570Z",
       "stabilities": [
         "unstable"
       ],
       "unfree": false,
-      "version": "1.51.0",
+      "version": "1.58.0",
       "outputs_to_install": [
         "man",
         "out"
       ],
       "outputs": {
-        "doc": "/nix/store/c8jdzd2s7hbldm1q1glrjisavxy1vf54-just-1.51.0-doc",
-        "man": "/nix/store/lxfs1naxd1a3934y9xsd1kid5yyw7jbn-just-1.51.0-man",
-        "out": "/nix/store/c9vv24f9bdnhnms10nwijn6q8wjz00ak-just-1.51.0"
+        "doc": "/nix/store/vz523mpwxiavavi83l6fh1g8i83s5agd-just-1.58.0-doc",
+        "man": "/nix/store/z01s84l6hcxqpww7fsy4kahfilrsxp9f-just-1.58.0-man",
+        "out": "/nix/store/ank1rvxdg1r21v885zm7k8q2sqx285x5-just-1.58.0"
       },
       "system": "aarch64-darwin",
       "group": "toplevel",
@@ -219,30 +215,30 @@
     {
       "attr_path": "just",
       "broken": false,
-      "derivation": "/nix/store/hkyjx4spky86b1j8vf9x9817s30zm7x3-just-1.51.0.drv",
+      "derivation": "/nix/store/qjkp3b0hlc7zzsy31145wwvrcfnyhkvg-just-1.58.0.drv",
       "description": "Handy way to save and run project-specific commands",
       "install_id": "just",
       "license": "CC0-1.0",
-      "locked_url": "https://github.com/flox/nixpkgs?rev=d233902339c02a9c334e7e593de68855ad26c4cb",
-      "name": "just-1.51.0",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=83199d0d373dd3ac2b9a1996b1d0263f76ab7a4c",
+      "name": "just-1.58.0",
       "pname": "just",
-      "rev": "d233902339c02a9c334e7e593de68855ad26c4cb",
-      "rev_count": 998534,
-      "rev_date": "2026-05-15T18:21:44Z",
-      "scrape_date": "2026-05-17T08:32:32.613932Z",
+      "rev": "83199d0d373dd3ac2b9a1996b1d0263f76ab7a4c",
+      "rev_count": 1063296,
+      "rev_date": "2026-08-28T06:55:34Z",
+      "scrape_date": "2026-08-30T06:07:36.341829Z",
       "stabilities": [
         "unstable"
       ],
       "unfree": false,
-      "version": "1.51.0",
+      "version": "1.58.0",
       "outputs_to_install": [
         "man",
         "out"
       ],
       "outputs": {
-        "doc": "/nix/store/mkdym7bscwpn6y6dvzrblm5p87q9c2g0-just-1.51.0-doc",
-        "man": "/nix/store/mgc1wdhgkc9246s9a52j17ymw4745bal-just-1.51.0-man",
-        "out": "/nix/store/zn7n9xnw5vx6cqf1az8b8p1pfsmrl9vw-just-1.51.0"
+        "doc": "/nix/store/nfnqh8gnsy9lv1ppmc5vzpf4zvkxcwqc-just-1.58.0-doc",
+        "man": "/nix/store/glg48g04x9bdibq3ylr69jz130lwdhbr-just-1.58.0-man",
+        "out": "/nix/store/z4czsax3mdyxx77mwb0yjarnzb1rip00-just-1.58.0"
       },
       "system": "x86_64-linux",
       "group": "toplevel",
@@ -251,17 +247,17 @@
     {
       "attr_path": "pre-commit",
       "broken": false,
-      "derivation": "/nix/store/jqq99ripb8zzqhmg0fyx5dmn9qdms9l4-pre-commit-4.5.1.drv",
+      "derivation": "/nix/store/587c9lizcc218fn5qma8w9r9fcix6aqr-pre-commit-4.5.1.drv",
       "description": "Framework for managing and maintaining multi-language pre-commit hooks",
       "install_id": "pre-commit",
       "license": "MIT",
-      "locked_url": "https://github.com/flox/nixpkgs?rev=d233902339c02a9c334e7e593de68855ad26c4cb",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=83199d0d373dd3ac2b9a1996b1d0263f76ab7a4c",
       "name": "pre-commit-4.5.1",
       "pname": "pre-commit",
-      "rev": "d233902339c02a9c334e7e593de68855ad26c4cb",
-      "rev_count": 998534,
-      "rev_date": "2026-05-15T18:21:44Z",
-      "scrape_date": "2026-05-17T07:06:30.203065Z",
+      "rev": "83199d0d373dd3ac2b9a1996b1d0263f76ab7a4c",
+      "rev_count": 1063296,
+      "rev_date": "2026-08-28T06:55:34Z",
+      "scrape_date": "2026-08-30T04:57:39.284933Z",
       "stabilities": [
         "unstable"
       ],
@@ -271,8 +267,8 @@
         "out"
       ],
       "outputs": {
-        "dist": "/nix/store/nc7n6xzxylg7yz99wpvya66fa59nj4ia-pre-commit-4.5.1-dist",
-        "out": "/nix/store/4y39fninb80ps3y1bnc7xyv31b775iv4-pre-commit-4.5.1"
+        "dist": "/nix/store/5lk0zm075qic9mcjanlnlvvf67kzfjb5-pre-commit-4.5.1-dist",
+        "out": "/nix/store/fg50lvs8kf5jcbfmn578h5z6wiay1p4m-pre-commit-4.5.1"
       },
       "system": "aarch64-darwin",
       "group": "toplevel",
@@ -281,28 +277,29 @@
     {
       "attr_path": "pre-commit",
       "broken": false,
-      "derivation": "/nix/store/h8qghjz9jfrr8k6l4kk2xvcd3vshmnmw-pre-commit-4.5.1.drv",
+      "derivation": "/nix/store/122n9532q00xrxg8wgvgpm9b0a6v6lgd-pre-commit-4.5.1.drv",
       "description": "Framework for managing and maintaining multi-language pre-commit hooks",
       "install_id": "pre-commit",
       "license": "MIT",
-      "locked_url": "https://github.com/flox/nixpkgs?rev=d233902339c02a9c334e7e593de68855ad26c4cb",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=83199d0d373dd3ac2b9a1996b1d0263f76ab7a4c",
       "name": "pre-commit-4.5.1",
       "pname": "pre-commit",
-      "rev": "d233902339c02a9c334e7e593de68855ad26c4cb",
-      "rev_count": 998534,
-      "rev_date": "2026-05-15T18:21:44Z",
-      "scrape_date": "2026-05-17T08:33:12.805385Z",
+      "rev": "83199d0d373dd3ac2b9a1996b1d0263f76ab7a4c",
+      "rev_count": 1063296,
+      "rev_date": "2026-08-28T06:55:34Z",
+      "scrape_date": "2026-08-30T06:08:16.482248Z",
       "stabilities": [
         "unstable"
       ],
       "unfree": false,
       "version": "4.5.1",
       "outputs_to_install": [
+        "out",
         "out"
       ],
       "outputs": {
-        "dist": "/nix/store/wrwjqaz58lnq793za7qlk50zsbrqywpd-pre-commit-4.5.1-dist",
-        "out": "/nix/store/vahfa5p05q8zyjhj47i4543nzd47y24n-pre-commit-4.5.1"
+        "dist": "/nix/store/z1bnarx0px935kmfp65izm92kdiml08g-pre-commit-4.5.1-dist",
+        "out": "/nix/store/qmf95a0dq52f0nffcq6xavpl6zsmd91s-pre-commit-4.5.1"
       },
       "system": "x86_64-linux",
       "group": "toplevel",
@@ -311,17 +308,17 @@
     {
       "attr_path": "shellcheck",
       "broken": false,
-      "derivation": "/nix/store/wb6bfc7h1bz04hwz47m8mrmd3zrmwxlk-shellcheck-0.11.0.drv",
+      "derivation": "/nix/store/1bnrzqn35mpffpddmini5y5s9bf1c5bc-shellcheck-0.11.0.drv",
       "description": "Shell script analysis tool",
       "install_id": "shellcheck",
       "license": "GPL-3.0-only",
-      "locked_url": "https://github.com/flox/nixpkgs?rev=d233902339c02a9c334e7e593de68855ad26c4cb",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=83199d0d373dd3ac2b9a1996b1d0263f76ab7a4c",
       "name": "shellcheck-0.11.0",
       "pname": "shellcheck",
-      "rev": "d233902339c02a9c334e7e593de68855ad26c4cb",
-      "rev_count": 998534,
-      "rev_date": "2026-05-15T18:21:44Z",
-      "scrape_date": "2026-05-17T07:07:37.802902Z",
+      "rev": "83199d0d373dd3ac2b9a1996b1d0263f76ab7a4c",
+      "rev_count": 1063296,
+      "rev_date": "2026-08-28T06:55:34Z",
+      "scrape_date": "2026-08-30T04:58:54.178363Z",
       "stabilities": [
         "unstable"
       ],
@@ -333,10 +330,10 @@
         "man"
       ],
       "outputs": {
-        "bin": "/nix/store/dlbqbwjzrv193wnjg04cpr5giw8hn12l-shellcheck-0.11.0-bin",
-        "doc": "/nix/store/y23x33gxn2dlxf0v3d03sk8hhwprqkwr-shellcheck-0.11.0-doc",
-        "man": "/nix/store/wp7s0lsrhwz0ix6lza75fch0cpl88py8-shellcheck-0.11.0-man",
-        "out": "/nix/store/1vr1pp6r6cszwcvbnx6jnm5m2acj6b72-shellcheck-0.11.0"
+        "bin": "/nix/store/c8zchzhhq3v981n8zfqj7gf21dyiy65z-shellcheck-0.11.0-bin",
+        "doc": "/nix/store/jh6dz9lmzmp4rys49kzmy922jiic75n1-shellcheck-0.11.0-doc",
+        "man": "/nix/store/563byp5hdpc4bszgyysqydfbc4shyw0s-shellcheck-0.11.0-man",
+        "out": "/nix/store/148akv1lk672gj1aw7gjf0pspysig5vc-shellcheck-0.11.0"
       },
       "system": "aarch64-darwin",
       "group": "toplevel",
@@ -345,17 +342,17 @@
     {
       "attr_path": "shellcheck",
       "broken": false,
-      "derivation": "/nix/store/4mn0nhhr5xpdy6qd3fpd8c0xrwamibp9-shellcheck-0.11.0.drv",
+      "derivation": "/nix/store/l0jdfv2mv07y12knwrq6gvr0jgy1819l-shellcheck-0.11.0.drv",
       "description": "Shell script analysis tool",
       "install_id": "shellcheck",
       "license": "GPL-3.0-only",
-      "locked_url": "https://github.com/flox/nixpkgs?rev=d233902339c02a9c334e7e593de68855ad26c4cb",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=83199d0d373dd3ac2b9a1996b1d0263f76ab7a4c",
       "name": "shellcheck-0.11.0",
       "pname": "shellcheck",
-      "rev": "d233902339c02a9c334e7e593de68855ad26c4cb",
-      "rev_count": 998534,
-      "rev_date": "2026-05-15T18:21:44Z",
-      "scrape_date": "2026-05-17T08:34:41.912822Z",
+      "rev": "83199d0d373dd3ac2b9a1996b1d0263f76ab7a4c",
+      "rev_count": 1063296,
+      "rev_date": "2026-08-28T06:55:34Z",
+      "scrape_date": "2026-08-30T06:09:49.352143Z",
       "stabilities": [
         "unstable"
       ],
@@ -363,14 +360,15 @@
       "version": "0.11.0",
       "outputs_to_install": [
         "bin",
+        "bin",
         "doc",
         "man"
       ],
       "outputs": {
-        "bin": "/nix/store/7xiiq153kv13wcqb6j5zffz2g778nssv-shellcheck-0.11.0-bin",
-        "doc": "/nix/store/x77g5cjb4mzab1vr48bv3vl67p7lcy2n-shellcheck-0.11.0-doc",
-        "man": "/nix/store/00zjsxq0s6j95n6004prcjxn4j5zgpb9-shellcheck-0.11.0-man",
-        "out": "/nix/store/09hk83dw55dpbw1f8km58pycmbfr186k-shellcheck-0.11.0"
+        "bin": "/nix/store/5bwp35yr32v0f6zx7x1w64y8bmxzzb8g-shellcheck-0.11.0-bin",
+        "doc": "/nix/store/8glg7jn1763pqjj5473zpgnh5phmq326-shellcheck-0.11.0-doc",
+        "man": "/nix/store/cb7sx1ydhh35hmp4af1q1b0ppxljnyv8-shellcheck-0.11.0-man",
+        "out": "/nix/store/fjyd5kk7hgkppi70zmn5pi1w3arc93lw-shellcheck-0.11.0"
       },
       "system": "x86_64-linux",
       "group": "toplevel",
@@ -379,27 +377,27 @@
     {
       "attr_path": "terraform",
       "broken": false,
-      "derivation": "/nix/store/5iqkyij8dlcywsywqiscv989fi969y75-terraform-1.15.2.drv",
+      "derivation": "/nix/store/xajrqfhpjj71rh8l1jasyxa9krx7ky75-terraform-1.15.9.drv",
       "description": "Tool for building, changing, and versioning infrastructure",
       "install_id": "terraform",
       "license": "BUSL-1.1",
-      "locked_url": "https://github.com/flox/nixpkgs?rev=d233902339c02a9c334e7e593de68855ad26c4cb",
-      "name": "terraform-1.15.2",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=83199d0d373dd3ac2b9a1996b1d0263f76ab7a4c",
+      "name": "terraform-1.15.9",
       "pname": "terraform",
-      "rev": "d233902339c02a9c334e7e593de68855ad26c4cb",
-      "rev_count": 998534,
-      "rev_date": "2026-05-15T18:21:44Z",
-      "scrape_date": "2026-05-17T07:07:41.828836Z",
+      "rev": "83199d0d373dd3ac2b9a1996b1d0263f76ab7a4c",
+      "rev_count": 1063296,
+      "rev_date": "2026-08-28T06:55:34Z",
+      "scrape_date": "2026-08-30T04:58:58.395038Z",
       "stabilities": [
         "unstable"
       ],
       "unfree": true,
-      "version": "1.15.2",
+      "version": "1.15.9",
       "outputs_to_install": [
         "out"
       ],
       "outputs": {
-        "out": "/nix/store/2clfc0xs7lb7ykfyvfxbxdarxqq31l7q-terraform-1.15.2"
+        "out": "/nix/store/8nnld5bxyg8fjsyxygryl1sp06j1r96l-terraform-1.15.9"
       },
       "system": "aarch64-darwin",
       "group": "toplevel",
@@ -408,27 +406,27 @@
     {
       "attr_path": "terraform",
       "broken": false,
-      "derivation": "/nix/store/h4xl1r7gfn8w3rz396ia3lh4jqdkji44-terraform-1.15.2.drv",
+      "derivation": "/nix/store/wd675wcybv7bckq745vkginqr2dd3cdj-terraform-1.15.9.drv",
       "description": "Tool for building, changing, and versioning infrastructure",
       "install_id": "terraform",
       "license": "BUSL-1.1",
-      "locked_url": "https://github.com/flox/nixpkgs?rev=d233902339c02a9c334e7e593de68855ad26c4cb",
-      "name": "terraform-1.15.2",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=83199d0d373dd3ac2b9a1996b1d0263f76ab7a4c",
+      "name": "terraform-1.15.9",
       "pname": "terraform",
-      "rev": "d233902339c02a9c334e7e593de68855ad26c4cb",
-      "rev_count": 998534,
-      "rev_date": "2026-05-15T18:21:44Z",
-      "scrape_date": "2026-05-17T08:34:48.959309Z",
+      "rev": "83199d0d373dd3ac2b9a1996b1d0263f76ab7a4c",
+      "rev_count": 1063296,
+      "rev_date": "2026-08-28T06:55:34Z",
+      "scrape_date": "2026-08-30T06:09:56.227297Z",
       "stabilities": [
         "unstable"
       ],
       "unfree": true,
-      "version": "1.15.2",
+      "version": "1.15.9",
       "outputs_to_install": [
         "out"
       ],
       "outputs": {
-        "out": "/nix/store/ij8la66jxvbz5r7p938ggzn1c71v2ay7-terraform-1.15.2"
+        "out": "/nix/store/0vz7kj1az3xkr5263ha45ani6vlma7mv-terraform-1.15.9"
       },
       "system": "x86_64-linux",
       "group": "toplevel",
@@ -437,27 +435,27 @@
     {
       "attr_path": "tflint",
       "broken": false,
-      "derivation": "/nix/store/hh3dqprpm2ws2s6r4dvki9r43vq6racd-tflint-0.61.0.drv",
+      "derivation": "/nix/store/j0906spnppksjw3cdsfrzchndwrpg0rk-tflint-0.64.0.drv",
       "description": "Terraform linter focused on possible errors, best practices, and so on",
       "install_id": "tflint",
       "license": "MPL-2.0",
-      "locked_url": "https://github.com/flox/nixpkgs?rev=d233902339c02a9c334e7e593de68855ad26c4cb",
-      "name": "tflint-0.61.0",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=83199d0d373dd3ac2b9a1996b1d0263f76ab7a4c",
+      "name": "tflint-0.64.0",
       "pname": "tflint",
-      "rev": "d233902339c02a9c334e7e593de68855ad26c4cb",
-      "rev_count": 998534,
-      "rev_date": "2026-05-15T18:21:44Z",
-      "scrape_date": "2026-05-17T07:08:00.764231Z",
+      "rev": "83199d0d373dd3ac2b9a1996b1d0263f76ab7a4c",
+      "rev_count": 1063296,
+      "rev_date": "2026-08-28T06:55:34Z",
+      "scrape_date": "2026-08-30T04:59:17.453241Z",
       "stabilities": [
         "unstable"
       ],
       "unfree": false,
-      "version": "0.61.0",
+      "version": "0.64.0",
       "outputs_to_install": [
         "out"
       ],
       "outputs": {
-        "out": "/nix/store/9sgf1krk97nsfcmw3aghxb463lb4y246-tflint-0.61.0"
+        "out": "/nix/store/0lwk1zb1nzcswphwh0fn32vly4fw7mc1-tflint-0.64.0"
       },
       "system": "aarch64-darwin",
       "group": "toplevel",
@@ -466,27 +464,27 @@
     {
       "attr_path": "tflint",
       "broken": false,
-      "derivation": "/nix/store/wm6wm06nk4rrsck3dydiz7cir8xfdg0l-tflint-0.61.0.drv",
+      "derivation": "/nix/store/p00vcrp7i0zf2rh3vmcag8nh3d9gaz1z-tflint-0.64.0.drv",
       "description": "Terraform linter focused on possible errors, best practices, and so on",
       "install_id": "tflint",
       "license": "MPL-2.0",
-      "locked_url": "https://github.com/flox/nixpkgs?rev=d233902339c02a9c334e7e593de68855ad26c4cb",
-      "name": "tflint-0.61.0",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=83199d0d373dd3ac2b9a1996b1d0263f76ab7a4c",
+      "name": "tflint-0.64.0",
       "pname": "tflint",
-      "rev": "d233902339c02a9c334e7e593de68855ad26c4cb",
-      "rev_count": 998534,
-      "rev_date": "2026-05-15T18:21:44Z",
-      "scrape_date": "2026-05-17T08:35:18.215093Z",
+      "rev": "83199d0d373dd3ac2b9a1996b1d0263f76ab7a4c",
+      "rev_count": 1063296,
+      "rev_date": "2026-08-28T06:55:34Z",
+      "scrape_date": "2026-08-30T06:10:23.795850Z",
       "stabilities": [
         "unstable"
       ],
       "unfree": false,
-      "version": "0.61.0",
+      "version": "0.64.0",
       "outputs_to_install": [
         "out"
       ],
       "outputs": {
-        "out": "/nix/store/p812wlxlbkrfqc195385ssdxbp4pl4a4-tflint-0.61.0"
+        "out": "/nix/store/1w9yj324746zhdywl8d22jl5nxg24gny-tflint-0.64.0"
       },
       "system": "x86_64-linux",
       "group": "toplevel",

@@ -1,8 +1,12 @@
-schema-version = "1.12.0"
+schema-version = "1.14.0"
 
 # ─── Packages ────────────────────────────────────────────────────────────────────
 [install]
 go.pkg-path = "go"
+# Pinned like terraform below. Without a version constraint flox follows the
+# channel, which silently moved Go 1.26.2 -> 1.26.7 and left manifest.lock
+# dirty in every working tree.
+go.version = "^1.26"
 terraform.pkg-path = "terraform"
 terraform.version = "^1.14"
 just.pkg-path = "just"
