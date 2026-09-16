@@ -23,7 +23,7 @@ jobs:
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v9
         with:
-          version: v2.5.0
+          version: v2.12.2
 
       - name: markdownlint
         uses: DavidAnson/markdownlint-cli2-action@v19
@@ -94,15 +94,22 @@ jobs:
         run: go build ./cmd/azemu
 
   terraform-test:
-    name: Terraform Scenarios
+    name: Terraform Scenarios (${{ matrix.terraform_version }})
     runs-on: ubuntu-latest
     needs: [build]
+    strategy:
+      fail-fast: false
+      matrix:
+        # 1.6 is the floor README and docs/SETUP.md advertise; 1.15 is what the
+        # flox environment installs. Testing only one of them meant nine minor
+        # versions between CI and every contributor went unexercised.
+        terraform_version: ["1.6.6", "1.15.9"]
     steps:
       - uses: actions/checkout@v7
 
       - uses: hashicorp/setup-terraform@v4
         with:
-          terraform_version: "~1.6"
+          terraform_version: ${{ matrix.terraform_version }}
 
       - name: Start azemu
         run: docker compose up -d --build
