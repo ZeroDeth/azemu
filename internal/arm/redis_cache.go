@@ -387,3 +387,26 @@ func redisCacheResponse(s *store.Resource) map[string]interface{} {
 		"properties": props,
 	}
 }
+
+// patchRedisCache serves the update path. azurerm updates a Redis cache with a
+// PATCH, so without this a second `terraform apply` fails with 405.
+func (a *Router) patchRedisCache(w http.ResponseWriter, r *http.Request) {
+	id := redisCacheID(
+		chi.URLParam(r, "subscriptionID"),
+		chi.URLParam(r, "resourceGroupName"),
+		chi.URLParam(r, "cacheName"),
+	)
+	a.patchResource(w, r, id, "Redis cache",
+		func(res *store.Resource) (string, string, bool) {
+			// A merge must not store a SKU that PUT would reject.
+			sku, ok, msg := validateAndDefaultRedisSKU(res.Properties["sku"])
+			if !ok {
+				return "InvalidRequestContent", msg, false
+			}
+			res.Properties["sku"] = sku
+			return "", "", true
+		},
+		func(res *store.Resource) interface{} {
+			return redisCacheResponse(res)
+		})
+}
