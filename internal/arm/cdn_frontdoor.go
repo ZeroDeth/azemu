@@ -393,11 +393,75 @@ func afdChildResponse(res *store.Resource) map[string]interface{} {
 		"id":         res.ID,
 		"name":       res.Name,
 		"type":       res.Type,
-		"tags":       res.Tags,
 		"properties": props,
 	}
 	if res.Location != "" {
 		out["location"] = res.Location
 	}
+	// Only afdEndpoints are taggable. Real Azure returns no tags field on
+	// originGroups, origins or routes, and emitting an empty one is the kind
+	// of small drift the fidelity rules exist to prevent. Gated like location.
+	if res.Type == afdEndpointTypeString {
+		out["tags"] = res.Tags
+	}
 	return out
+}
+
+// Front Door update path. azurerm updates every one of these five resources
+// with PATCH, not PUT: the four child types go through the CDN SDK's
+// AsPatch preparers and the profile through go-azure-sdk's method_update.
+// Without these routes the resources provision once and then fail on every
+// subsequent `terraform apply` with a 405, which is what shipped before.
+
+func (a *Router) patchAFDEndpoint(w http.ResponseWriter, r *http.Request) {
+	endpointName := chi.URLParam(r, "endpointName")
+	id := afdEndpointID(
+		chi.URLParam(r, "subscriptionID"),
+		chi.URLParam(r, "resourceGroupName"),
+		chi.URLParam(r, "profileName"),
+		endpointName,
+	)
+	a.patchResource(w, r, id, "Front Door endpoint",
+		func(res *store.Resource) (string, string, bool) {
+			// hostName is derived from the endpoint name and is what the data
+			// plane muxes on, so a client must not be able to repoint it.
+			res.Properties["hostName"] = afdGeneratedHostName(endpointName)
+			return "", "", true
+		},
+		func(res *store.Resource) interface{} { return afdChildResponse(res) })
+}
+
+func (a *Router) patchAFDOriginGroup(w http.ResponseWriter, r *http.Request) {
+	id := afdOriginGroupID(
+		chi.URLParam(r, "subscriptionID"),
+		chi.URLParam(r, "resourceGroupName"),
+		chi.URLParam(r, "profileName"),
+		chi.URLParam(r, "originGroupName"),
+	)
+	a.patchResource(w, r, id, "Front Door origin group", nil,
+		func(res *store.Resource) interface{} { return afdChildResponse(res) })
+}
+
+func (a *Router) patchAFDOrigin(w http.ResponseWriter, r *http.Request) {
+	id := afdOriginID(
+		chi.URLParam(r, "subscriptionID"),
+		chi.URLParam(r, "resourceGroupName"),
+		chi.URLParam(r, "profileName"),
+		chi.URLParam(r, "originGroupName"),
+		chi.URLParam(r, "originName"),
+	)
+	a.patchResource(w, r, id, "Front Door origin", nil,
+		func(res *store.Resource) interface{} { return afdChildResponse(res) })
+}
+
+func (a *Router) patchAFDRoute(w http.ResponseWriter, r *http.Request) {
+	id := afdRouteID(
+		chi.URLParam(r, "subscriptionID"),
+		chi.URLParam(r, "resourceGroupName"),
+		chi.URLParam(r, "profileName"),
+		chi.URLParam(r, "endpointName"),
+		chi.URLParam(r, "routeName"),
+	)
+	a.patchResource(w, r, id, "Front Door route", nil,
+		func(res *store.Resource) interface{} { return afdChildResponse(res) })
 }

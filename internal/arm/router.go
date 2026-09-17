@@ -238,6 +238,7 @@ func (a *Router) Routes(r chi.Router) {
 	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.cdn/profiles/{profileName}", a.getCDNProfile)
 	r.Head("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.cdn/profiles/{profileName}", a.headCDNProfile)
 	r.Delete("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.cdn/profiles/{profileName}", a.deleteCDNProfile)
+	r.Patch("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.cdn/profiles/{profileName}", a.patchCDNProfile)
 	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.cdn/profiles", a.listCDNProfilesByRG)
 	r.Get("/{subscriptionID}/providers/microsoft.cdn/profiles", a.listCDNProfilesBySub)
 
@@ -253,6 +254,7 @@ func (a *Router) Routes(r chi.Router) {
 	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.cdn/profiles/{profileName}/afdendpoints/{endpointName}", a.getAFDEndpoint)
 	r.Head("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.cdn/profiles/{profileName}/afdendpoints/{endpointName}", a.headAFDEndpoint)
 	r.Delete("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.cdn/profiles/{profileName}/afdendpoints/{endpointName}", a.deleteAFDEndpoint)
+	r.Patch("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.cdn/profiles/{profileName}/afdendpoints/{endpointName}", a.patchAFDEndpoint)
 	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.cdn/profiles/{profileName}/afdendpoints", a.listAFDEndpoints)
 
 	// Front Door routes (Microsoft.Cdn/profiles/afdEndpoints/routes)
@@ -260,6 +262,7 @@ func (a *Router) Routes(r chi.Router) {
 	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.cdn/profiles/{profileName}/afdendpoints/{endpointName}/routes/{routeName}", a.getAFDRoute)
 	r.Head("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.cdn/profiles/{profileName}/afdendpoints/{endpointName}/routes/{routeName}", a.headAFDRoute)
 	r.Delete("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.cdn/profiles/{profileName}/afdendpoints/{endpointName}/routes/{routeName}", a.deleteAFDRoute)
+	r.Patch("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.cdn/profiles/{profileName}/afdendpoints/{endpointName}/routes/{routeName}", a.patchAFDRoute)
 	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.cdn/profiles/{profileName}/afdendpoints/{endpointName}/routes", a.listAFDRoutes)
 
 	// Front Door origin groups (Microsoft.Cdn/profiles/originGroups)
@@ -267,6 +270,7 @@ func (a *Router) Routes(r chi.Router) {
 	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.cdn/profiles/{profileName}/origingroups/{originGroupName}", a.getAFDOriginGroup)
 	r.Head("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.cdn/profiles/{profileName}/origingroups/{originGroupName}", a.headAFDOriginGroup)
 	r.Delete("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.cdn/profiles/{profileName}/origingroups/{originGroupName}", a.deleteAFDOriginGroup)
+	r.Patch("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.cdn/profiles/{profileName}/origingroups/{originGroupName}", a.patchAFDOriginGroup)
 	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.cdn/profiles/{profileName}/origingroups", a.listAFDOriginGroups)
 
 	// Front Door origins (Microsoft.Cdn/profiles/originGroups/origins)
@@ -274,6 +278,7 @@ func (a *Router) Routes(r chi.Router) {
 	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.cdn/profiles/{profileName}/origingroups/{originGroupName}/origins/{originName}", a.getAFDOrigin)
 	r.Head("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.cdn/profiles/{profileName}/origingroups/{originGroupName}/origins/{originName}", a.headAFDOrigin)
 	r.Delete("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.cdn/profiles/{profileName}/origingroups/{originGroupName}/origins/{originName}", a.deleteAFDOrigin)
+	r.Patch("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.cdn/profiles/{profileName}/origingroups/{originGroupName}/origins/{originName}", a.patchAFDOrigin)
 	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.cdn/profiles/{profileName}/origingroups/{originGroupName}/origins", a.listAFDOrigins)
 
 	// User Assigned Identities (Microsoft.ManagedIdentity/userAssignedIdentities)

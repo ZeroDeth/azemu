@@ -437,3 +437,73 @@ func TestAFDProfile_DELETE_CascadesChildren(t *testing.T) {
 	assertStatus(t, httpGet(t, afdOriginURL(srv, "sub1", "rg1", "fd1", "og1", "o1")), http.StatusNotFound)
 	assertStatus(t, httpGet(t, afdRouteURL(srv, "sub1", "rg1", "fd1", "ep1", "r1")), http.StatusNotFound)
 }
+
+// TestAFDPatch_secondApplySucceeds covers the blocker this PR shipped with:
+// azurerm updates all five Front Door resources with PATCH, so a PUT-only
+// route table meant they provisioned once and then 405'd on every subsequent
+// `terraform apply`.
+func TestAFDPatch_secondApplySucceeds(t *testing.T) {
+	srv := newTestServer(t)
+	base := srv.URL + "/subscriptions/sub1/resourceGroups/rg1/providers/Microsoft.Cdn/profiles/fd1"
+
+	// Build the graph the way the provider does.
+	httpPut(t, base, `{"location":"global","sku":{"name":"Standard_AzureFrontDoor"}}`)
+	httpPut(t, base+"/afdEndpoints/ep1", `{"location":"global","properties":{"enabledState":"Enabled"}}`)
+	httpPut(t, base+"/originGroups/og1", `{"properties":{"loadBalancingSettings":{"sampleSize":4}}}`)
+	httpPut(t, base+"/originGroups/og1/origins/o1", `{"properties":{"hostName":"acct.blob.core.windows.net","priority":1}}`)
+	httpPut(t, base+"/afdEndpoints/ep1/routes/r1", `{"properties":{"linkToDefaultDomain":"Enabled"}}`)
+
+	cases := []struct {
+		name  string
+		url   string
+		patch string
+	}{
+		{"profile", base, `{"tags":{"env":"prod"}}`},
+		{"endpoint", base + "/afdEndpoints/ep1", `{"tags":{"env":"prod"}}`},
+		{"origin group", base + "/originGroups/og1", `{"properties":{"loadBalancingSettings":{"sampleSize":8}}}`},
+		{"origin", base + "/originGroups/og1/origins/o1", `{"properties":{"priority":2}}`},
+		{"route", base + "/afdEndpoints/ep1/routes/r1", `{"properties":{"forwardingProtocol":"HttpsOnly"}}`},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			resp := httpPatch(t, tc.url, tc.patch)
+			if resp.StatusCode != http.StatusOK {
+				t.Fatalf("PATCH %s = %d, want 200", tc.name, resp.StatusCode)
+			}
+			if got := httpGet(t, tc.url); got.StatusCode != http.StatusOK {
+				t.Errorf("GET after patch = %d, want 200", got.StatusCode)
+			}
+		})
+	}
+}
+
+// TestAFDPatch_endpointHostNameIsServerOwned pins that a merge cannot repoint
+// the host the data plane muxes on.
+func TestAFDPatch_endpointHostNameIsServerOwned(t *testing.T) {
+	srv := newTestServer(t)
+	base := srv.URL + "/subscriptions/sub1/resourceGroups/rg1/providers/Microsoft.Cdn/profiles/fd1"
+
+	httpPut(t, base, `{"location":"global","sku":{"name":"Standard_AzureFrontDoor"}}`)
+	url := base + "/afdEndpoints/ep1"
+	httpPut(t, url, `{"location":"global","properties":{"enabledState":"Enabled"}}`)
+
+	before, _ := decodeJSON(t, httpGet(t, url))["properties"].(map[string]interface{})
+	httpPatch(t, url, `{"properties":{"hostName":"evil.example.com"}}`)
+	after, _ := decodeJSON(t, httpGet(t, url))["properties"].(map[string]interface{})
+
+	if after["hostName"] != before["hostName"] {
+		t.Errorf("hostName = %v after patch, want %v; the data-plane host was client-settable",
+			after["hostName"], before["hostName"])
+	}
+}
+
+// TestAFDPatch_missingResource_404 pins that PATCH never creates.
+func TestAFDPatch_missingResource_404(t *testing.T) {
+	srv := newTestServer(t)
+	url := srv.URL + "/subscriptions/sub1/resourceGroups/rg1/providers/Microsoft.Cdn/profiles/nope/afdEndpoints/ep1"
+
+	if resp := httpPatch(t, url, `{"tags":{"a":"b"}}`); resp.StatusCode != http.StatusNotFound {
+		t.Errorf("status = %d, want 404", resp.StatusCode)
+	}
+}
