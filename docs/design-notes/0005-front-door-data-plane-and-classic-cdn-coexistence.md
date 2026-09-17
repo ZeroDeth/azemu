@@ -13,9 +13,11 @@ note 1 and the `ota-delivery` scenario were built to mirror locally.
 Until now azemu emulated only classic Azure CDN: the
 `azurerm_cdn_profile` / `azurerm_cdn_endpoint` control plane and a
 `*.azureedge.net` content data plane (design note for the data plane
-landed in v0.3.0). The azurerm provider removed classic CDN at v4.35.0
-(the resources fail a wall-clock deprecation check client-side before any
-request reaches azemu), so the `static-site` and `ota-delivery` scenarios
+landed in v0.3.0). From v4.35.0 the azurerm provider blocks *creation* of
+classic CDN behind a wall-clock deprecation check that fails client-side
+before any request reaches azemu; updates to existing resources stay
+supported until 2027-09-30. The resource is not removed. That block was
+enough to stop the `static-site` and `ota-delivery` scenarios
 were pinned to `>= 4.0, < 4.35`. That pin meant azemu could not validate
 the resource graph the production system actually ships, which is Front
 Door, not classic CDN. This note records how Front Door was added without
@@ -97,6 +99,41 @@ Concretely:
    `provisioningState: "Succeeded"` as immediate success. azemu answers
    both synchronously; DELETE reuses the existing async-operation path from
    design note material in `operations.go` (the M7 lesson).
+
+## Update path
+
+The first version of this note analysed only the create path. It concluded
+that a synchronous terminal 200/201 satisfies the provider's poller, which is
+true, and stopped there. Every Front Door resource was therefore registered
+PUT/GET/HEAD/DELETE and nothing else.
+
+azurerm does not update any of these five with PUT. The four child types go
+through the CDN SDK's `AsPatch` preparers
+(`afdendpoints.go`, `afdorigins.go`, `afdorigingroups.go`, `routes.go`) and
+the profile through go-azure-sdk's `method_update.go`, which is
+`http.MethodPatch`. A PUT-only route table answers 405:
+
+```text
+PATCH afdEndpoint -> status=405 allow="PUT"
+```
+
+So the resources provisioned once and then failed on every subsequent
+`terraform apply` that touched `tags`, `enabled`, `priority`, `weight`,
+`patterns_to_match`, `forwarding_protocol`, `link_to_default_domain` or
+`response_timeout_seconds` -- which is to say, on every non-ForceNew change.
+The parity claim of Full was made on the strength of an analysis that had
+covered half the lifecycle.
+
+All five now register PATCH and share `patchResource`, so absent keys are
+preserved, `tags` is replaced wholesale, a PATCH to something that does not
+exist is 404 rather than an implicit create, and the endpoint's generated
+`hostName` is reasserted after the merge so a client cannot repoint the host
+the data plane muxes on.
+
+The general lesson, recorded in TODO.md: `terraform test` applies and then
+destroys, so it cannot catch a missing update verb. Any resource whose
+provider updates by PATCH will ship this same bug until a scenario changes an
+attribute and applies a second time.
 
 ## Consequences
 
