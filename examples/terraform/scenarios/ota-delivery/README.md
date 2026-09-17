@@ -1,14 +1,14 @@
-# Scenario: server-less OTA delivery (Blob + Key Vault sign + CDN)
+# Scenario: server-less OTA delivery (Blob + Key Vault sign + Front Door)
 
 Validates a server-less, static-file over-the-air delivery design end to end
 against azemu, with no real Azure subscription. There is no compute on the read
 path: a build pipeline signs an update manifest with a Key Vault key and writes
 immutable artefacts to Blob Storage, a release pipeline promotes a version by a
-server-side blob copy, and a CDN serves the static files to clients.
+server-side blob copy, and Azure Front Door serves the static files to clients.
 
 This scenario stitches the existing `ado-pipeline`, `static-site`, and
-`ota-updates` building blocks into one flow and exercises the CDN read path
-through azemu's CDN content data plane.
+`ota-updates` building blocks into one flow and exercises the Front Door read
+path through azemu's Front Door content data plane.
 
 ## What it provisions
 
@@ -18,8 +18,11 @@ through azemu's CDN content data plane.
 | `azurerm_storage_account.ota` | Immutable artefacts + mutable rollout state (`allow_nested_items_to_be_public = true`) |
 | `azurerm_key_vault.signing` | Holds the RSA manifest signing key |
 | `azurerm_key_vault_key.manifest` | RSA-2048, `key_opts = ["sign", "verify"]` |
-| `azurerm_cdn_profile.ota` | Classic CDN profile (`Standard_Microsoft`) |
-| `azurerm_cdn_endpoint.ota` | CDN endpoint with the storage blob as origin |
+| `azurerm_cdn_frontdoor_profile.ota` | Front Door profile (`Standard_AzureFrontDoor`) |
+| `azurerm_cdn_frontdoor_endpoint.ota` | Generated `{name}.azurefd.net` read-path host |
+| `azurerm_cdn_frontdoor_origin_group.ota` | Load-balancing settings |
+| `azurerm_cdn_frontdoor_origin.ota` | The storage blob origin |
+| `azurerm_cdn_frontdoor_route.ota` | Links endpoint to origin group on the default domain |
 
 The blob container is created by the publish step, not Terraform: azemu does
 not mirror ARM containers into the Azurite data plane. The `azemuotadsa` account
@@ -43,19 +46,20 @@ quickly. A promotion is a server-side copy of `v{n}/update.multipart` to the
 live `manifest.json` path; the signature is over the manifest bytes and travels
 in the multipart part header, so the copy never invalidates it.
 
-## The CDN read path
+## The Front Door read path
 
-azemu's CDN content data plane serves the endpoint host
-`{name}.azureedge.net` (multiplexed on the ARM port `:4566`): it resolves the
-endpoint, finds the Blob origin (`{account}.blob.core.windows.net`), and
-reverse-proxies to Azurite path-style, passing the origin's `Content-Type` and
-`Cache-Control` through unchanged. A client therefore fetches the signed
-manifest and assets from the CDN host, exactly as in production.
+azemu's Front Door content data plane serves the endpoint host
+`{name}.azurefd.net` (multiplexed on the ARM port `:4566`): it resolves the
+endpoint, walks route to origin group to origin to find the Blob origin
+(`{account}.blob.core.windows.net`), and reverse-proxies to Azurite path-style,
+passing the origin's `Content-Type` and `Cache-Control` through unchanged. A
+client therefore fetches the signed manifest and assets from the Front Door
+host, exactly as in production.
 
-Because `{name}.azureedge.net` is not a real DNS name locally, the client
+Because `{name}.azurefd.net` is not a real DNS name locally, the client
 resolves it to `127.0.0.1` (the `fixturegen verify` tool and the `curl --resolve`
 examples below do this) and trusts the azemu cert (covered by the
-`*.azureedge.net` SAN).
+`*.azurefd.net` SAN).
 
 ## Run the full loop (local)
 
@@ -64,7 +68,7 @@ make ota-delivery          # from the repo root
 ```
 
 That brings up azemu + Azurite, provisions the ARM estate, publishes a signed
-update, promotes it to 100%, asserts the CDN read path (multipart Content-Type,
+update, promotes it to 100%, asserts the Front Door read path (multipart Content-Type,
 cache TTLs, and the manifest signature against the exported public key), then
 tears everything down. It needs Docker (for the Azurite data plane) and Go (for
 the `fixturegen` tool).

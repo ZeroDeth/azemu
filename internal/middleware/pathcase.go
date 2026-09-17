@@ -58,6 +58,16 @@ var canonicalLiteralSegments = map[string]string{
 	"microsoft.cdn":   "microsoft.cdn",
 	"profiles":        "profiles",
 	"endpoints":       "endpoints",
+	// Front Door (Standard/Premium) child segments under Microsoft.Cdn/profiles.
+	//
+	// Only the camelCase ones belong here. ARM spells the route and origin
+	// collections `routes` and `origins`, already lowercase, so an entry for
+	// them would rewrite a segment to the value it already has. It would not
+	// be harmless: this map is applied to every segment of every request,
+	// including user-chosen resource names, so listing a common English word
+	// lowercases a resource group literally named "Routes".
+	"afdendpoints":    "afdendpoints",
+	"origingroups":    "origingroups",
 	"microsoft.cache": "microsoft.cache",
 	"redis":           "redis",
 	// Phase 8 resource types

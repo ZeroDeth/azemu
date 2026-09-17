@@ -6,13 +6,17 @@
 terraform {
   required_providers {
     azurerm = {
-      source  = "hashicorp/azurerm"
-      # Pinned below 4.35: from v4.35.0 the provider refuses to create
-      # classic CDN resources after the 2025-10-01 deprecation date
-      # (wall-clock check, no opt-out), failing this scenario before any
-      # request reaches azemu. Migrate the scenario to Front Door
-      # (cdn_frontdoor_*) to lift the pin; tracked in TODO.md.
-      version = ">= 4.0, < 4.35"
+      source = "hashicorp/azurerm"
+      # Lower bound 4.35: the scenario uses cdn_frontdoor_*, and 4.35 is the
+      # release azemu's Front Door emulation was developed against. The
+      # resources exist earlier, so this is "tested against", not "requires".
+      #
+      # Upper bound < 4.36: the same, from the other side. Nothing in this
+      # scenario is known to break above it; the pin keeps the scenario on the
+      # exact provider the emulation was validated with. Note this scenario
+      # uses storage_account_id, so the storage data-plane parser that forced
+      # the < 4.35 pin elsewhere does not apply here.
+      version = ">= 4.35, < 4.36"
     }
   }
 }

@@ -350,3 +350,16 @@ func cdnEndpointResponse(e *store.Resource) map[string]interface{} {
 		"properties": props,
 	}
 }
+
+// patchCDNProfile serves the update path shared by classic CDN and Front Door
+// profiles. azurerm updates a profile through go-azure-sdk's profiles.Update,
+// which is a PATCH.
+func (a *Router) patchCDNProfile(w http.ResponseWriter, r *http.Request) {
+	id := cdnProfileID(
+		chi.URLParam(r, "subscriptionID"),
+		chi.URLParam(r, "resourceGroupName"),
+		chi.URLParam(r, "profileName"),
+	)
+	a.patchResource(w, r, id, "CDN profile", nil,
+		func(res *store.Resource) interface{} { return cdnProfileResponse(res) })
+}

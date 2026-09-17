@@ -502,8 +502,8 @@ func (c config) canonicalizedResource(u *url.URL) (string, error) {
 	return b.String(), nil
 }
 
-// runVerify asserts the CDN read path: it fetches the live manifest, rollout,
-// and an asset through the {endpoint}.azureedge.net host and checks the cache
+// runVerify asserts the Front Door read path: it fetches the live manifest,
+// rollout, and an asset through the {endpoint}.azurefd.net host and checks the cache
 // TTLs, the multipart Content-Type, the rollout body, and the manifest
 // signature against the public key the client would embed. All assertions live
 // here (rather than in fragile shell) so the read path is checked robustly.

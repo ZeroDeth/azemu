@@ -100,3 +100,60 @@ func TestNormalizePath_LowercaseLiteralsAreNoOp(t *testing.T) {
 		t.Errorf("got %q, want %q", got, want)
 	}
 }
+
+// TestNormalizePath_userNamesAreNotVocabulary guards the trade-off this map
+// makes. It is applied to every segment of every request, including names the
+// user chose, so any common English word added to it silently renames their
+// resources. `routes` and `origins` were listed here for Front Door even
+// though ARM already sends them lowercase, which made the entries useless for
+// routing and harmful for anyone with a resource group called "Routes".
+func TestNormalizePath_userNamesAreNotVocabulary(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		path string
+		want string
+	}{
+		{
+			name: "resource group named Routes keeps its case",
+			path: "/subscriptions/s1/resourceGroups/Routes",
+			want: "/subscriptions/s1/resourcegroups/Routes",
+		},
+		{
+			name: "resource group named Origins keeps its case",
+			path: "/subscriptions/s1/resourceGroups/Origins",
+			want: "/subscriptions/s1/resourcegroups/Origins",
+		},
+		{
+			name: "a vault secret named Routes keeps its case",
+			path: "/subscriptions/s1/resourceGroups/rg/providers/Microsoft.KeyVault/vaults/Routes",
+			want: "/subscriptions/s1/resourcegroups/rg/providers/microsoft.keyvault/vaults/Routes",
+		},
+		{
+			// The literals that genuinely need normalising still do.
+			name: "Front Door camelCase literals are still lowercased",
+			path: "/subscriptions/s1/resourceGroups/rg/providers/Microsoft.Cdn/profiles/p1/afdEndpoints/e1/routes/r1",
+			want: "/subscriptions/s1/resourcegroups/rg/providers/microsoft.cdn/profiles/p1/afdendpoints/e1/routes/r1",
+		},
+		{
+			name: "originGroups is still lowercased",
+			path: "/subscriptions/s1/resourceGroups/rg/providers/Microsoft.Cdn/profiles/p1/originGroups/og1/origins/o1",
+			want: "/subscriptions/s1/resourcegroups/rg/providers/microsoft.cdn/profiles/p1/origingroups/og1/origins/o1",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			var got string
+			h := NormalizePath(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+				got = r.URL.Path
+			}))
+			h.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, tt.path, nil))
+			if got != tt.want {
+				t.Errorf("NormalizePath(%q)\n got  %q\n want %q", tt.path, got, tt.want)
+			}
+		})
+	}
+}

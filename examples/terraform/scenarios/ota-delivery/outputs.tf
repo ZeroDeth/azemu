@@ -34,11 +34,11 @@ output "manifest_key_public_pem" {
 }
 
 output "cdn_profile_id" {
-  description = "CDN profile ARM ID"
-  value       = azurerm_cdn_profile.ota.id
+  description = "Front Door profile ARM ID"
+  value       = azurerm_cdn_frontdoor_profile.ota.id
 }
 
 output "cdn_endpoint_fqdn" {
-  description = "CDN endpoint hostname ({name}.azureedge.net); the read-path host the client fetches"
-  value       = azurerm_cdn_endpoint.ota.fqdn
+  description = "Front Door endpoint hostname ({name}.azurefd.net); the read-path host the client fetches"
+  value       = azurerm_cdn_frontdoor_endpoint.ota.host_name
 }
