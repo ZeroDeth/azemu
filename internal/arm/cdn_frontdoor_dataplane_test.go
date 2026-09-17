@@ -235,3 +235,144 @@ func TestIsAFDContentHost(t *testing.T) {
 		}
 	}
 }
+
+// TestServeAFDContent_traversalRejected proves the Front Door proxy inherits
+// the account-prefix check rather than repeating the classic CDN proxy's old
+// bug. Both call proxyBlobObject, so the check lives in blobOriginURL and
+// neither call site can forget it.
+//
+// The encoded variants matter most: a traversal hides inside one segment,
+// since %2e%2e%2f decodes to "../". curl collapses the literal form
+// client-side, so only a test at this level actually exercises them.
+func TestServeAFDContent_traversalRejected(t *testing.T) {
+	var reached []string
+	origin := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		reached = append(reached, r.URL.Path)
+		w.WriteHeader(http.StatusOK)
+		_, _ = io.WriteString(w, "should-not-be-served")
+	}))
+	defer origin.Close()
+
+	a := seedAFDGraph(t, origin.URL, "fdedge", "otasa")
+
+	for _, target := range []string{
+		"http://fdedge.azurefd.net/../otheracct/private/secret.txt",
+		"http://fdedge.azurefd.net/%2e%2e/otheracct/private/secret.txt",
+		"http://fdedge.azurefd.net/ota/%2e%2e%2f%2e%2e%2fotheracct/x",
+		"http://fdedge.azurefd.net/ota/..%2f..%2fotheracct/x",
+	} {
+		rec := httptest.NewRecorder()
+		a.ServeAFDContent(rec, httptest.NewRequest(http.MethodGet, target, nil))
+
+		if got := rec.Result().StatusCode; got != http.StatusBadRequest {
+			t.Errorf("%s: status = %d, want 400", target, got)
+		}
+	}
+
+	if len(reached) != 0 {
+		t.Errorf("origin was reached for %v; the account prefix was escaped", reached)
+	}
+}
+
+// TestPreferredOrigin_ordering exercises the comparator with more than one
+// origin. With a single origin, as every other test here uses, the comparator
+// could be inverted and nothing would notice.
+func TestPreferredOrigin_ordering(t *testing.T) {
+	const sub, rg, profile, group = "sub1", "rg1", "fd1", "og1"
+	ogID := afdOriginGroupID(sub, rg, profile, group)
+
+	newRouter := func(t *testing.T, origins map[string][2]float64) *Router {
+		t.Helper()
+		s := store.NewMemoryStore()
+		a := NewRouter(s, "http://origin", "https://kv", "redis://r:6379")
+		if err := s.Put(ogID, &store.Resource{
+			ID: ogID, Name: group, Type: afdOriginGroupTypeString,
+			Properties: map[string]interface{}{},
+		}); err != nil {
+			t.Fatalf("seed group: %v", err)
+		}
+		for name, pw := range origins {
+			id := afdOriginID(sub, rg, profile, group, name)
+			if err := s.Put(id, &store.Resource{
+				ID: id, Name: name, Type: afdOriginTypeString,
+				Properties: map[string]interface{}{
+					"hostName": name + ".blob.core.windows.net",
+					"priority": pw[0],
+					"weight":   pw[1],
+				},
+			}); err != nil {
+				t.Fatalf("seed origin %s: %v", name, err)
+			}
+		}
+		return a
+	}
+
+	tests := []struct {
+		name    string
+		origins map[string][2]float64 // name -> {priority, weight}
+		want    string
+	}{
+		{
+			name:    "lower priority wins regardless of weight",
+			origins: map[string][2]float64{"low": {1, 10}, "high": {5, 9000}},
+			want:    "low",
+		},
+		{
+			name:    "equal priority falls back to higher weight",
+			origins: map[string][2]float64{"light": {1, 100}, "heavy": {1, 900}},
+			want:    "heavy",
+		},
+		{
+			name:    "priority beats weight even when weight is far larger",
+			origins: map[string][2]float64{"p1": {1, 1}, "p2": {2, 100000}},
+			want:    "p1",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			a := newRouter(t, tt.origins)
+			// Run repeatedly: the store iterates a map, so a comparator that
+			// only happens to work would be caught by a differing pick.
+			for i := 0; i < 20; i++ {
+				got, ok := a.preferredOrigin(ogID)
+				if !ok {
+					t.Fatal("preferredOrigin found nothing")
+				}
+				if got.Name != tt.want {
+					t.Fatalf("preferredOrigin = %q, want %q", got.Name, tt.want)
+				}
+			}
+		})
+	}
+}
+
+// TestFindAFDEndpoint_duplicateNamesAreStable pins the tie-break. Endpoint
+// names resolve globally because the data plane has only the Host header, and
+// the generated host derives from the name alone, so two endpoints sharing a
+// name collide by construction. The pick must at least not vary per request.
+func TestFindAFDEndpoint_duplicateNamesAreStable(t *testing.T) {
+	s := store.NewMemoryStore()
+	a := NewRouter(s, "http://origin", "https://kv", "redis://r:6379")
+
+	for _, profile := range []string{"fdB", "fdA", "fdC"} {
+		id := afdEndpointID("sub1", "rg1", profile, "edge")
+		if err := s.Put(id, &store.Resource{
+			ID: id, Name: "edge", Type: afdEndpointTypeString,
+			Properties: map[string]interface{}{"hostName": "edge.azurefd.net"},
+		}); err != nil {
+			t.Fatalf("seed %s: %v", id, err)
+		}
+	}
+
+	first, ok := a.findAFDEndpoint("edge")
+	if !ok {
+		t.Fatal("findAFDEndpoint found nothing")
+	}
+	for i := 0; i < 30; i++ {
+		got, ok := a.findAFDEndpoint("edge")
+		if !ok || got.ID != first.ID {
+			t.Fatalf("resolution varies between calls: %q then %q", first.ID, got.ID)
+		}
+	}
+}

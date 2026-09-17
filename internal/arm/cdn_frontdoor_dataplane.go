@@ -94,12 +94,25 @@ func (a *Router) ServeAFDContent(w http.ResponseWriter, r *http.Request) {
 // names are unique enough within a local emulator, the same assumption the
 // classic CDN and Key Vault host resolvers make.
 func (a *Router) findAFDEndpoint(name string) (*store.Resource, bool) {
+	// Endpoint names are resolved globally because the data plane only has the
+	// Host header to go on, and afdGeneratedHostName derives that host from the
+	// name alone. Two endpoints with the same name in different profiles
+	// therefore advertise the same host and collide by construction.
+	//
+	// MemoryStore.List iterates a map, so without sorting the winner of such a
+	// collision changes between requests. Sorting by ID at least makes the
+	// choice stable and reproducible, matching routeOriginGroupID just below.
+	var matches []*store.Resource
 	for _, res := range a.store.List("/subscriptions/") {
 		if res.Type == afdEndpointTypeString && strings.EqualFold(res.Name, name) {
-			return res, true
+			matches = append(matches, res)
 		}
 	}
-	return nil, false
+	if len(matches) == 0 {
+		return nil, false
+	}
+	sort.Slice(matches, func(i, j int) bool { return matches[i].ID < matches[j].ID })
+	return matches[0], true
 }
 
 // resolveAFDOriginAccount walks the Front Door resource graph from an endpoint
