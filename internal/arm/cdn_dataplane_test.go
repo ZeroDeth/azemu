@@ -190,3 +190,120 @@ func TestBlobServiceBase(t *testing.T) {
 		}
 	}
 }
+
+// TestSafeBlobPath covers the traversal cases the data-plane mux exposes. The
+// mux keys off the client-controlled Host header and runs before auth, so this
+// path is entirely attacker-chosen.
+func TestSafeBlobPath(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		in   string
+		want string
+		ok   bool
+	}{
+		{"plain blob", "/container/blob.txt", "/container/blob.txt", true},
+		{"nested", "/c/a/b/c.bin", "/c/a/b/c.bin", true},
+		{"root", "/", "/", true},
+		{"empty", "", "/", true},
+		{"no leading slash", "c/b.txt", "/c/b.txt", true},
+
+		// Encoded characters in blob keys must survive untouched.
+		{"encoded space", "/c/my%20blob.txt", "/c/my%20blob.txt", true},
+		{"encoded hash", "/c/a%23b.txt", "/c/a%23b.txt", true},
+		{"encoded slash in key", "/c/a%2Fb.txt", "/c/a%2Fb.txt", true},
+		{"dots inside a name", "/c/..hidden.txt", "/c/..hidden.txt", true},
+		{"name ending in dots", "/c/report..txt", "/c/report..txt", true},
+
+		// Traversal, literal and encoded.
+		{"literal dotdot", "/../other/secret.txt", "", false},
+		{"dotdot mid path", "/c/../../other/secret", "", false},
+		{"encoded dotdot lower", "/%2e%2e/other/x", "", false},
+		{"encoded dotdot upper", "/%2E%2E/other/x", "", false},
+		{"single dot", "/./c/b.txt", "", false},
+		{"trailing dotdot", "/c/..", "", false},
+		{"bad escape", "/c/%zz", "", false},
+
+		// A traversal can hide inside a single segment: %2e%2e%2f decodes to
+		// "../", so comparing escaped segments against ".." misses it. These
+		// all bypassed an earlier version of this function.
+		{"encoded separator", "/c/%2e%2e%2f/x", "", false},
+		{"encoded separator twice", "/c/%2e%2e%2f%2e%2e%2f/x", "", false},
+		{"encoded separator at root", "/%2e%2e%2fotheracct/secret.txt", "", false},
+		{"mixed case encoded separator", "/c/%2e%2e%2F%2e%2e%2Fother/x", "", false},
+		{"literal dots, encoded slash", "/c/..%2f..%2fotheracct/x", "", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got, ok := safeBlobPath(tt.in)
+			if ok != tt.ok {
+				t.Fatalf("safeBlobPath(%q) ok = %v, want %v", tt.in, ok, tt.ok)
+			}
+			if ok && got != tt.want {
+				t.Errorf("safeBlobPath(%q) = %q, want %q", tt.in, got, tt.want)
+			}
+		})
+	}
+}
+
+// TestServeCDNContent_traversalRejected proves the account prefix actually
+// holds end to end. The origin records every path it is asked for, so the test
+// fails if a traversal reaches it even when the response looks like a 404.
+func TestServeCDNContent_traversalRejected(t *testing.T) {
+	var reached []string
+	origin := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		reached = append(reached, r.URL.Path)
+		w.WriteHeader(http.StatusOK)
+		_, _ = io.WriteString(w, "should-not-be-served")
+	}))
+	defer origin.Close()
+
+	a := seedCDNEndpoint(t, origin.URL, "otacdn", "otasa")
+
+	for _, target := range []string{
+		"http://otacdn.azureedge.net/../otheracct/private/secret.txt",
+		"http://otacdn.azureedge.net/%2e%2e/otheracct/private/secret.txt",
+		"http://otacdn.azureedge.net/%2E%2E/otheracct/x",
+		"http://otacdn.azureedge.net/ota/../../otheracct/x",
+	} {
+		rec := httptest.NewRecorder()
+		a.ServeCDNContent(rec, httptest.NewRequest(http.MethodGet, target, nil))
+
+		if got := rec.Result().StatusCode; got != http.StatusBadRequest {
+			t.Errorf("%s: status = %d, want 400", target, got)
+		}
+	}
+
+	if len(reached) != 0 {
+		t.Errorf("origin was reached for %v; the account prefix was escaped", reached)
+	}
+}
+
+// TestServeCDNContent_encodedKeyStillWorks guards the traversal fix against
+// over-reach: a blob key may legitimately contain encoded characters, and %2F
+// means a slash inside the key rather than a path separator.
+func TestServeCDNContent_encodedKeyStillWorks(t *testing.T) {
+	var gotPath string
+	origin := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.EscapedPath()
+		w.WriteHeader(http.StatusOK)
+		_, _ = io.WriteString(w, "ok")
+	}))
+	defer origin.Close()
+
+	a := seedCDNEndpoint(t, origin.URL, "otacdn", "otasa")
+
+	rec := httptest.NewRecorder()
+	a.ServeCDNContent(rec, httptest.NewRequest(http.MethodGet,
+		"http://otacdn.azureedge.net/ota/my%20blob..name%2Fpart.json", nil))
+
+	if got := rec.Result().StatusCode; got != http.StatusOK {
+		t.Fatalf("status = %d, want 200", got)
+	}
+	if want := "/otasa/ota/my%20blob..name%2Fpart.json"; gotPath != want {
+		t.Errorf("origin path = %q, want %q", gotPath, want)
+	}
+}

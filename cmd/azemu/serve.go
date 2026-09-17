@@ -2,6 +2,9 @@ package main
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"crypto/ed25519"
+	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
@@ -12,6 +15,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -47,12 +51,16 @@ func runServe(args []string) error {
 
 	// --- store selection ---
 	var state store.Store
+	// storeKind is reported on /health so the console can tell the user
+	// whether their state survives a restart instead of guessing.
+	storeKind := "in-memory"
 	if cfg.PersistPath != "" {
 		fs, err := store.NewFileStore(cfg.PersistPath)
 		if err != nil {
 			log.Fatal().Err(err).Str("path", cfg.PersistPath).Msg("failed to open persist store")
 		}
 		state = fs
+		storeKind = "file-backed"
 		log.Info().Str("path", cfg.PersistPath).Msg("file-backed store enabled")
 	} else {
 		state = store.NewMemoryStore()
@@ -109,6 +117,12 @@ func runServe(args []string) error {
 
 	unhandled := mw.NewUnhandledTracker()
 	r.NotFound(mw.LogUnhandledRequests(unhandled))
+	// chi's default 405 has an empty body, which azurerm cannot parse: it
+	// reports `error response cannot be parsed: {"" '\x00' '\x00'} error: EOF`
+	// and the real cause is invisible. A verb azemu does not implement for a
+	// path it does know is a parity gap worth surfacing, so it is recorded
+	// alongside the unhandled routes.
+	r.MethodNotAllowed(methodNotAllowed(r, unhandled))
 	r.HandleFunc("/api/unhandled", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(map[string]any{
@@ -208,6 +222,8 @@ func runServe(args []string) error {
 			"status":         "ok",
 			"version":        Version,
 			"uptime_seconds": int(time.Since(startTime).Seconds()),
+			"store":          storeKind,
+			"tls":            tlsKeyAlgorithm(tlsCfg),
 		})
 	})
 	healthSrv := &http.Server{
@@ -390,4 +406,80 @@ func printServeUsage(w *os.File) {
 	fmt.Fprintf(w, "  :4568   Health check (plain HTTP)\n")
 	fmt.Fprintf(w, "  :4569   ADO OIDC / service connections (plain HTTP)\n")
 	fmt.Fprintf(w, "  :4570   Web console (plain HTTP)\n\n")
+}
+
+// tlsKeyAlgorithm describes the serving certificate's public key, for /health.
+//
+// The bundle is not always the one azemu generates: with AZEMU_CERT_PATH set,
+// tryLoadBundle accepts whatever tls.X509KeyPair accepts, which includes RSA
+// and Ed25519. Reporting a fixed "ECDSA P-256" would therefore be a guess, and
+// the point of surfacing this field at all is that the console stops guessing.
+func tlsKeyAlgorithm(cert tls.Certificate) string {
+	leaf := cert.Leaf
+	if leaf == nil {
+		if len(cert.Certificate) == 0 {
+			return "unknown"
+		}
+		parsed, err := x509.ParseCertificate(cert.Certificate[0])
+		if err != nil {
+			return "unknown"
+		}
+		leaf = parsed
+	}
+
+	switch pub := leaf.PublicKey.(type) {
+	case *ecdsa.PublicKey:
+		return "ECDSA " + pub.Curve.Params().Name
+	case *rsa.PublicKey:
+		return fmt.Sprintf("RSA %d", pub.N.BitLen())
+	case ed25519.PublicKey:
+		return "Ed25519"
+	default:
+		return leaf.PublicKeyAlgorithm.String()
+	}
+}
+
+// methodNotAllowed answers a known path reached with an unsupported verb.
+//
+// RFC 9110 15.5.6 requires a 405 to carry an Allow header listing the methods
+// the origin server supports for that target. That is azemu's registered verb
+// set, not Azure's, so it is derived by re-matching the path against the router
+// for each method. chi's Match only routes; it runs no handler.
+func methodNotAllowed(router *chi.Mux, tracker *mw.UnhandledTracker) http.HandlerFunc {
+	candidates := []string{
+		http.MethodGet, http.MethodHead, http.MethodPost, http.MethodPut,
+		http.MethodPatch, http.MethodDelete, http.MethodOptions,
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		// tracker.Record already logs the method and path.
+		tracker.Record(r.Method, r.URL.Path)
+
+		allowed := make([]string, 0, len(candidates))
+		for _, m := range candidates {
+			if m == r.Method {
+				continue
+			}
+			if router.Match(chi.NewRouteContext(), m, r.URL.Path) {
+				allowed = append(allowed, m)
+			}
+		}
+		if len(allowed) > 0 {
+			w.Header().Set("Allow", strings.Join(allowed, ", "))
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		if err := json.NewEncoder(w).Encode(map[string]any{
+			"error": map[string]any{
+				"code": "MethodNotAllowed",
+				"message": fmt.Sprintf(
+					"The HTTP method %q is not implemented by azemu for this resource. See GET /api/unhandled for details.",
+					r.Method,
+				),
+			},
+		}); err != nil {
+			log.Error().Err(err).Str("path", r.URL.Path).Msg("failed to write error response")
+		}
+	}
 }

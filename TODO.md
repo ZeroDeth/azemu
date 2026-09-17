@@ -94,6 +94,20 @@ The bundle file is written with mode 0600 because it contains the private key.
 - No async operation polling (DELETE returns 202 but operation URL is not implemented)
 - No resource-level tags querying
 - `api-version` parameter is accepted but not validated against known versions
+- **PATCH is implemented for three resources, not surveyed across the rest.**
+  Azure's resource providers differ on update: some accept a full PUT, others
+  require PATCH, and azurerm follows whichever the provider uses. Measured by
+  applying a scenario, changing a tag and applying again: resource group,
+  virtual network, network security group, public IP, DNS zone and storage
+  account update fine via PUT; Key Vault, user-assigned identity and Redis
+  needed PATCH and now have it. Not yet measured: classic CDN profile and
+  endpoint, AKS cluster and agent pool, application gateway, load balancer and
+  its children, subnet, NSG rules, DNS record sets, blob containers. A `Full`
+  parity claim for any of those is unverified on the update path.
+- **`terraform test` cannot catch a missing update verb.** `make
+  tf-test-scenarios` applies then destroys, so no scenario has ever applied
+  twice. Until a scenario changes an attribute and re-applies, the next
+  PATCH-only resource reintroduces the 405 silently.
 - **Storage containers are not mirrored into Azurite.** `azurerm_storage_container`
   creates the container in azemu's ARM store only; the Azurite sidecar never
   hears about it, and the `publicAccess` property has no data-plane effect.

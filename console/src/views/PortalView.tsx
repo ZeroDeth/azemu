@@ -6,7 +6,7 @@ import { StatusDot } from '../components/StatusDot';
 import { useResources } from '../hooks/useResources';
 import { getResourceGroup, getCategoryForType } from '../types/resource';
 import type { Resource } from '../types/resource';
-import { Plus, RefreshCw, Download, Trash2, Search } from 'lucide-react';
+import { RefreshCw, Search } from 'lucide-react';
 import styles from './PortalView.module.css';
 
 interface Props {
@@ -14,7 +14,7 @@ interface Props {
 }
 
 export function PortalView({ resourceGroupName = 'rg-platform' }: Props) {
-  const { resourceList } = useResources();
+  const { resourceList, refresh } = useResources();
 
   const rgResources = useMemo(
     () => resourceList.filter((r) => {
@@ -52,21 +52,9 @@ export function PortalView({ resourceGroupName = 'rg-platform' }: Props) {
 
         {/* Command bar */}
         <div className={styles.commandBar}>
-          <button className={styles.primaryBtn} disabled title="Not yet implemented">
-            <Plus size={13} strokeWidth={2} />
-            Create
-          </button>
-          <button className={styles.secondaryBtn}>
+          <button className={styles.secondaryBtn} onClick={refresh}>
             <RefreshCw size={13} strokeWidth={1.6} />
             Refresh
-          </button>
-          <button className={styles.secondaryBtn} disabled title="Not yet implemented">
-            <Download size={13} strokeWidth={1.6} />
-            Export template
-          </button>
-          <button className={styles.deleteBtn} disabled title="Not yet implemented">
-            <Trash2 size={13} strokeWidth={1.6} />
-            Delete
           </button>
         </div>
 

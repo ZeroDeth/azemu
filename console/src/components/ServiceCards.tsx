@@ -5,37 +5,56 @@ interface Service {
   name: string;
   port: string;
   proto: string;
-  reqs: string;
-  status: string;
+  /** True when the request log observes this port, so a count can be shown. */
+  metered: boolean;
 }
 
 const SERVICES: Service[] = [
-  { name: 'ARM management API', port: '4566', proto: 'HTTPS', reqs: '0', status: 'Running' },
-  { name: 'Metadata · OAuth2 · OIDC', port: '4567', proto: 'HTTPS', reqs: '0', status: 'Running' },
-  { name: 'Health probe', port: '4568', proto: 'HTTP', reqs: '0', status: 'Running' },
-  { name: 'Azure DevOps OIDC', port: '4569', proto: 'HTTP', reqs: '0', status: 'Running' },
+  { name: 'ARM management API', port: '4566', proto: 'HTTPS', metered: true },
+  { name: 'Metadata · OAuth2 · OIDC', port: '4567', proto: 'HTTPS', metered: false },
+  { name: 'Health probe', port: '4568', proto: 'HTTP', metered: false },
+  { name: 'Azure DevOps OIDC', port: '4569', proto: 'HTTP', metered: false },
 ];
 
+export type HealthState = 'checking' | 'healthy' | 'unreachable';
+
+const STATE_LABEL: Record<HealthState, string> = {
+  checking: 'Checking',
+  healthy: 'Running',
+  unreachable: 'Unreachable',
+};
+
+const STATE_COLOR: Record<HealthState, string> = {
+  checking: '#8b949e',
+  healthy: '#3fb950',
+  unreachable: '#f85149',
+};
+
 interface Props {
-  healthy: boolean;
+  /** Never assume healthy: until /health answers, the state is unknown. */
+  state: HealthState;
+  /** Requests seen on the ARM port this session, from the live request log. */
+  armRequests: number;
 }
 
-export function ServiceCards({ healthy }: Props) {
+export function ServiceCards({ state, armRequests }: Props) {
   return (
     <div className={styles.grid}>
       {SERVICES.map((s) => (
         <div key={s.port} className={styles.card}>
           <div className={styles.cardTop}>
             <span className={styles.status}>
-              <StatusDot color={healthy ? '#3fb950' : '#f85149'} glow />
-              {healthy ? s.status : 'Unreachable'}
+              <StatusDot color={STATE_COLOR[state]} glow />
+              {STATE_LABEL[state]}
             </span>
             <span className={styles.port}>:{s.port}</span>
           </div>
           <div className={styles.name}>{s.name}</div>
           <div className={styles.meta}>
             <span>{s.proto}</span>
-            <span>{s.reqs} req</span>
+            {/* Only the ARM port is instrumented; the others would be a
+                fabricated number, so they show nothing rather than "0 req". */}
+            <span>{s.metered ? `${armRequests} req` : 'not metered'}</span>
           </div>
         </div>
       ))}

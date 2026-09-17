@@ -16,7 +16,7 @@
 #   - The binary named `azemu` is expected at the build-context root.
 #     goreleaser places it there automatically.
 
-FROM alpine:3.23
+FROM alpine:3.24
 RUN apk add --no-cache ca-certificates wget
 
 # Persistent TLS cert bundle; bind-mounted from host via docker-compose.
