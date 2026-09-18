@@ -17,13 +17,20 @@ cert trust.
 docker compose up -d --build
 ```
 
-This builds the image, starts azemu, and exposes three ports:
+This builds the image, starts azemu, and exposes five ports:
 
 | Port | Protocol | Purpose |
 |---|---|---|
 | 4566 | HTTPS | ARM API |
 | 4567 | HTTPS | Metadata, OAuth2, OIDC |
 | 4568 | HTTP | Health check (no TLS) |
+| 4569 | HTTP | Azure DevOps OIDC and service-endpoint API |
+| 4570 | HTTP | Web console (no TLS) |
+
+Open <http://localhost:4570> for the web console: resource inventory, a
+resource explorer with a detail pane, and a live request log streaming every
+ARM call the provider makes. It is read-only apart from the state export,
+import and reset controls; Terraform still drives the emulator.
 
 The compose file bind-mounts `.azemu/` from the host, so the self-signed cert
 bundle appears at `.azemu/cert-bundle.pem` on the host after first boot.
@@ -36,12 +43,12 @@ cd examples/terraform
 terraform init && terraform apply -auto-approve
 ```
 
-Or use the `scripts/aztf` wrapper which handles the env-var exports and
-starts azemu automatically:
+Or use `azemu tf` which auto-starts the emulator, injects all env vars,
+and execs terraform:
 
 ```bash
-./scripts/aztf -chdir=examples/terraform init
-./scripts/aztf -chdir=examples/terraform apply -auto-approve
+azemu tf -chdir=examples/terraform init
+azemu tf -chdir=examples/terraform apply -auto-approve
 ```
 
 To stop:
@@ -210,10 +217,10 @@ export AZEMU_REDIS_ENDPOINT=redis://localhost:6379
 ```
 
 The deterministic `listKeys` contract is documented in
-[design note 3](https://github.com/zerodeth/azemu/blob/main/docs/design-notes/0003-add-azure-cache-for-redis.md).
-Premium-tier features (clustering, persistence, geo-replication,
-`regenerateKey`) are out of scope for the initial implementation, see the
-[Parity Matrix](../concepts/parity-matrix.md) for the follow-up list.
+[design note 3](design-notes/0003-add-azure-cache-for-redis.md). Premium-tier features
+(clustering, persistence, geo-replication, `regenerateKey`) are out of
+scope for the initial implementation, see
+[PARITY.md](PARITY.md) for the follow-up list.
 
 ## TLS certificate trust
 
@@ -232,11 +239,11 @@ mkdir -p .azemu
 AZEMU_CERT_PATH=$PWD/.azemu/cert-bundle.pem ./bin/azemu
 ```
 
-Trust the bundle once in the system keychain -- subsequent restarts reuse the
+Trust the bundle once in the system keychain — subsequent restarts reuse the
 same cert and keychain prompt does not return:
 
 ```bash
-# macOS -- TouchID/password prompt fires once
+# macOS — TouchID/password prompt fires once
 security add-trusted-cert -r trustRoot -p ssl \
   -k ~/Library/Keychains/login.keychain-db \
   .azemu/cert-bundle.pem
@@ -291,7 +298,7 @@ export ARM_CLIENT_SECRET=azemu-mock-secret
 ```
 
 > Use `127.0.0.1`, not `localhost`. macOS resolves `localhost` to `::1` first
-> and azemu listens on IPv4 -- Terraform will fail with `dial tcp [::1]:4567:
+> and azemu listens on IPv4 — Terraform will fail with `dial tcp [::1]:4567:
 > connection refused` otherwise. Also note that `skip_provider_registration`
 > is deprecated in azurerm v4.x and silently ignored; use the
 > `resource_provider_registrations` form above.
@@ -315,8 +322,8 @@ AZEMU_CERT_PATH=$PWD/.azemu/cert-bundle.pem ./bin/azemu  # persistent cert
 
 Ports:
 
-- `:4566` (HTTPS) -- ARM API, data plane
-- `:4567` (HTTPS) -- metadata service, OAuth2, OIDC
+- `:4566` (HTTPS) — ARM API, data plane
+- `:4567` (HTTPS) — metadata service, OAuth2, OIDC
 
 ## Available make targets
 
@@ -354,6 +361,6 @@ ta && td   # tf-apply && tf-destroy (flox aliases)
 
 ## See also
 
-- [Troubleshooting](../resources/troubleshooting.md)
-- [Parity Matrix](../concepts/parity-matrix.md)
-- [Architecture](../concepts/architecture.md)
+- [docs/TROUBLESHOOTING.md](TROUBLESHOOTING.md)
+- [docs/PARITY.md](PARITY.md)
+- [docs/ARCHITECTURE.md](ARCHITECTURE.md)

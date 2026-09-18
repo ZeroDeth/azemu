@@ -21,6 +21,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Web console is reachable and complete. It shipped in v0.3.0 but
+  `docker compose` never published port 4570, so it could not be opened from
+  the host and appeared in neither `README.md` nor `docs/SETUP.md`. The port is
+  now published (bound to loopback, since the state export, import and reset
+  endpoints carry no authentication) and documented. Eight of its eleven nav
+  destinations previously rendered nothing and were drawn disabled; Networking,
+  Storage, Key Vault, DNS zones and Databases now list live resources filtered
+  by ARM category, and Health, Request log and State store surface data the
+  backend already returned. The emulator pages live under `/emulator/*` because
+  the console proxy reserves `/health` and `/api/*`.
+- `PATCH` support for the resources whose azurerm provider updates by PATCH
+  rather than PUT: `azurerm_key_vault`, `azurerm_user_assigned_identity`,
+  `azurerm_redis_cache`, and all five `azurerm_cdn_frontdoor_*` resources.
+  Azure's providers are not uniform about update, and azemu registered 28 PUT
+  routes and no PATCH routes, so a second `terraform apply` that changed any
+  non-ForceNew attribute failed with 405. Five of the eight shipped scenarios
+  contained at least one affected resource. The shared merge preserves keys
+  absent from the request, replaces `tags` wholesale, answers 404 rather than
+  creating implicitly, and re-runs each resource's own validation so a merge
+  cannot store a value `PUT` would reject.
+- `/health` reports the store kind (`in-memory` or `file-backed`) and the
+  serving certificate's key algorithm, both read from the running server. The
+  console previously hardcoded these and told every user their state was
+  durable while the default configuration keeps it in memory.
 - Azure Front Door (Standard/Premium) support. Four new ARM child types under
   the existing `Microsoft.Cdn/profiles` provider:
   `azurerm_cdn_frontdoor_endpoint` (afdEndpoints),
@@ -43,6 +67,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- An unsupported HTTP method now returns the Azure error envelope with an
+  `Allow` header listing the verbs azemu registers for that route, per RFC 9110
+  15.5.6, and is recorded in `GET /api/unhandled` alongside unhandled routes.
+  chi's default 405 has an empty body, which azurerm reports as
+  `error response cannot be parsed`, so a real parity gap reached the user as
+  unreadable output and nothing was logged.
+- Toolchain versions no longer disagree. `go` had no constraint in the flox
+  manifest, unlike `terraform` beside it, so it followed the channel and left
+  `manifest.lock` dirty in every working tree; it is pinned. CI linted with
+  golangci-lint v2.5.0 while the pre-commit hook ran v2.12.2, so a rule
+  difference between them could only be found by pushing; both are v2.12.2.
+  Terraform scenarios now run as a matrix over 1.6.6, the floor the docs
+  advertise, and 1.15.9, what the flox environment installs.
 - `static-site` and `ota-delivery` scenarios migrated from classic CDN
   (`azurerm_cdn_profile` / `azurerm_cdn_endpoint`) to Front Door
   (`azurerm_cdn_frontdoor_*`), lifting their provider pin from
@@ -77,6 +114,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `azurerm_cdn_frontdoor_*` resources no longer 405 on update, which had made
+  them single-use: they provisioned once and then failed on every subsequent
+  apply, behind a parity claim of Full.
+- `NormalizePath` no longer lowercases `routes` and `origins`. That map applies
+  to every segment of every request, including names the user chose, so a
+  resource group named `Routes` arrived as `routes` and any provider reading its
+  name back saw post-apply drift. ARM already sends both collections lowercase,
+  so the entries rewrote each segment to the value it already had.
+- The root Terraform example applies again. `azurerm_storage_container` used the
+  deprecated `storage_account_name` argument, which resolves through the storage
+  data plane and requires a `core.windows.net` blob endpoint; azemu serves
+  Azurite path-style endpoints, so the provider rejected the account before any
+  request reached azemu. It now uses `storage_account_id`, which resolves
+  through ARM.
+- Front Door endpoint resolution is deterministic. `findAFDEndpoint` returned
+  the first match from a map iteration, so two endpoints sharing a name in
+  different profiles resolved differently between requests.
 - Docs site header title and icons were invisible. `extra.css` painted the
   header `#010409` while Material kept deriving the text colour from
   `--md-primary-bg-color`, which was `#0d1117`: a contrast ratio of about
@@ -94,6 +148,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   at the widths where the drawer button is hidden. As a side effect, the
   per-page sidebar now lists only the current section instead of all 25
   pages.
+
+### Security
+
+- The CDN and Front Door content data planes can no longer be used to read blobs
+  outside the account an endpoint resolves to. Both proxies forwarded the client
+  path to the Azurite sidecar unmodified, and the host mux keys off the
+  client-controlled `Host` header and runs before any auth middleware, so
+  `GET /../otheraccount/private/secret` against an endpoint host escaped the
+  account prefix. The path is now validated against its fully decoded form,
+  because a traversal can hide inside a single segment (`%2e%2e%2f` decodes to
+  `../`), while the escaped path is still what reaches the origin so blob keys
+  containing encoded characters arrive intact.
 
 ## [v0.3.0] - 2026-06-28
 
