@@ -26,18 +26,25 @@ import (
 // "Microsoft.Network" will see that name normalized to its lowercase
 // form. This is a self-inflicted DOS and is documented in TODO.md.
 var canonicalLiteralSegments = map[string]string{
-	"subscriptions":       "subscriptions",
-	"resourcegroups":      "resourcegroups",
-	"providers":           "providers",
-	"microsoft.network":   "microsoft.network",
-	"microsoft.resources": "microsoft.resources",
-	"microsoft.storage":   "microsoft.storage",
-	"microsoft.compute":   "microsoft.compute",
-	"microsoft.keyvault":  "microsoft.keyvault",
-	"microsoft.web":       "microsoft.web",
-	"microsoft.dns":       "microsoft.dns",
-	"virtualnetworks":     "virtualnetworks",
-	"subnets":             "subnets",
+	"subscriptions":           "subscriptions",
+	"resourcegroups":          "resourcegroups",
+	"providers":               "providers",
+	"microsoft.network":       "microsoft.network",
+	"microsoft.resources":     "microsoft.resources",
+	"microsoft.apimanagement": "microsoft.apimanagement",
+	"backends":                "backends",
+	"microsoft.insights":      "microsoft.insights",
+	"currentbillingfeatures":  "currentbillingfeatures",
+	"portalsettings":          "portalsettings",
+	"listsecrets":             "listsecrets",
+	"deletedservices":         "deletedservices",
+	"microsoft.storage":       "microsoft.storage",
+	"microsoft.compute":       "microsoft.compute",
+	"microsoft.keyvault":      "microsoft.keyvault",
+	"microsoft.web":           "microsoft.web",
+	"microsoft.dns":           "microsoft.dns",
+	"virtualnetworks":         "virtualnetworks",
+	"subnets":                 "subnets",
 	// Phase 6 resource types — each maps the camelCase ARM literal to its
 	// lowercase chi route form so real clients (azurerm, az CLI) are matched.
 	"networksecuritygroups": "networksecuritygroups",
@@ -51,13 +58,15 @@ var canonicalLiteralSegments = map[string]string{
 	"dnszones":              "dnszones",
 	"recordsets":            "recordsets",
 	// Phase 7 resource types
-	"storageaccounts": "storageaccounts",
-	"blobservices":    "blobservices",
-	"containers":      "containers",
-	"vaults":          "vaults",
-	"microsoft.cdn":   "microsoft.cdn",
-	"profiles":        "profiles",
-	"endpoints":       "endpoints",
+	"storageaccounts":   "storageaccounts",
+	"accountmigrations": "accountmigrations",
+	"blobservices":      "blobservices",
+	"containers":        "containers",
+	"vaults":            "vaults",
+	"accesspolicies":    "accesspolicies",
+	"microsoft.cdn":     "microsoft.cdn",
+	"profiles":          "profiles",
+	"endpoints":         "endpoints",
 	// Front Door (Standard/Premium) child segments under Microsoft.Cdn/profiles.
 	//
 	// Only the camelCase ones belong here. ARM spells the route and origin
@@ -70,12 +79,14 @@ var canonicalLiteralSegments = map[string]string{
 	"origingroups":    "origingroups",
 	"microsoft.cache": "microsoft.cache",
 	"redis":           "redis",
+	"patchschedules":  "patchschedules",
 	// Phase 8 resource types
 	"microsoft.managedidentity":    "microsoft.managedidentity",
 	"userassignedidentities":       "userassignedidentities",
 	"federatedidentitycredentials": "federatedidentitycredentials",
 	"microsoft.containerservice":   "microsoft.containerservice",
 	"managedclusters":              "managedclusters",
+	"maintenanceconfigurations":    "maintenanceconfigurations",
 	"agentpools":                   "agentpools",
 	// POST .../managedClusters/{name}/listClusterUserCredential and
 	// .../listClusterAdminCredential (azurerm kube_config reads)

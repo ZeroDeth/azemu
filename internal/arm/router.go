@@ -44,6 +44,18 @@ func NewRouter(s store.Store, azuriteEndpoint, kvEndpoint, redisEndpoint string,
 }
 
 func (a *Router) Routes(r chi.Router) {
+	a.apimRoutes(r)
+	a.apimAPIRoutes(r)
+	a.apimAPIPolicyRoutes(r)
+	a.apimAPIOperationRoutes(r)
+	a.apimTagRoutes(r)
+	a.apimAPIOperationTagRoutes(r)
+	a.apimAPIOperationPolicyRoutes(r)
+	a.apimUserRoutes(r)
+	a.apimBackendRoutes(r)
+	a.applicationInsightsRoutes(r)
+	a.apimLoggerRoutes(r)
+	a.apimAPIDiagnosticRoutes(r)
 	// Subscription info
 	r.Get("/", a.listSubscriptions)
 	r.Get("/{subscriptionID}", a.getSubscription)
@@ -176,6 +188,7 @@ func (a *Router) Routes(r chi.Router) {
 	r.Delete("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.storage/storageaccounts/{accountName}", a.deleteStorageAccount)
 	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.storage/storageaccounts", a.listStorageAccountsByRG)
 	r.Get("/{subscriptionID}/providers/microsoft.storage/storageaccounts", a.listStorageAccountsBySub)
+	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.storage/storageaccounts/{accountName}/accountmigrations/default", a.getStorageAccountMigration)
 	// listKeys — called by the azurerm provider to populate account key in state.
 	// Returns Azurite's well-known key so SDK clients can authenticate against
 	// the Azurite sidecar without extra configuration.
@@ -189,6 +202,7 @@ func (a *Router) Routes(r chi.Router) {
 	r.Patch("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.cache/redis/{cacheName}", a.patchRedisCache)
 	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.cache/redis", a.listRedisCachesByRG)
 	r.Get("/{subscriptionID}/providers/microsoft.cache/redis", a.listRedisCachesBySub)
+	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.cache/redis/{cacheName}/patchschedules/default", a.getRedisPatchSchedule)
 	// listKeys returns deterministic dev keys whose primary value matches the
 	// Redis sidecar's --requirepass so SDK clients authenticate against the
 	// real Redis data plane without further configuration.
@@ -200,6 +214,7 @@ func (a *Router) Routes(r chi.Router) {
 	r.Head("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.keyvault/vaults/{vaultName}", a.headKeyVault)
 	r.Delete("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.keyvault/vaults/{vaultName}", a.deleteKeyVault)
 	r.Patch("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.keyvault/vaults/{vaultName}", a.patchKeyVault)
+	r.Put("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.keyvault/vaults/{vaultName}/accesspolicies/{policyOperation}", a.updateKeyVaultAccessPolicy)
 	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.keyvault/vaults", a.listKeyVaultsByRG)
 	r.Get("/{subscriptionID}/providers/microsoft.keyvault/vaults", a.listKeyVaultsBySub)
 	// azurerm v4 checks for soft-deleted Key Vaults before creating a new one.
@@ -302,6 +317,7 @@ func (a *Router) Routes(r chi.Router) {
 	r.Delete("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.containerservice/managedclusters/{clusterName}", a.deleteAKSCluster)
 	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.containerservice/managedclusters", a.listAKSClustersByRG)
 	r.Get("/{subscriptionID}/providers/microsoft.containerservice/managedclusters", a.listAKSClustersBySub)
+	r.Get("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.containerservice/managedclusters/{clusterName}/maintenanceconfigurations/{configurationName}", a.getAKSMaintenanceConfiguration)
 	// Credential listing. azurerm POSTs these on every cluster read to
 	// populate kube_config / kube_admin_config; unhandled they 501.
 	r.Post("/{subscriptionID}/resourcegroups/{resourceGroupName}/providers/microsoft.containerservice/managedclusters/{clusterName}/listclusterusercredential", a.listAKSClusterUserCredential)
@@ -361,9 +377,7 @@ func (a *Router) KeyVaultDataPlaneRoutes(r chi.Router) {
 	r.Delete("/{vaultName}/keys/{keyName}", a.deleteKeyVaultKey)
 	r.Get("/{vaultName}/keys", a.listKeyVaultKeys)
 
-	// azurerm v4 fetches certificate contacts on every plan/refresh to detect
-	// drift. azemu does not manage certificates; return an empty contact list.
-	r.Get("/{vaultName}/certificates/contacts", a.getKeyVaultCertificateContacts)
+	a.keyVaultCertificateRoutes(r, "/{vaultName}")
 }
 
 // KeyVaultNestedItemRoutes mounts root-level /keys and /secrets routes.
@@ -407,9 +421,7 @@ func (a *Router) KeyVaultNestedItemRoutes(r chi.Router) {
 		r.Get("/{secretName}", a.withVaultFor("secretName", "keyvault/secret/current", "SecretNotFound", a.getKeyVaultSecret))
 		r.Delete("/{secretName}", a.withVaultFor("secretName", "keyvault/secret/current", "SecretNotFound", a.deleteKeyVaultSecret))
 	})
-	// azurerm v4 fetches certificate contacts on every plan/refresh; mirror
-	// the path-style stub for the host-based form.
-	r.Get("/certificates/contacts", a.getKeyVaultCertificateContacts)
+	a.keyVaultCertificateRoutes(r, "")
 
 	// Soft-delete purge stubs. With the default features {} block the
 	// provider purges deleted keys/secrets after destroy (DELETE
@@ -538,7 +550,7 @@ var defaultProviders = []string{
 	"Microsoft.Compute", "Microsoft.KeyVault", "Microsoft.Web",
 	"Microsoft.ContainerRegistry", "Microsoft.Dns",
 	"Microsoft.ManagedIdentity", "Microsoft.ContainerService",
-	"Microsoft.Cache",
+	"Microsoft.Cache", "Microsoft.ApiManagement",
 }
 
 func (a *Router) listProviders(w http.ResponseWriter, r *http.Request) {

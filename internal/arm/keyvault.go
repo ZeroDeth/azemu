@@ -239,14 +239,14 @@ func (a *Router) vaultExists(name string) bool {
 	return false
 }
 
-// purgeDeletedKeyVault stubs the purge-deleted-vault endpoint that azurerm v4
-// calls after deleting a Key Vault when purge_protection_enabled = false.
-// azemu does not implement soft-delete; returning 200 OK signals that the purge
-// is complete and allows the provider to continue.
+// The 2026-02-01 DeletedVaults SDK accepts 200/202 for this POST. An empty 200
+// selects its provisioning-state poller, which GETs the now-absent deleted
+// vault and fails with 404. Advertise the operation-status URL explicitly.
+// This only changes vault purge, not the contracts of other DELETE endpoints.
 func (a *Router) purgeDeletedKeyVault(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "vaultName")
 	log.Info().Str("vault_name", name).Msg("key vault purge (no-op)")
-	w.WriteHeader(http.StatusOK)
+	a.acceptAsyncDelete(w, r, chi.URLParam(r, "subscriptionID"))
 }
 
 // getKeyVaultCertificateContacts handles the data-plane GET

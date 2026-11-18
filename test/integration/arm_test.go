@@ -45,12 +45,219 @@ func buildFullServer(t *testing.T) *httptest.Server {
 	r.Use(mw.AzureHeaders)
 	r.Use(mw.RequireAPIVersion)
 	r.Route("/subscriptions", ar.Routes)
+	r.Route("/keyvault", ar.KeyVaultDataPlaneRoutes)
 	srv := httptest.NewServer(r)
 	t.Cleanup(srv.Close)
 	return srv
 }
 
 const apiVersionQ = "?api-version=2023-09-01"
+
+func TestARM_APIMCustomDomainCertificateLifecycle(t *testing.T) {
+	srv := buildFullServer(t)
+	version := "?api-version=2024-05-01"
+	rg := srv.URL + "/subscriptions/sub1/resourceGroups/custom-domain-rg"
+	apim := rg + "/providers/Microsoft.ApiManagement/service/example"
+	mi := rg + "/providers/Microsoft.ManagedIdentity/userAssignedIdentities/mi1"
+	vault := rg + "/providers/Microsoft.KeyVault/vaults/domain-vault"
+	certURL := srv.URL + "/keyvault/domain-vault/certificates/example"
+	for _, step := range []struct{ url, body string }{
+		{rg, `{"location":"uksouth"}`},
+		{mi, `{"location":"uksouth"}`},
+		{vault, `{"location":"uksouth","properties":{"tenantId":"00000000-0000-0000-0000-000000000001"}}`},
+	} {
+		resp := doJSON(t, http.MethodPut, step.url+version, step.body)
+		mustStatus(t, resp, 201)
+		resp.Body.Close()
+	}
+	identity := decode(t, doJSON(t, http.MethodGet, mi+version, ""))
+	identityProps := identity["properties"].(map[string]any)
+	body, _ := json.Marshal(map[string]any{
+		"location": "uksouth", "sku": map[string]any{"name": "Developer", "capacity": 1},
+		"identity": map[string]any{"type": "UserAssigned", "userAssignedIdentities": map[string]any{identity["id"].(string): map[string]any{}}},
+		"properties": map[string]any{"publisherName": "Example", "publisherEmail": "example@example.test",
+			"customProperties": map[string]any{"Microsoft.WindowsAzure.ApiManagement.Gateway.Protocols.Server.Http2": "true"}},
+	})
+	resp := doJSON(t, http.MethodPut, apim+version, string(body))
+	mustStatus(t, resp, 201)
+	resp.Body.Close()
+	body, _ = json.Marshal(map[string]any{"properties": map[string]any{"accessPolicies": []any{
+		map[string]any{"objectId": identityProps["principalId"], "tenantId": identityProps["tenantId"],
+			"permissions": map[string]any{"secrets": []string{"Get", "List"}}},
+	}}})
+	resp = doJSON(t, http.MethodPut, vault+"/accessPolicies/add"+version, string(body))
+	mustStatus(t, resp, 200)
+	resp.Body.Close()
+	resp = doJSON(t, http.MethodPost, certURL+"/create?api-version=7.4", `{"policy":{
+		"issuer":{"name":"Self"},"key_props":{"kty":"RSA","key_size":2048,"exportable":true,"reuse_key":true},
+		"secret_props":{"contentType":"application/x-pkcs12"},
+		"x509_props":{"subject":"CN=api.example.com","validity_months":12,"key_usage":["digitalSignature","keyEncipherment"],
+		"sans":{"dns_names":["api.example.com","portal.example.com"]}}}}`)
+	mustStatus(t, resp, 202)
+	resp.Body.Close()
+	cert := decode(t, doJSON(t, http.MethodGet, certURL+"?api-version=7.4", ""))
+	der, err := base64.StdEncoding.DecodeString(cert["cer"].(string))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(der) == 0 || cert["sid"] == nil {
+		t.Fatal("certificate was not generated with a backing secret")
+	}
+	configs := []any{}
+	for _, endpoint := range []struct{ kind, host string }{{"Proxy", "api.example.com"}, {"DeveloperPortal", "portal.example.com"}} {
+		configs = append(configs, map[string]any{"type": endpoint.kind, "hostName": endpoint.host,
+			"keyVaultId": cert["sid"], "identityClientId": identityProps["clientId"]})
+	}
+	body, _ = json.Marshal(map[string]any{"properties": map[string]any{"hostnameConfigurations": configs}})
+	resp = doJSON(t, http.MethodPatch, apim+version, string(body))
+	mustStatus(t, resp, 200)
+	configured := decode(t, resp)
+	hosts := configured["properties"].(map[string]any)["hostnameConfigurations"].([]any)
+	if len(hosts) != 3 || hosts[0].(map[string]any)["certificateSource"] != "KeyVault" {
+		t.Fatal("hostnames did not round-trip")
+	}
+	configured["properties"].(map[string]any)["hostnameConfigurations"] = nil
+	body, _ = json.Marshal(configured)
+	resp = doJSON(t, http.MethodPut, apim+version, string(body))
+	mustStatus(t, resp, 200)
+	cleared := decode(t, resp)
+	props := cleared["properties"].(map[string]any)
+	if len(props["hostnameConfigurations"].([]any)) != 1 || props["publisherName"] != "Example" ||
+		cleared["identity"].(map[string]any)["type"] != "UserAssigned" {
+		t.Fatal("clearing domains damaged the shared APIM resource")
+	}
+	resp = doJSON(t, http.MethodDelete, certURL+"?api-version=7.4", "")
+	mustStatus(t, resp, 200)
+	resp.Body.Close()
+	resp = doJSON(t, http.MethodGet, certURL+"?api-version=7.4", "")
+	mustStatus(t, resp, 404)
+	resp.Body.Close()
+	resp = doJSON(t, http.MethodDelete, rg+version, "")
+	mustStatus(t, resp, 202)
+	resp.Body.Close()
+	resp = doJSON(t, http.MethodGet, apim+version, "")
+	mustStatus(t, resp, 404)
+	resp.Body.Close()
+}
+
+func TestARM_APIMAPIPolicyLifecycle(t *testing.T) {
+	srv := buildFullServer(t)
+	rg := srv.URL + "/subscriptions/sub1/resourceGroups/api-policy-rg"
+	service := rg + "/providers/Microsoft.ApiManagement/service/apim-test"
+	api := service + "/apis/example;rev=1"
+	alias := service + "/apis/example"
+	version := "?api-version=2022-08-01"
+	policy := alias + "/policies/policy" + version
+	document := "<policies>\n  <inbound>\n    <find-and-replace from=\"xyz\" to=\"abc\" />\n  </inbound>\n</policies>\n"
+	for _, step := range []struct {
+		url, body string
+	}{
+		{rg, `{"location":"australiaeast"}`},
+		{service, `{"location":"australiaeast","sku":{"name":"Developer","capacity":1},"properties":{"publisherName":"Example","publisherEmail":"example@example.test"}}`},
+		{api, `{"properties":{"path":"example","displayName":"Example","protocols":["https"]}}`},
+	} {
+		resp := doJSON(t, http.MethodPut, step.url+version, step.body)
+		mustStatus(t, resp, 201)
+		resp.Body.Close()
+	}
+	for i, value := range []string{document, strings.ReplaceAll(document, `to="abc"`, `to="updated"`)} {
+		body, err := json.Marshal(map[string]any{"properties": map[string]any{"format": "rawxml", "value": value}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		resp := doJSON(t, http.MethodPut, policy, string(body))
+		status := 201
+		if i == 1 {
+			status = 200
+		}
+		mustStatus(t, resp, status)
+		resp.Body.Close()
+		for _, path := range []string{alias, api} {
+			resp = doJSON(t, http.MethodGet, path+"/policies/policy"+version+"&format=xml", "")
+			mustStatus(t, resp, 200)
+			if decode(t, resp)["properties"].(map[string]any)["value"] != value {
+				t.Fatal("API policy XML did not round-trip")
+			}
+		}
+	}
+	resp := doJSON(t, http.MethodGet, service+"/policies/policy"+version, "")
+	mustStatus(t, resp, 404)
+	resp.Body.Close()
+	resp = doJSON(t, http.MethodDelete, policy, "")
+	mustStatus(t, resp, 204)
+	resp.Body.Close()
+	resp = doJSON(t, http.MethodGet, policy+"&format=xml", "")
+	mustStatus(t, resp, 404)
+	resp.Body.Close()
+}
+
+func TestARM_APIMDiagnosticsLifecycle(t *testing.T) {
+	srv := buildFullServer(t)
+	rg := srv.URL + "/subscriptions/sub1/resourceGroups/diagnostics-rg"
+	service := rg + "/providers/Microsoft.ApiManagement/service/apim-test"
+	component := rg + "/providers/Microsoft.Insights/components/ai1"
+	logger := service + "/loggers/logger1"
+	api := service + "/apis/example;rev=1"
+	diagnostic := service + "/apis/example/diagnostics/applicationinsights"
+	for _, step := range []struct {
+		url, body, version string
+		status             int
+	}{
+		{rg, `{"location":"uksouth"}`, apiVersionQ, 201},
+		{service, `{"location":"uksouth","sku":{"name":"Developer","capacity":1},"properties":{"publisherName":"Example","publisherEmail":"example@example.test"}}`, "?api-version=2024-05-01", 201},
+		{component, `{"location":"UK South","kind":"web","properties":{"Application_Type":"web"}}`, "?api-version=2020-02-02", 200},
+		{api, `{"properties":{"path":"example","displayName":"Example","protocols":["https"]}}`, "?api-version=2022-08-01", 201},
+	} {
+		resp := doJSON(t, http.MethodPut, step.url+step.version, step.body)
+		mustStatus(t, resp, step.status)
+		resp.Body.Close()
+	}
+	resp := doJSON(t, http.MethodGet, component+"?api-version=2020-02-02", "")
+	mustStatus(t, resp, 200)
+	key := decode(t, resp)["properties"].(map[string]any)["InstrumentationKey"].(string)
+	loggerBody := `{"properties":{"loggerType":"applicationInsights","credentials":{"instrumentationKey":"` + key + `"},"isBuffered":true}}`
+	resp = doJSON(t, http.MethodPut, logger+"?api-version=2022-08-01", loggerBody)
+	mustStatus(t, resp, 201)
+	resp.Body.Close()
+	loggerID := strings.TrimPrefix(logger, srv.URL)
+	diagnosticBody := `{"properties":{"loggerId":"` + loggerID + `","sampling":{"samplingType":"fixed","percentage":5},"alwaysLog":"allErrors","logClientIp":true,"httpCorrelationProtocol":"W3C","verbosity":"verbose","frontend":{"request":{"body":{"bytes":32},"headers":["content-type"]}}}}`
+	resp = doJSON(t, http.MethodPut, diagnostic+"?api-version=2022-08-01", diagnosticBody)
+	mustStatus(t, resp, 201)
+	resp.Body.Close()
+	for _, step := range []struct {
+		method, url, body string
+	}{
+		{http.MethodPut, component + "?api-version=2020-02-02", `{"location":"uksouth","kind":"web","tags":{"updated":"yes"},"properties":{"Application_Type":"web","SamplingPercentage":25}}`},
+		{http.MethodPatch, logger + "?api-version=2022-08-01", `{"properties":{"isBuffered":false,"description":"updated"}}`},
+		{http.MethodPut, diagnostic + "?api-version=2022-08-01", strings.Replace(diagnosticBody, `"percentage":5`, `"percentage":10`, 1)},
+		{http.MethodPut, component + "/currentBillingFeatures?api-version=2015-05-01", `{"CurrentBillingFeatures":["Basic"],"DataVolumeCap":{"Cap":42,"StopSendNotificationWhenHitCap":true}}`},
+	} {
+		resp = doJSON(t, step.method, step.url, step.body)
+		mustStatus(t, resp, 200)
+		resp.Body.Close()
+	}
+	resp = doJSON(t, http.MethodGet, component+"?api-version=2020-02-02", "")
+	result := decode(t, resp)
+	if result["location"] != "uksouth" || result["properties"].(map[string]any)["SamplingPercentage"] != float64(25) {
+		t.Fatal("Application Insights update lost")
+	}
+	resp = doJSON(t, http.MethodGet, logger+"?api-version=2022-08-01", "")
+	if decode(t, resp)["properties"].(map[string]any)["isBuffered"] != false {
+		t.Fatal("logger update lost")
+	}
+	resp = doJSON(t, http.MethodGet, diagnostic+"?api-version=2022-08-01", "")
+	if decode(t, resp)["properties"].(map[string]any)["sampling"].(map[string]any)["percentage"] != float64(10) {
+		t.Fatal("diagnostic update lost")
+	}
+	for _, url := range []string{diagnostic + "?api-version=2022-08-01", logger + "?api-version=2022-08-01", component + "?api-version=2020-02-02"} {
+		resp = doJSON(t, http.MethodDelete, url, "")
+		mustStatus(t, resp, 204)
+		resp.Body.Close()
+		resp = doJSON(t, http.MethodGet, url, "")
+		mustStatus(t, resp, 404)
+		resp.Body.Close()
+	}
+}
 
 func doJSON(t *testing.T, method, url, body string) *http.Response {
 	t.Helper()
@@ -91,6 +298,308 @@ func decode(t *testing.T, resp *http.Response) map[string]interface{} {
 		t.Fatalf("decode json: %v", err)
 	}
 	return m
+}
+
+func TestARM_APIMBackendLifecycle(t *testing.T) {
+	srv := buildFullServer(t)
+	rg := srv.URL + "/subscriptions/sub1/resourceGroups/apim-backend-rg"
+	service := rg + "/providers/Microsoft.ApiManagement/service/apim-test"
+	resp := doJSON(t, http.MethodPut, rg+apiVersionQ, `{"location":"uksouth"}`)
+	mustStatus(t, resp, http.StatusCreated)
+	resp.Body.Close()
+	resp = doJSON(t, http.MethodPut, service+"?api-version=2024-05-01",
+		`{"location":"uksouth","sku":{"name":"Developer","capacity":1},"properties":{"publisherName":"Example","publisherEmail":"example@example.test"}}`)
+	mustStatus(t, resp, http.StatusCreated)
+	resp.Body.Close()
+	backend := service + "/backends/example?api-version=2024-05-01"
+	resp = doJSON(t, http.MethodPut, backend, `{"properties":{"protocol":"http","url":"https://backend"}}`)
+	mustStatus(t, resp, http.StatusCreated)
+	resp.Body.Close()
+	resp = doJSON(t, http.MethodPatch, backend, `{"properties":{"url":"https://changed.example.test"}}`)
+	mustStatus(t, resp, http.StatusOK)
+	resp.Body.Close()
+	resp = doJSON(t, http.MethodGet, backend, "")
+	mustStatus(t, resp, http.StatusOK)
+	if decode(t, resp)["properties"].(map[string]any)["url"] != "https://changed.example.test" {
+		t.Fatal("backend update was not persisted")
+	}
+	resp = doJSON(t, http.MethodDelete, backend, "")
+	mustStatus(t, resp, http.StatusNoContent)
+	resp.Body.Close()
+	resp = doJSON(t, http.MethodGet, backend, "")
+	mustStatus(t, resp, http.StatusNotFound)
+	resp.Body.Close()
+}
+
+func TestARM_APIMBasicLifecycle(t *testing.T) {
+	srv := buildFullServer(t)
+	rg := srv.URL + "/subscriptions/sub1/resourceGroups/apim-rg"
+	service := rg + "/providers/Microsoft.ApiManagement/service/apim-test"
+	resp := doJSON(t, http.MethodPut, rg+apiVersionQ, `{"location":"uksouth"}`)
+	mustStatus(t, resp, http.StatusCreated)
+	resp.Body.Close()
+	resp = doJSON(t, http.MethodPut, service+"?api-version=2024-05-01",
+		`{"location":"uksouth","sku":{"name":"Developer","capacity":1},"properties":{"publisherName":"Example","publisherEmail":"example@example.test"}}`)
+	mustStatus(t, resp, http.StatusCreated)
+	resp.Body.Close()
+	resp = doJSON(t, http.MethodPatch, service+"?api-version=2024-05-01", `{"tags":{"updated":"yes"}}`)
+	mustStatus(t, resp, http.StatusOK)
+	resp.Body.Close()
+	resp = doJSON(t, http.MethodGet, service+"?api-version=2024-05-01", "")
+	mustStatus(t, resp, http.StatusOK)
+	if decode(t, resp)["tags"].(map[string]any)["updated"] != "yes" {
+		t.Fatal("API Management update was not persisted")
+	}
+	resp = doJSON(t, http.MethodDelete, service+"?api-version=2024-05-01", "")
+	mustStatus(t, resp, http.StatusAccepted)
+	pollURL := resp.Header.Get("Azure-AsyncOperation")
+	resp.Body.Close()
+	resp = doJSON(t, http.MethodGet, pollURL, "")
+	mustStatus(t, resp, http.StatusOK)
+	if decode(t, resp)["status"] != "Succeeded" {
+		t.Fatal("API Management delete polling did not complete")
+	}
+	deleted := srv.URL + "/subscriptions/sub1/providers/Microsoft.ApiManagement/locations/uksouth/deletedservices/apim-test?api-version=2022-08-01"
+	resp = doJSON(t, http.MethodGet, deleted, "")
+	mustStatus(t, resp, http.StatusOK)
+	resp.Body.Close()
+	resp = doJSON(t, http.MethodDelete, deleted, "")
+	mustStatus(t, resp, http.StatusNoContent)
+	resp.Body.Close()
+	resp = doJSON(t, http.MethodGet, deleted, "")
+	mustStatus(t, resp, http.StatusNotFound)
+	resp.Body.Close()
+}
+
+func TestARM_APIMUserLifecycle(t *testing.T) {
+	srv := buildFullServer(t)
+	rg := srv.URL + "/subscriptions/sub1/resourceGroups/apim-user-rg"
+	service := rg + "/providers/Microsoft.ApiManagement/service/apim-test"
+	user := service + "/users/5931a75ae4bbd512288c680b"
+	version := "?api-version=2022-08-01"
+	for _, resource := range []struct{ url, body string }{
+		{rg, `{"location":"uksouth"}`},
+		{service, `{"location":"uksouth","sku":{"name":"Developer","capacity":1},"properties":{"publisherName":"Example","publisherEmail":"example@example.test"}}`},
+		{user, `{"properties":{"firstName":"Example","lastName":"User","email":"tom+tfdev@example.test","state":"active"}}`},
+	} {
+		resp := doJSON(t, http.MethodPut, resource.url+version, resource.body)
+		mustStatus(t, resp, 201)
+		resp.Body.Close()
+	}
+	resp := doJSON(t, http.MethodGet, user+version, "")
+	mustStatus(t, resp, 200)
+	props := decode(t, resp)["properties"].(map[string]any)
+	registered := props["registrationDate"]
+	if props["firstName"] != "Example" || props["state"] != "active" || props["password"] != nil {
+		t.Fatal("invalid user response")
+	}
+	resp = doJSON(t, http.MethodPut, user+version, `{"properties":{"firstName":"Updated","lastName":"User","email":"updated@example.test","state":"blocked","note":"managed locally"}}`)
+	mustStatus(t, resp, 200)
+	resp.Body.Close()
+	resp = doJSON(t, http.MethodGet, user+version, "")
+	props = decode(t, resp)["properties"].(map[string]any)
+	if props["firstName"] != "Updated" || props["state"] != "blocked" || props["note"] != "managed locally" || props["registrationDate"] != registered {
+		t.Fatal("user update did not round-trip")
+	}
+	resp = doJSON(t, http.MethodDelete, user+version+"&deleteSubscriptions=true&notify=false&appType=developerPortal", "")
+	mustStatus(t, resp, 204)
+	resp.Body.Close()
+	resp = doJSON(t, http.MethodGet, user+version, "")
+	mustStatus(t, resp, 404)
+	resp.Body.Close()
+}
+
+func TestARM_APIMAPIOperationPolicyLifecycle(t *testing.T) {
+	srv := buildFullServer(t)
+	rg := srv.URL + "/subscriptions/sub1/resourceGroups/apim-operation-policy-rg"
+	service := rg + "/providers/Microsoft.ApiManagement/service/apim-test"
+	api := service + "/apis/Example;rev=1"
+	operation := service + "/apis/Example/operations/sample"
+	policy := operation + "/policies/policy"
+	version := "?api-version=2022-08-01"
+	for _, resource := range []struct{ url, body string }{
+		{rg, `{"location":"uksouth"}`},
+		{service, `{"location":"uksouth","sku":{"name":"Developer","capacity":1},"properties":{"publisherName":"Example","publisherEmail":"example@example.test"}}`},
+		{api, `{"properties":{"path":"example","displayName":"Example API","protocols":["https"]}}`},
+		{operation, `{"properties":{"displayName":"Sample","method":"GET","urlTemplate":"/wishlists"}}`},
+		{policy, `{"properties":{"format":"rawxml","value":"<policies>\n  <inbound><find-and-replace from=\"xyz\" to=\"abc\" /></inbound>\n</policies>\n"}}`},
+	} {
+		resp := doJSON(t, http.MethodPut, resource.url+version, resource.body)
+		mustStatus(t, resp, 201)
+		resp.Body.Close()
+	}
+	resp := doJSON(t, http.MethodGet, api+"/operations/sample/policies/policy"+version+"&format=xml", "")
+	mustStatus(t, resp, 200)
+	if decode(t, resp)["properties"].(map[string]any)["value"] != "<policies>\n  <inbound><find-and-replace from=\"xyz\" to=\"abc\" /></inbound>\n</policies>\n" {
+		t.Fatal("policy XML did not round-trip")
+	}
+	resp = doJSON(t, http.MethodPut, policy+version, `{"properties":{"format":"xml","value":"<policies><inbound><base/></inbound></policies>"}}`)
+	mustStatus(t, resp, 200)
+	resp.Body.Close()
+	resp = doJSON(t, http.MethodDelete, policy+version, "")
+	mustStatus(t, resp, 204)
+	resp.Body.Close()
+	resp = doJSON(t, http.MethodGet, policy+version, "")
+	mustStatus(t, resp, 404)
+	resp.Body.Close()
+}
+
+func TestARM_APIMAPIOperationTagLifecycle(t *testing.T) {
+	srv := buildFullServer(t)
+	rg := srv.URL + "/subscriptions/sub1/resourceGroups/apim-tag-rg"
+	service := rg + "/providers/Microsoft.ApiManagement/service/apim-test"
+	api := service + "/apis/Example;rev=1"
+	operation := service + "/apis/Example/operations/sample"
+	tag := service + "/tags/example-Tag"
+	assignment := operation + "/tags/example-Tag"
+	version := "?api-version=2022-08-01"
+	for _, resource := range []struct{ url, body string }{
+		{rg, `{"location":"uksouth"}`},
+		{service, `{"location":"uksouth","sku":{"name":"Developer","capacity":1},"properties":{"publisherName":"Example","publisherEmail":"example@example.test"}}`},
+		{api, `{"properties":{"path":"example","displayName":"Example API","protocols":["https"]}}`},
+		{operation, `{"properties":{"displayName":"Sample","method":"GET","urlTemplate":"/wishlists"}}`},
+		{tag, `{"properties":{"displayName":"display-name"}}`}, {assignment, ""},
+	} {
+		resp := doJSON(t, http.MethodPut, resource.url+version, resource.body)
+		mustStatus(t, resp, 201)
+		resp.Body.Close()
+	}
+	resp := doJSON(t, http.MethodPut, tag+version, `{"properties":{"displayName":"renamed"}}`)
+	mustStatus(t, resp, 200)
+	resp.Body.Close()
+	resp = doJSON(t, http.MethodGet, api+"/operations/sample/tags/example-Tag"+version, "")
+	mustStatus(t, resp, 200)
+	body := decode(t, resp)
+	if body["type"] != "Microsoft.ApiManagement/service/tags" || body["id"] != strings.TrimPrefix(tag, srv.URL) ||
+		body["properties"].(map[string]any)["displayName"] != "renamed" {
+		t.Fatal("assignment did not resolve updated service tag")
+	}
+	resp = doJSON(t, http.MethodDelete, assignment+version, "")
+	mustStatus(t, resp, 204)
+	resp.Body.Close()
+	resp = doJSON(t, http.MethodGet, assignment+version, "")
+	mustStatus(t, resp, 404)
+	resp.Body.Close()
+	resp = doJSON(t, http.MethodGet, tag+version, "")
+	mustStatus(t, resp, 200)
+	resp.Body.Close()
+}
+
+func TestARM_APIMAPIOperationLifecycle(t *testing.T) {
+	srv := buildFullServer(t)
+	rg := srv.URL + "/subscriptions/sub1/resourceGroups/apim-operation-rg"
+	service := rg + "/providers/Microsoft.ApiManagement/service/apim-test"
+	api := service + "/apis/Example;rev=1"
+	version := "?api-version=2022-08-01"
+	operation := service + "/apis/Example/operations/sample"
+	for _, resource := range []struct{ url, body string }{
+		{rg, `{"location":"uksouth"}`},
+		{service, `{"location":"uksouth","sku":{"name":"Developer","capacity":1},"properties":{"publisherName":"Example","publisherEmail":"example@example.test"}}`},
+		{api, `{"properties":{"path":"example","displayName":"Example API","protocols":["https"]}}`},
+		{operation, `{"properties":{"displayName":"Get WishLists","method":"GET","urlTemplate":"/wishlists","request":{"headers":[{"name":"test","required":false,"type":"string","values":["true","false"],"examples":{"name":{}}}]}}}`},
+	} {
+		resp := doJSON(t, http.MethodPut, resource.url+version, resource.body)
+		mustStatus(t, resp, http.StatusCreated)
+		resp.Body.Close()
+	}
+	resp := doJSON(t, http.MethodGet, api+"/operations/sample"+version, "")
+	mustStatus(t, resp, http.StatusOK)
+	props := decode(t, resp)["properties"].(map[string]any)
+	header := props["request"].(map[string]any)["headers"].([]any)[0].(map[string]any)
+	if header["required"] != false || len(header["values"].([]any)) != 2 ||
+		header["examples"].(map[string]any)["name"] == nil {
+		t.Fatalf("nested operation contract was not preserved: %v", props)
+	}
+	resp = doJSON(t, http.MethodPut, operation+version, `{"properties":{"displayName":"Updated","method":"POST","urlTemplate":"/wishlists","responses":[{"statusCode":201,"description":"Created"}]}}`)
+	mustStatus(t, resp, http.StatusOK)
+	resp.Body.Close()
+	resp = doJSON(t, http.MethodGet, operation+version, "")
+	mustStatus(t, resp, http.StatusOK)
+	props = decode(t, resp)["properties"].(map[string]any)
+	if props["method"] != "POST" || props["request"] != nil ||
+		props["responses"].([]any)[0].(map[string]any)["statusCode"] != float64(201) {
+		t.Fatalf("operation update was not persisted: %v", props)
+	}
+	resp = doJSON(t, http.MethodDelete, operation+version, "")
+	mustStatus(t, resp, http.StatusNoContent)
+	resp.Body.Close()
+	resp = doJSON(t, http.MethodGet, operation+version, "")
+	mustStatus(t, resp, http.StatusNotFound)
+	resp.Body.Close()
+}
+
+func TestARM_APIMAPILifecycle(t *testing.T) {
+	srv := buildFullServer(t)
+	rg := srv.URL + "/subscriptions/sub1/resourceGroups/apim-api-rg"
+	service := rg + "/providers/Microsoft.ApiManagement/service/apim-test"
+	api := service + "/apis/Example;rev=1?api-version=2022-08-01"
+	for _, resource := range []struct{ url, body string }{
+		{rg + apiVersionQ, `{"location":"uksouth"}`},
+		{service + "?api-version=2024-05-01", `{"location":"uksouth","sku":{"name":"Developer","capacity":1},"properties":{"publisherName":"Example","publisherEmail":"example@example.test"}}`},
+		{api, `{"properties":{"path":"example","displayName":"Example API","protocols":["https"]}}`},
+	} {
+		resp := doJSON(t, http.MethodPut, resource.url, resource.body)
+		mustStatus(t, resp, http.StatusCreated)
+		resp.Body.Close()
+	}
+	resp := doJSON(t, http.MethodPut, api, `{"properties":{"path":"updated","displayName":"Updated API","protocols":["https"],"subscriptionRequired":false}}`)
+	mustStatus(t, resp, http.StatusOK)
+	resp.Body.Close()
+	resp = doJSON(t, http.MethodGet, api, "")
+	mustStatus(t, resp, http.StatusOK)
+	props := decode(t, resp)["properties"].(map[string]any)
+	if props["path"] != "updated" || props["subscriptionRequired"] != false || props["apiRevision"] != "1" {
+		t.Fatalf("API update/defaults not persisted: %v", props)
+	}
+	// AzureRM 5.14 imports first, PUTs its explicit create settings, then
+	// sends empty strings when a later apply removes imported string
+	// metadata. Removed contact/license blocks serialize as omitted fields.
+	swagger := `{"swagger":"2.0","info":{"title":"Imported API","version":"1","description":"Imported description","termsOfService":"https://example.test/terms","contact":{"email":"api@example.test"},"license":{"name":"Imported license"}},"host":"api.example.test","basePath":"/v2","schemes":["https"],"paths":{}}`
+	importBody, err := json.Marshal(map[string]any{"properties": map[string]any{
+		"path": "example", "format": "swagger-json", "value": swagger,
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp = doJSON(t, http.MethodPut, api, string(importBody))
+	mustStatus(t, resp, http.StatusOK)
+	props = decode(t, resp)["properties"].(map[string]any)
+	if props["contact"].(map[string]any)["email"] != "api@example.test" ||
+		props["license"].(map[string]any)["name"] != "Imported license" {
+		t.Fatalf("import discarded valid metadata: %v", props)
+	}
+	for _, step := range []struct {
+		body, description, terms string
+	}{
+		{`{"properties":{"path":"example","displayName":"Explicit API","protocols":["https"]}}`, "Imported description", "https://example.test/terms"},
+		{`{"properties":{"path":"example","displayName":"Explicit API","protocols":["https"],"description":"","termsOfServiceUrl":""}}`, "", ""},
+		{`{"properties":{"path":"example","displayName":"Explicit API","protocols":["https"]}}`, "", ""},
+	} {
+		resp = doJSON(t, http.MethodPut, api, step.body)
+		mustStatus(t, resp, http.StatusOK)
+		resp.Body.Close()
+		resp = doJSON(t, http.MethodGet, api, "")
+		mustStatus(t, resp, http.StatusOK)
+		props = decode(t, resp)["properties"].(map[string]any)
+		if props["displayName"] != "Explicit API" || props["description"] != step.description ||
+			props["termsOfServiceUrl"] != step.terms || props["serviceUrl"] != "https://api.example.test/v2" {
+			t.Fatalf("explicit PUT/import precedence is incorrect: %v", props)
+		}
+		for _, key := range []string{"contact", "license"} {
+			if _, exists := props[key]; exists {
+				t.Fatalf("omitted %s retained by non-import PUT", key)
+			}
+		}
+	}
+	resp = doJSON(t, http.MethodDelete, api, "")
+	mustStatus(t, resp, http.StatusNoContent)
+	resp.Body.Close()
+	resp = doJSON(t, http.MethodGet, api, "")
+	mustStatus(t, resp, http.StatusNotFound)
+	resp.Body.Close()
+	resp = doJSON(t, http.MethodDelete, service+"?api-version=2024-05-01", "")
+	mustStatus(t, resp, http.StatusAccepted)
+	resp.Body.Close()
 }
 
 // TestARM_VNetSubnetFullFlow exercises the canonical Terraform lifecycle:
@@ -644,6 +1153,53 @@ func TestARM_DNSZoneFullFlow(t *testing.T) {
 // TestARM_StorageAccountFullFlow exercises the storage account and container
 // lifecycle: create account, verify SKU and endpoints, create containers, list
 // them, delete a container, delete the account and confirm cascade.
+func TestARM_CompatibilityReads(t *testing.T) {
+	for _, tc := range []struct {
+		name, parent, child, version, body string
+		putStatus, getStatus               int
+	}{
+		{"storage", "Microsoft.Storage/storageAccounts/testacct", "accountMigrations/default", "2025-08-01",
+			`{"location":"uksouth","sku":{"name":"Standard_LRS"},"kind":"StorageV2"}`, http.StatusOK, http.StatusOK},
+		{"aks", "Microsoft.ContainerService/managedClusters/testaks", "maintenanceConfigurations/aksManagedAutoUpgradeSchedule", "2026-07-01",
+			`{"location":"uksouth"}`, http.StatusCreated, http.StatusNotFound},
+		{"redis", "Microsoft.Cache/Redis/testredis", "patchSchedules/default", "2024-11-01",
+			`{"location":"uksouth","properties":{"sku":{"name":"Standard","family":"C","capacity":1}}}`, http.StatusCreated, http.StatusNotFound},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			srv := buildFullServer(t)
+			parent := srv.URL + "/subscriptions/sub1/resourceGroups/rg1/providers/" + tc.parent
+			child := parent + "/" + tc.child + "?api-version=" + tc.version
+
+			checkError := func(code string) {
+				t.Helper()
+				resp := doJSON(t, http.MethodGet, child, "")
+				mustStatus(t, resp, http.StatusNotFound)
+				body := decode(t, resp)
+				apiError, _ := body["error"].(map[string]any)
+				if apiError["code"] != code {
+					t.Fatalf("error = %v, want %s", apiError, code)
+				}
+			}
+			checkError("ParentResourceNotFound")
+
+			resp := doJSON(t, http.MethodPut, parent+apiVersionQ, tc.body)
+			mustStatus(t, resp, tc.putStatus)
+			resp.Body.Close()
+			if tc.getStatus == http.StatusNotFound {
+				checkError("ResourceNotFound")
+				return
+			}
+			resp = doJSON(t, http.MethodGet, child, "")
+			mustStatus(t, resp, tc.getStatus)
+			body := decode(t, resp)
+			properties, ok := body["properties"].(map[string]any)
+			if body["name"] != "default" || !ok || len(properties) != 0 {
+				t.Fatalf("unexpected inactive migration response: %v", body)
+			}
+		})
+	}
+}
+
 func TestARM_StorageAccountFullFlow(t *testing.T) {
 	srv := buildFullServer(t)
 	base := srv.URL

@@ -121,6 +121,16 @@ stay local.
 | Resource Groups (CRUD + HEAD) | Full |
 | Virtual Networks (CRUD + HEAD) | Full |
 | Subnets (CRUD + HEAD, parent-aware) | Full |
+| API Management service (`Developer_1`, basic management plane) | Partial; no gateway data plane |
+| API Management user-assigned identity and Key Vault-backed custom domains | ARM configuration only; custom-domain Terraform refresh is blocked by the provider's metadata environment |
+| API Management APIs (Swagger 2.0 import, revisions) | Partial management plane; see the parity matrix for import convergence limits |
+| API Management API operations | Partial management plane |
+| API Management HTTP backends | Partial management plane; no gateway proxying |
+| API Management API policies | Partial XML configuration (`base`, `find-and-replace`); no policy execution |
+| API Management operation tags and operation policies | Partial management plane; no policy execution |
+| API Management users | Basic profiles; password provisioning, email delivery and federated identities return explicit errors |
+| Application Insights components, APIM loggers and API diagnostics | Partial management plane; no telemetry ingestion |
+| Key Vault certificate creation and access-policy updates | Partial; self-signed exportable RSA/PKCS#12 certificates; no automatic renewal |
 | Health check (`GET /health` on `:4568`) | Full |
 | State export/import (file-backed) | Full |
 | Web console (`:4570`) | Full |

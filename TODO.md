@@ -6,11 +6,77 @@ called it, and whether it blocks `terraform apply`.
 
 ---
 
+## Application Insights and APIM diagnostics limits
+
+- Components `2020-02-02` and billing `2015-05-01`, plus APIM logger/API
+  diagnostic `2022-08-01`, implement management-plane configuration only.
+  Workspace-backed Application Insights, telemetry ingestion, generated smart
+  detector rules, Event Hub/managed-identity loggers, and diagnostic data masking
+  remain unsupported and must not be reported as operational telemetry support.
+- APIs created by Swagger import retain the metadata convergence limitation
+  described below, independently of logger or diagnostic configuration.
+
+---
+
+## AzureRM v5 compatibility probes
+
+| Operation | v4.34/v4.35 scenario baseline | v5.14.0 API version | Implemented behavior |
+|-----------|-------------------------------|---------------------|----------------------|
+| `GET .../storageAccounts/{accountName}/accountMigrations/default` | Not part of baseline | `2025-08-01` | `200` with no active migration for an existing account |
+| `GET .../managedClusters/{clusterName}/maintenanceConfigurations/{configurationName}` | Not part of baseline | `2026-07-01` | `404 ResourceNotFound` for an unconfigured schedule |
+| `GET .../Redis/{cacheName}/patchSchedules/default` | Not part of baseline | `2024-11-01` | `404 ResourceNotFound` for an unconfigured schedule |
+
+These are read-only compatibility operations, not support for starting a
+migration or configuring schedules. The ARM integration suite covers the
+responses, including `404 ParentResourceNotFound` when the parent is missing.
+
+With the test runner's local Key Vault aliases, `ado-pipeline` completes on
+v4.34.0. On v5.14.0, `ado-pipeline` and `static-site` get past the migration
+read but fail when the provider rejects Azurite's path-style Blob endpoint.
+The v5 `ado-pipeline` teardown also rejects the `202` returned by Key Vault
+secret deletion. These are separate from the three reads above.
+
 ## Unhandled Endpoints (discovered during terraform apply)
 
-| Endpoint | Method | Caller | Blocks apply? | Added |
-|----------|--------|--------|--------------|-------|
-| (none yet — provider has not made it past initialization to ARM call phase) | | | | |
+No outstanding unhandled paths from these three GET probes.
+
+## APIM Swagger import convergence and limits
+
+Importing a Swagger 2.0 document can populate
+`description`, `contact`, `license`, and `termsOfServiceUrl`. AzureRM reads
+these fields into state. If they are absent from the Terraform configuration,
+the next plan proposes removing them. AzureRM 5.14.0's final create request
+omits description and terms, while update explicitly sends empty values. Omitted optional
+contact/license contracts are replaced on ordinary PUT rather than merged
+indefinitely. Explicit values and nulls take precedence, and cleared metadata
+is not reconstructed from the retained document. The next plan after this
+update exits 0. This is not a single-apply zero-drift claim.
+
+The importer supports `swagger-json` and `swagger-link-json` only. Other
+formats, non-HTTP API types, cloning, version sets, authentication providers
+and changing the current revision via releases return explicit errors.
+Imported operation/schema reads are limited to the Swagger projection; there
+is no gateway, policy execution, external-reference resolution, or general
+schema CRUD. Explicit operation CRUD is supported. Full import parity remains
+incomplete.
+
+## APIM operation and backend limits
+
+- API operations (`2022-08-01`) persist nested parameters/examples and
+  revision aliases. Operation conditional ETags and OData paging are not
+  implemented.
+- HTTP backends (`2024-05-01`) support TLS validation flags. Backend
+  credentials, proxy settings, Service Fabric, circuit breakers, pools, SOAP
+  and gateway proxying remain unsupported.
+
+## APIM API policy limits
+
+API `2022-08-01` policy HEAD returns `200` with an ETag and DELETE returns
+`204`, as required by the pinned SDK. This is limited management-plane XML
+configuration for `base` and `find-and-replace`, with byte-for-byte XML
+preservation, not gateway execution.
+Linked documents, .NET expressions, namespaces, effective expansion and other
+policy statements return explicit errors. Service policies are not implemented.
 
 ## Provider initialization gaps (discovered during fix/metadata-classifier-bugs)
 
@@ -183,3 +249,37 @@ The bundle file is written with mode 0600 because it contains the private key.
 - ARM deployment template execution (massively complex, defer)
 - Azure CLI (`az`) compatibility (beyond Terraform)
 - Testcontainers-go integration module
+
+## APIM user, tag and operation policy limits
+
+- User password provisioning, confirmation/notification emails, configured
+  identities, closed-account state transitions and deletion with referenced
+  subscriptions return explicit errors. Basic user profiles do not implement
+  developer-portal authentication.
+- Tag/user OData queries and user group expansion return explicit errors.
+  Operation policies retain the API-policy XML subset (`base` and
+  `find-and-replace`), not a gateway execution engine.
+- Existing path-normalization limitation: a mixed-case ARM path with a
+  noncanonical percent escape (for example `bad%2Bname`) retains `RawPath`.
+  chi uses that unnormalized path and returns 404 before handler validation.
+  The ordinary `bad+name` spelling reaches tag validation and returns 400.
+  Use the ordinary spelling until escaped-path normalization is implemented.
+
+## APIM custom-domain provider blocker
+
+- Custom-domain configuration requires an actual certificate source for each
+  hostname. A successful Terraform plan does not establish that a certificate
+  reference resolves to a provisioned certificate.
+- ARM unit/integration tests cover runtime-generated self-signed RSA/PKCS#12
+  certificates, assigned identity and Key Vault-backed hostname updates.
+  No private key or generated certificate is committed.
+- AzureRM 5.14.0's custom-domain Read requires an API Management domain suffix.
+  Its SDK does not configure this suffix through `metadata_host`; Read fails
+  before issuing an ARM request. A complete Terraform lifecycle is blocked,
+  even though the certificate and hostname writes succeed.
+- Setting an invented metadata field or increasing timeouts cannot fix the
+  missing SDK environment value. Alternative endpoint routing without
+  `metadata_host` is not implemented or validated.
+- Custom-domain cleanup takes minutes because the provider checks readiness
+  repeatedly before and after updating the parent service, not because ARM
+  requests take minutes.

@@ -1,0 +1,49 @@
+# Terraform native test file (requires Terraform 1.6+).
+#
+# This is the ARM-half smoke: it runs a full apply cycle against azemu and
+# asserts the control-plane outputs are populated. It does NOT publish bundles
+# or assert the CDN read path; that local-only loop lives in e2e.sh.
+#
+# Usage (from repo root):
+#   docker compose up -d --build
+#   export SSL_CERT_FILE=$PWD/.azemu/cert-bundle.pem
+#   cd examples/terraform/scenarios-v5/ota-delivery && terraform init && terraform test
+
+run "ota_delivery_lifecycle" {
+  command = apply
+
+  assert {
+    condition     = output.resource_group_id != ""
+    error_message = "resource_group_id must not be empty"
+  }
+
+  assert {
+    condition     = output.storage_account_id != ""
+    error_message = "storage_account_id must not be empty"
+  }
+
+  assert {
+    condition     = output.storage_primary_blob_endpoint != ""
+    error_message = "storage_primary_blob_endpoint must not be empty"
+  }
+
+  assert {
+    condition     = startswith(output.key_vault_uri, "https://") && strcontains(output.key_vault_uri, ".vault.localhost")
+    error_message = "key_vault_uri must be an emulator-routable {vault}.vault.localhost HTTPS URL"
+  }
+
+  assert {
+    condition     = strcontains(output.manifest_key_id, "/keys/manifest-signing-key/")
+    error_message = "manifest_key_id must be a versioned kid"
+  }
+
+  assert {
+    condition     = strcontains(output.manifest_key_public_pem, "BEGIN PUBLIC KEY")
+    error_message = "manifest_key_public_pem must be a PEM public key"
+  }
+
+  assert {
+    condition     = endswith(output.cdn_endpoint_fqdn, ".azurefd.net")
+    error_message = "cdn_endpoint_fqdn must be a Front Door .azurefd.net host"
+  }
+}

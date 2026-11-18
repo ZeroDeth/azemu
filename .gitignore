@@ -18,6 +18,10 @@ dist/
 *.tfstate
 *.tfstate.backup
 .terraform.lock.hcl
+!examples/terraform/scenarios/**/.terraform.lock.hcl
+!examples/terraform/scenarios-v5/**/.terraform.lock.hcl
+!test/terraform/apim-v5.14/.terraform.lock.hcl
+!test/terraform/apim-v5.14/**/.terraform.lock.hcl
 
 # Go
 coverage.out
@@ -55,6 +59,7 @@ state.json
 # Public key the ota-delivery e2e exports from terraform for signature
 # verification; regenerated each run and torn down by e2e.sh.
 examples/terraform/scenarios/ota-delivery/pub.pem
+examples/terraform/scenarios-v5/ota-delivery/pub.pem
 
 # Per-project Claude Code tooling cache — personal state stays local, but
 # .claude/rules/, .claude/agents/, and .claude/skills/ are project-shared
