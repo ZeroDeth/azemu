@@ -1,8 +1,9 @@
-.PHONY: build run test docker docker-run docker-compose docker-compose-down clean smoke tf-test tf-test-scenarios coverage ota-delivery console-build console-dev
+.PHONY: build run test docker docker-run docker-compose docker-compose-down clean smoke tf-test tf-test-scenarios tf-test-scenarios-v4 tf-test-scenarios-v5 coverage ota-delivery console-build console-dev
 
 BINARY  := azemu
 MODULE  := github.com/zerodeth/azemu
 VERSION ?= dev
+TF_SCENARIO_RUNNER ?= native
 
 build:
 	go build -ldflags "-X main.Version=$(VERSION)" -o bin/$(BINARY) ./cmd/azemu
@@ -33,31 +34,18 @@ docker-compose-down:
 tf-test:
 	cd examples/terraform && terraform init -input=false && terraform test
 
-# Runs only the focused scenarios under examples/terraform/scenarios/.
-# Used by CI; each scenario is designed for end-to-end azurerm round-trips.
-# init runs WITHOUT -upgrade so the azurerm version constraint pinned in each
-# scenario's provider.tf (>= 4.0, < 4.35) governs resolution. -upgrade forced
-# the newest azurerm on every run, which drifted past the version azemu is
-# validated against and broke scenarios (e.g. storage_container account-ID
-# domain-suffix checks added after 4.77).
-# Runs every scenario even if one fails, then reports a summary and exits
-# non-zero if any failed. A fail-fast loop here previously masked failures in
-# every scenario alphabetically after the first broken one.
-tf-test-scenarios:
-	@failed=""; passed=""; \
-	for dir in examples/terraform/scenarios/*/; do \
-		name=$$(basename "$$dir"); \
-		echo "=== terraform test: $$name ==="; \
-		if (cd "$$dir" && terraform init -input=false && terraform test); then \
-			passed="$$passed $$name"; \
-		else \
-			failed="$$failed $$name"; \
-		fi; \
-	done; \
-	echo "================ scenario summary ================"; \
-	echo "passed:$$passed"; \
-	echo "failed:$$failed"; \
-	if [ -n "$$failed" ]; then exit 1; fi
+# Keep the existing scenario command as the v4 compatibility alias.
+tf-test-scenarios: tf-test-scenarios-v4
+
+tf-test-scenarios-v4: SCENARIO_ROOT = examples/terraform/scenarios
+tf-test-scenarios-v4: PROVIDER_MAJOR = v4
+tf-test-scenarios-v5: SCENARIO_ROOT = examples/terraform/scenarios-v5
+tf-test-scenarios-v5: PROVIDER_MAJOR = v5
+
+# Each provider major has its own scenarios and lockfiles. Do not pass
+# -upgrade: intentional provider upgrades should update that suite's lockfiles.
+tf-test-scenarios-v4 tf-test-scenarios-v5:
+	@sh scripts/test-terraform-scenarios.sh "$(TF_SCENARIO_RUNNER)" "$(SCENARIO_ROOT)" "$(PROVIDER_MAJOR)"
 
 console-build:
 	cd console && npm ci && npm run build

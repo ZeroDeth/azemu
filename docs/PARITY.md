@@ -42,6 +42,65 @@ and should read Scaffold or Planned instead.
 | AKS Managed Cluster | Full (stub) | N/A | `azurerm_kubernetes_cluster`, `azurerm_kubernetes_cluster_node_pool` | Full management plane (computed fqdn, default k8s version 1.29.0, SKU + identity at top level, cascade-delete node pools, parent-existence check on pool PUT, listClusterUserCredential / listClusterAdminCredential returning a parseable kubeconfig for the kube_config attribute) | [aks_test.go](../internal/arm/aks_test.go) |
 | Azure Cache for Redis | Full | Delegated to `redis:7-alpine` sidecar | `azurerm_redis_cache` | Full (Standard tier scope; SKU validated inside `properties.sku` with name/family/capacity ranges; `hostName` derived from `AZEMU_REDIS_ENDPOINT`; `port: 6379`, `sslPort: 6380`; PATCH update so a second `terraform apply` succeeds; `listKeys` returns deterministic dev keys whose primary value matches the sidecar `--requirepass`; Premium-only properties rejected on Basic/Standard; Premium clustering, persistence, geo-replication, `regenerateKey`, and TLS-wrapped 6380 are tracked as follow-ups) | [redis_cache_test.go](../internal/arm/redis_cache_test.go), [arm_test.go](../test/integration/arm_test.go) |
 
+### API Management scope
+
+API Management support is validated with azurerm **5.14.0** using the
+standalone [APIM fixture](../test/terraform/apim-v5.14/main.tf).
+New APIM development and provider validation target this v5 version only.
+
+| Capability | Status | Proof and limitations |
+|------------|--------|-----------------------|
+| `Microsoft.ApiManagement/service` | Full for basic `Developer_1` management | [apim_test.go](../internal/arm/apim_test.go), [arm_test.go](../test/integration/arm_test.go). Service PUT/GET/PATCH/DELETE/HEAD/LIST, publisher, tags and custom properties. Service API `2024-05-01`. |
+| Service identities and hostname configurations | Partial ARM configuration | [apim_hostname_test.go](../internal/arm/apim_hostname_test.go), [arm_test.go](../test/integration/arm_test.go). UserAssigned identity or None, Key Vault-backed gateway and developer-portal certificates, reference/access-policy checks and certificate metadata. No SystemAssigned/mixed identities or gateway TLS termination. Official-provider Terraform refresh is blocked as described below. |
+| Key Vault certificate and access-policy dependencies | Partial management configuration | [keyvault_certificate_test.go](../internal/arm/keyvault_certificate_test.go), [keyvault_access_policy_test.go](../internal/arm/keyvault_access_policy_test.go). Runtime Self-issued exportable RSA 2048/3072/4096 PKCS#12 certificates with backing secrets; access-policy updates and vault purge polling. No external issuers, import, EC/PEM/nonexportable certificates or renewal scheduler. Certificate deletion is immediate, without retained soft-delete recovery. |
+| `Microsoft.ApiManagement/service/apis` | Partial management plane | [apim_api_test.go](../internal/arm/apim_api_test.go). API `2022-08-01`, revision-aware PUT/GET/DELETE/HEAD/LIST, Swagger 2.0 JSON/link import and metadata. API DELETE returns synchronous `204`, matching the pinned SDK. Imported metadata may require a second apply, as described below. |
+| `Microsoft.ApiManagement/service/apis/operations` | Partial management plane | [apim_api_operation_test.go](../internal/arm/apim_api_operation_test.go), [arm_test.go](../test/integration/arm_test.go). API `2022-08-01`, CRUD/HEAD/LIST with revision aliases, nested request/response parameters and examples; explicit operations survive API updates and re-imports. DELETE returns `204`. Operation conditional ETags and OData paging are not implemented. |
+| `Microsoft.ApiManagement/service/tags` | Full basic CRUD | [apim_tag_test.go](../internal/arm/apim_tag_test.go). API `2022-08-01`, display-name validation and uniqueness, conditional ETags and association cleanup. OData queries return explicit errors. |
+| `Microsoft.ApiManagement/service/apis/operations/tags` | Full basic association management | [apim_api_operation_tag_test.go](../internal/arm/apim_api_operation_tag_test.go), [arm_test.go](../test/integration/arm_test.go). Bodyless PUT references an existing service tag; responses identify that service tag. Revision aliases, live display names, parent/reference checks and cascade. HEAD `200`, DELETE `204`. No API/product tag association routes. |
+| `Microsoft.ApiManagement/service/apis/operations/policies` | Partial management plane | [apim_api_operation_policy_test.go](../internal/arm/apim_api_operation_policy_test.go), [arm_test.go](../test/integration/arm_test.go). API `2022-08-01`, singleton policy CRUD/HEAD/LIST, XML preserved byte-for-byte, revision aliases, ETags, parent checks and cascade. HEAD `200`, DELETE `204`. Same explicit XML limitations as API policies; no execution. |
+| `Microsoft.ApiManagement/service/users` | Partial management plane | [apim_user_test.go](../internal/arm/apim_user_test.go), [arm_test.go](../test/integration/arm_test.go). API `2022-08-01`, CRUD/PATCH/HEAD/LIST, required names and unique email, default active state, stable registration date, Basic identity metadata, conditional ETags and parent cascade. HEAD `200`, DELETE `204`. Password provisioning, email delivery, configured identities, deleted-state transitions, OData/group expansion and deletion with subscription references return explicit errors. No portal authentication. |
+| `Microsoft.ApiManagement/service/backends` | Partial management plane | [apim_backend_test.go](../internal/arm/apim_backend_test.go), [arm_test.go](../test/integration/arm_test.go). API `2024-05-01`, HTTP backend CRUD/HEAD/LIST/PATCH, optional TLS validation settings, parent checks and cascade; DELETE `204`. Backend credentials, proxy, Service Fabric, circuit breakers, pools and SOAP are not implemented. Stored backend URLs are configuration, not gateway proxy targets. |
+| `Microsoft.ApiManagement/service/apis/policies` | Partial management plane | [apim_api_policy_test.go](../internal/arm/apim_api_policy_test.go), [arm_test.go](../test/integration/arm_test.go). API `2022-08-01`, XML CRUD/LIST, revision aliases, parent checks, cascade and ETags. HEAD returns `200`, DELETE `204`, matching this SDK. Policy XML round-trips byte-for-byte. Only `base` and `find-and-replace` statements; links, .NET expressions, namespaces, effective expansion and other statements return explicit errors. No gateway policy execution. |
+| Portal settings and initial service reads | Partial | Sign-in, sign-up and delegation settings, tenant-access reads, empty initial API/product collections, and `404` for an unconfigured service policy. Auxiliary API `2022-08-01`. |
+| `Microsoft.Insights/components` | Partial management plane | [application_insights_test.go](../internal/arm/application_insights_test.go). Components API `2020-02-02`, billing GET/PUT `2015-05-01`, stable local credentials, CRUD/HEAD/LIST. Component PUT returns `200` and DELETE `204`, matching the pinned SDK. No telemetry ingestion or workspace integration. |
+| `Microsoft.ApiManagement/service/loggers` | Partial management plane | [apim_logger_test.go](../internal/arm/apim_logger_test.go). API `2022-08-01`, Application Insights logger CRUD/HEAD/LIST and PATCH; Event Hub and managed-identity credentials rejected. |
+| `Microsoft.ApiManagement/service/apis/diagnostics` | Partial management plane | [apim_api_diagnostic_test.go](../internal/arm/apim_api_diagnostic_test.go), [arm_test.go](../test/integration/arm_test.go). API `2022-08-01`, sampling, correlation, headers and body settings persisted; parent checks and cascade. No gateway execution or data masking. |
+| Soft delete and purge | Partial | Explicit deleted-service discovery and purge; automatic restore is not implemented. |
+| Gateway traffic, virtual networks, additional locations and availability zones | None | Configured unsupported service features return an explicit error. Computed gateway URLs are metadata, not running gateways. |
+
+**Swagger import convergence:** imported metadata that is absent from the
+Terraform configuration can require a second apply. AzureRM 5.14.0 omits
+description and terms from its final create request but clears them during
+update. Explicit properties take precedence over the import; the retained
+document does not repopulate cleared metadata. The next plan after this
+update is empty. No `ignore_changes` workaround is required.
+
+**Custom-domain provider limitation:** AzureRM 5.14.0 cannot refresh
+`azurerm_api_management_custom_domain` when using `metadata_host`.
+Its SDK constructs an environment without the API Management domain suffix,
+and the resource's Read fails with
+`could not determine API Management domain suffix for environment "AzureCloud"`
+before requesting the service. Adding a suffix field to azemu's metadata
+does not fix this SDK limitation. ARM configuration tests pass, but a complete
+Terraform apply/plan/destroy lifecycle for custom domains is not supported
+with the current redirection mechanism.
+
+Custom-domain updates and deletion also include provider-side readiness
+waits before and after the service update. These waits can take minutes even
+when local ARM requests complete immediately.
+
+### Provider version differences
+
+| ARM operation | azurerm v4.34/v4.35 scenario baseline | azurerm v5.14.0 |
+|---------------|--------------------------------------|----------------|
+| Storage `GET accountMigrations/default` | Existing account lifecycle unchanged; this read is not part of the v4 baseline. | Requests API `2025-08-01`; azemu returns `200` with no active migration. |
+| AKS `GET maintenanceConfigurations/{name}` | Existing cluster lifecycle unchanged; this read is not part of the v4 baseline. | Requests API `2026-07-01`; azemu returns `404` for an unconfigured schedule. |
+| Redis `GET patchSchedules/default` | Existing cache lifecycle unchanged; this read is not part of the v4 baseline. | Requests API `2024-11-01`; azemu returns `404` for an unconfigured schedule. |
+
+These are additive ARM reads, covered by the [ARM integration tests](../test/integration/arm_test.go).
+They do not change the existing v4 routes or add write support. The v5
+Terraform suite is separate and is not yet a CI gate.
+
 ## Identity
 
 | Capability | Status | Notes |

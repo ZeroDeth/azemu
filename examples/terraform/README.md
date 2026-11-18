@@ -68,6 +68,29 @@ Or from the repo root:
 make tf-test
 ```
 
+The end-to-end resource scenarios use independent fixtures and lockfiles:
+
+| Provider | Fixtures | Command | CI |
+|----------|----------|---------|----|
+| azurerm v4.34/v4.35 | [`scenarios/`](./scenarios/) | `make tf-test-scenarios-v4` | Existing suite |
+| azurerm v5.14.0 | [`scenarios-v5/`](./scenarios-v5/) | `make tf-test-scenarios-v5` | Local only |
+
+The v4 fixtures keep their original resource configuration. The v5
+fixtures use `user_assigned_identity_id` for federated credentials, specify
+`rbac_authorization_enabled` for Key Vault, and declare an AKS
+`node_provisioning_profile`. The [parity matrix](../../docs/PARITY.md#provider-version-differences)
+lists the additional ARM reads observed in v5.
+
+On Linux with Docker host networking, use the container runner if your local
+resolver does not resolve `*.vault.localhost`. Start azemu with Docker Compose
+first. The aliases apply only inside the Terraform container and cover the
+default scenario names, not custom vault names:
+
+```bash
+make tf-test-scenarios-v4 TF_SCENARIO_RUNNER=docker
+make tf-test-scenarios-v5 TF_SCENARIO_RUNNER=docker
+```
+
 ## Customisation
 
 Edit `variables.tf` to change the location or resource name prefix.
