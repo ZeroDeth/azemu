@@ -377,6 +377,32 @@ enough resources to justify a team-shared CI cluster running it.
 - `charts/azemu/values.yaml`
 - `examples/kubernetes/` manifests for users who do not want Helm
 
+### Phase 12: Out-of-the-box experience (LocalStack-style)
+
+Goal: a new user runs one command and points Terraform at azemu, with no repo
+clone, no build, and no hand-written provider block. Today azemu works, but
+reads as a contributor project rather than a tool. Raised in the 2026-11-21 PR
+review.
+
+| # | Task | Status | Notes |
+|---|------|--------|-------|
+| 12.1 | One-line run from a published image | TODO | README quick start needs a repo clone plus `docker compose up --build`. Lead with `docker run ghcr.io/zerodeth/azemu:latest` (goreleaser already targets that tag; confirm it is published) and keep compose as the "with Azurite and Redis" option. |
+| 12.2 | Installable `azemu` binary | TODO | README never says how to get the binary that `azemu tf` needs. Add a Homebrew tap (goreleaser `brews:`) and a release-download snippet. |
+| 12.3 | Zero-config provider wiring | TODO | Users copy a provider block with `metadata_host`, `resource_provider_registrations` and four mock IDs. `azemu tf` should inject all of it via `ARM_*` env so a stock `provider "azurerm" { features {} }` works, like LocalStack's `tflocal`. |
+| 12.4 | No cert setup step | TODO | Quick start asks for `export SSL_CERT_FILE=...`. Have `azemu tf` and an `azemu env` (prints exports for `eval`) handle it. |
+| 12.5 | Any storage account name works | TODO | New account names must be appended to `AZURITE_ACCOUNTS` in `docker-compose.yml` or blob calls fail. Register accounts with Azurite on `storageAccounts` PUT, or document the limit in the first error message. |
+| 12.6 | `azemu start` / `azemu stop` | TODO | Single entry point that starts azemu plus its sidecars (Azurite, Redis) and prints the console URL, matching `localstack start`. |
+| 12.7 | Five-minute README rewrite | TODO | Install, start, `azemu tf apply`, open console. Everything contributor-facing (flox, pre-commit) moves to `CONTRIBUTING.md`. |
+
+### PR review follow-ups (2026-11-21)
+
+| # | Task | Status | Notes |
+|---|------|--------|-------|
+| R.1 | Fix website setup page links broken by PR #108 | TODO | The mirror sync copied `docs/SETUP.md` paths verbatim into `website/docs/reference/setup.md`: `TROUBLESHOOTING.md`, `PARITY.md`, `ARCHITECTURE.md` and `design-notes/0003-...` no longer resolve. It also reintroduced em-dashes (lines 242, 246, 301, 325, 326). Make the mirror step rewrite links, or add `mkdocs build --strict` to CI so this fails. |
+| R.2 | Decide on PR #113 (APIM + azurerm v5 scenarios) | TODO | Left open, not merged. Tests pass locally (`go test -race ./...`), but: adds `software.sslmate.com/src/go-pkcs12` without approval; API Management is not in `ROADMAP.md`; 11.4k lines in one commit; duplicates every scenario into `scenarios-v5/`; now conflicts on `go.mod` (main moved to `go 1.24`). GitGuardian failure is a false positive (public Azurite dev key). Ask the author to split: v5 compatibility reads first, APIM after a roadmap decision. |
+| R.3 | Run fork PR CI | TODO | Fork PRs show only GitGuardian and CodeRabbit; the CI workflow never ran on #113. Approve fork workflow runs or document that maintainers must. |
+| R.4 | azurerm v5 support plan | TODO | #113 shows azurerm 5.x needs new reads (storage account migration, AKS maintenance configuration, Redis patch schedule). Scenarios still pin `< 4.35` / `< 4.36`. Add a v5 line to `ROADMAP.md`. |
+
 ---
 
 ## How to use this file
